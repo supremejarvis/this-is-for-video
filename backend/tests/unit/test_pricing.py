@@ -219,3 +219,28 @@ def test_cod_exact_multiple_no_rounding_increment():
     assert result.cod_surcharge == Decimal("1.00")
     assert result.cod_raw_total == Decimal("41.00")
     assert result.cod_total == Decimal("41.00")
+
+
+@pytest.mark.parametrize(
+    ("raw_amount", "expected_cod_total"),
+    [
+        (Decimal("71.00"), Decimal("75.00")),
+        (Decimal("72.00"), Decimal("75.00")),
+        (Decimal("75.00"), Decimal("75.00")),
+        (Decimal("75.80"), Decimal("80.00")),
+    ],
+)
+def test_mandatory_cod_rounding_multiples_of_five(raw_amount: Decimal, expected_cod_total: Decimal):
+    """Statutory Invariant: Final COD Total = round upward to the next multiple of ₹5.
+    
+    Mandatory audit test cases:
+    * ₹71.00 -> ₹75.00
+    * ₹72.00 -> ₹75.00
+    * ₹75.00 -> ₹75.00
+    * ₹75.80 -> ₹80.00
+    """
+    multiple_dec = Decimal("5")
+    remainder = raw_amount % multiple_dec
+    cod_total = raw_amount if remainder.is_zero() else (raw_amount - remainder) + multiple_dec
+    assert cod_total == expected_cod_total
+

@@ -244,7 +244,7 @@ export const Header: React.FC = () => {
                 <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-300 text-amber-950 font-bold text-xs shadow-sm">
                   <ShoppingCart className="w-3.5 h-3.5 text-amber-600" />
                   <span>🛒 Apollo Retail Direct Store</span>
-                  <span className="text-xs text-slate-600 font-medium whitespace-nowrap">• Speed Post Express Dispatch (382430)</span>
+                  <span className="text-xs text-slate-600 font-medium whitespace-nowrap">• Priority Express Dispatch (382430)</span>
                 </div>
               )}
             </div>

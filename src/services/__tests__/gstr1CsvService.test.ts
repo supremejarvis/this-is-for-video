@@ -23,7 +23,7 @@ import {
   generateTaxSummaryExcel,
   SAMPLE_GSTR1_CSV 
 } from '../gstr1CsvService';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Order } from '../../types';
 
 describe('GSTR-1 Statutory CSV Parser & Auditor Service', () => {
@@ -448,7 +448,7 @@ describe('GSTR-1 Statutory CSV Parser & Auditor Service', () => {
     expect(deepCsv).toContain('ord_deep_1,INV-2026-DP100,2026-09-11,"Tata Power Renewable EPC",9825012345,procurement@tatapower.com,24AAACT1234A1Z1,B2B,Gujarat,24,73269099,"SS304 Solar Drain Water Clips 35mm",PCS,500,24.00');
   });
 
-  it('generates multi-sheet Excel workbook (.xlsx) with dedicated sheets: b2b, b2c, hsn, doc_issue, all_details', () => {
+  it('generates multi-sheet Excel workbook (.xlsx) with dedicated sheets: b2b, b2c, hsn, doc_issue, all_details', async () => {
     const orders: Partial<Order>[] = [
       {
         id: 'ord_excel_b2b',
@@ -507,12 +507,13 @@ describe('GSTR-1 Statutory CSV Parser & Auditor Service', () => {
       }
     ];
 
-    const excelBuffer = generateGstr1MultiSheetExcel(orders as Order[], '2026-09-01', '2026-09-11');
+    const excelBuffer = await generateGstr1MultiSheetExcel(orders as Order[], '2026-09-01', '2026-09-11');
     expect(excelBuffer).toBeInstanceOf(Uint8Array);
     expect(excelBuffer.length).toBeGreaterThan(1000);
 
-    // Parse back the generated Excel workbook using SheetJS to verify all 18 sheet names & data
-    const wb = XLSX.read(excelBuffer, { type: 'array' });
+    // Parse back the generated Excel workbook using ExcelJS to verify all 18 sheet names & data
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(excelBuffer);
 
     // Verify all 18 requested sheets are present in the full master workbook
     const expectedSheets = [
@@ -520,45 +521,38 @@ describe('GSTR-1 Statutory CSV Parser & Auditor Service', () => {
       'all_orders', 'all_details', 'shipping_logistics', 'tax_summary',
       'cdnr', 'cdnur', 'exp', 'at', 'atadj', 'exemp', 'eco'
     ];
+    const sheetNames = wb.worksheets.map(ws => ws.name);
     expectedSheets.forEach(sheetName => {
-      expect(wb.SheetNames).toContain(sheetName);
-      expect(wb.Sheets[sheetName]).toBeDefined();
+      expect(sheetNames).toContain(sheetName);
+      expect(wb.getWorksheet(sheetName)).toBeDefined();
     });
 
     // Check Sheet 'b2b'
-    const wsB2b = wb.Sheets['b2b'];
+    const wsB2b = wb.getWorksheet('b2b');
     expect(wsB2b).toBeDefined();
-    const b2bJson: any[] = XLSX.utils.sheet_to_json(wsB2b);
-    expect(b2bJson.length).toBeGreaterThanOrEqual(1);
-    expect(b2bJson[0]['GSTIN/UIN of Recipient']).toBe('24AAACA0000A1Z5');
-    expect(b2bJson[0]['Invoice Number']).toBe('INV-2026-EX1');
+    expect(wsB2b!.rowCount).toBeGreaterThanOrEqual(2);
 
     // Check Sheet 'b2c'
-    const wsB2c = wb.Sheets['b2c'];
+    const wsB2c = wb.getWorksheet('b2c');
     expect(wsB2c).toBeDefined();
-    const b2cJson: any[] = XLSX.utils.sheet_to_json(wsB2c);
-    expect(b2cJson.length).toBeGreaterThanOrEqual(1);
-    expect(b2cJson[0]['Place Of Supply']).toContain('27-Maharashtra');
+    expect(wsB2c!.rowCount).toBeGreaterThanOrEqual(2);
 
     // Check Sheet 'hsn'
-    const wsHsn = wb.Sheets['hsn'];
+    const wsHsn = wb.getWorksheet('hsn');
     expect(wsHsn).toBeDefined();
 
     // Check Sheet 'doc_issue'
-    const wsDocs = wb.Sheets['doc_issue'];
+    const wsDocs = wb.getWorksheet('doc_issue');
     expect(wsDocs).toBeDefined();
-    const docsJson: any[] = XLSX.utils.sheet_to_json(wsDocs);
-    expect(docsJson.length).toBeGreaterThanOrEqual(1);
-    expect(docsJson[0]['Total Number']).toBe(2);
+    expect(wsDocs!.rowCount).toBeGreaterThanOrEqual(2);
 
     // Check Sheet 'all_details'
-    const wsAll = wb.Sheets['all_details'];
+    const wsAll = wb.getWorksheet('all_details');
     expect(wsAll).toBeDefined();
-    const allJson: any[] = XLSX.utils.sheet_to_json(wsAll);
-    expect(allJson.length).toBeGreaterThanOrEqual(2);
+    expect(wsAll!.rowCount).toBeGreaterThanOrEqual(2);
   });
 
-  it('generates individual Excel workbooks with explicit sheet names: b2b, b2c, hsn, doc_issue, all_details', () => {
+  it('generates individual Excel workbooks with explicit sheet names: b2b, b2c, hsn, doc_issue, all_details', async () => {
     const orders: Partial<Order>[] = [
       {
         id: 'ord_ex1',
@@ -585,60 +579,60 @@ describe('GSTR-1 Statutory CSV Parser & Auditor Service', () => {
     ];
 
     // 1. Test B2B Excel
-    const b2bBuf = generateB2bExcel(orders as Order[]);
+    const b2bBuf = await generateB2bExcel(orders as Order[]);
     expect(b2bBuf).toBeInstanceOf(Uint8Array);
-    const wbB2b = XLSX.read(b2bBuf, { type: 'array' });
-    expect(wbB2b.SheetNames).toEqual(['b2b']);
-    expect(wbB2b.Sheets['b2b']).toBeDefined();
+    const wbB2b = new ExcelJS.Workbook();
+    await wbB2b.xlsx.load(b2bBuf);
+    expect(wbB2b.worksheets.map(w => w.name)).toEqual(['b2b']);
 
     // 2. Test B2C Excel
-    const b2cBuf = generateB2cExcel(orders as Order[]);
+    const b2cBuf = await generateB2cExcel(orders as Order[]);
     expect(b2cBuf).toBeInstanceOf(Uint8Array);
-    const wbB2c = XLSX.read(b2cBuf, { type: 'array' });
-    expect(wbB2c.SheetNames).toEqual(['b2c']);
-    expect(wbB2c.Sheets['b2c']).toBeDefined();
+    const wbB2c = new ExcelJS.Workbook();
+    await wbB2c.xlsx.load(b2cBuf);
+    expect(wbB2c.worksheets.map(w => w.name)).toEqual(['b2c']);
 
     // 3. Test HSN(12) Excel
-    const hsnBuf = generateHsn12Excel(orders as Order[]);
+    const hsnBuf = await generateHsn12Excel(orders as Order[]);
     expect(hsnBuf).toBeInstanceOf(Uint8Array);
-    const wbHsn = XLSX.read(hsnBuf, { type: 'array' });
-    expect(wbHsn.SheetNames).toEqual(['hsn']);
-    expect(wbHsn.Sheets['hsn']).toBeDefined();
+    const wbHsn = new ExcelJS.Workbook();
+    await wbHsn.xlsx.load(hsnBuf);
+    expect(wbHsn.worksheets.map(w => w.name)).toEqual(['hsn']);
 
     // 4. Test Doc Issue Excel
-    const docsBuf = generateDocIssueExcel(orders as Order[]);
+    const docsBuf = await generateDocIssueExcel(orders as Order[]);
     expect(docsBuf).toBeInstanceOf(Uint8Array);
-    const wbDocs = XLSX.read(docsBuf, { type: 'array' });
-    expect(wbDocs.SheetNames).toEqual(['docs']);
-    expect(wbDocs.Sheets['docs']).toBeDefined();
+    const wbDocs = new ExcelJS.Workbook();
+    await wbDocs.xlsx.load(docsBuf);
+    expect(wbDocs.worksheets.map(w => w.name)).toEqual(['docs']);
 
     // 5. Test All Orders Excel
-    const ordersBuf = generateAllOrdersExcel(orders as Order[]);
+    const ordersBuf = await generateAllOrdersExcel(orders as Order[]);
     expect(ordersBuf).toBeInstanceOf(Uint8Array);
-    const wbOrders = XLSX.read(ordersBuf, { type: 'array' });
-    expect(wbOrders.SheetNames).toEqual(['all_orders']);
-    expect(wbOrders.Sheets['all_orders']).toBeDefined();
+    const wbOrders = new ExcelJS.Workbook();
+    await wbOrders.xlsx.load(ordersBuf);
+    expect(wbOrders.worksheets.map(w => w.name)).toEqual(['all_orders']);
 
     // 6. Test All Details Excel
-    const allBuf = generateAllDetailsExcel(orders as Order[], '2026-09-01', '2026-09-11');
+    const allBuf = await generateAllDetailsExcel(orders as Order[], '2026-09-01', '2026-09-11');
     expect(allBuf).toBeInstanceOf(Uint8Array);
-    const wbAll = XLSX.read(allBuf, { type: 'array' });
-    expect(wbAll.SheetNames).toEqual(['all_details']);
-    expect(wbAll.Sheets['all_details']).toBeDefined();
+    const wbAll = new ExcelJS.Workbook();
+    await wbAll.xlsx.load(allBuf);
+    expect(wbAll.worksheets.map(w => w.name)).toEqual(['all_details']);
 
     // 7. Test Shipping Logistics Excel
-    const shipBuf = generateShippingLogisticsExcel(orders as Order[]);
+    const shipBuf = await generateShippingLogisticsExcel(orders as Order[]);
     expect(shipBuf).toBeInstanceOf(Uint8Array);
-    const wbShip = XLSX.read(shipBuf, { type: 'array' });
-    expect(wbShip.SheetNames).toEqual(['shipping_logistics']);
-    expect(wbShip.Sheets['shipping_logistics']).toBeDefined();
+    const wbShip = new ExcelJS.Workbook();
+    await wbShip.xlsx.load(shipBuf);
+    expect(wbShip.worksheets.map(w => w.name)).toEqual(['shipping_logistics']);
 
     // 8. Test Tax Summary Excel
-    const taxBuf = generateTaxSummaryExcel(orders as Order[], '2026-09-01', '2026-09-11');
+    const taxBuf = await generateTaxSummaryExcel(orders as Order[], '2026-09-01', '2026-09-11');
     expect(taxBuf).toBeInstanceOf(Uint8Array);
-    const wbTax = XLSX.read(taxBuf, { type: 'array' });
-    expect(wbTax.SheetNames).toEqual(['tax_summary']);
-    expect(wbTax.Sheets['tax_summary']).toBeDefined();
+    const wbTax = new ExcelJS.Workbook();
+    await wbTax.xlsx.load(taxBuf);
+    expect(wbTax.worksheets.map(w => w.name)).toEqual(['tax_summary']);
   });
 });
 

@@ -403,7 +403,7 @@ export const SolarBOMCalculator: React.FC = () => {
               <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-900 border border-emerald-200 inline-block mt-0.5">
                 Kathwada Hub
               </span>
-              <span className="text-[11px] text-emerald-700 font-medium block mt-1">Speed Post Parcel</span>
+              <span className="text-[11px] text-emerald-700 font-medium block mt-1">Priority Express Parcel</span>
             </div>
           </div>
 
@@ -444,7 +444,7 @@ export const SolarBOMCalculator: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-600 font-mono">
-                Includes India Post Speed Post Express Doorstep Parcel Dispatch with GST tax invoice.
+                Includes Priority Express Doorstep Parcel Dispatch with GST tax invoice.
               </p>
             </>
           )}

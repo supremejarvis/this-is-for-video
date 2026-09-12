@@ -12,6 +12,13 @@ class UserLoginRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=128)
 
 
+class AdminLoginRequest(BaseModel):
+    email: EmailStr = Field(default="admin@apolloengineering.co.in")
+    password: str = Field(..., min_length=6, max_length=128)
+    totp_code: str = Field(..., min_length=6, max_length=6)
+
+
+
 class UserCreateRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=12, max_length=128)

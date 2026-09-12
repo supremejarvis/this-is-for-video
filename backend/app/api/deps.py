@@ -19,12 +19,17 @@ async def get_current_session_and_user(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> tuple[UserSession, User]:
-    """Validate HttpOnly session cookie and return active session and user."""
+    """Validate HttpOnly session cookie or Bearer token and return active session and user."""
     raw_token = request.cookies.get(SESSION_COOKIE_NAME)
+    if not raw_token:
+        auth_header = request.headers.get("authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            raw_token = auth_header[7:].strip()
+
     if not raw_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required. Missing session cookie.",
+            detail="Authentication required. Missing session cookie or Bearer token.",
         )
 
     result = await AuthService.get_session_and_user(db, raw_token)
@@ -42,6 +47,26 @@ async def get_current_user(
 ) -> User:
     """Return the authenticated user."""
     return session_user[1]
+
+
+async def get_optional_current_user(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User | None:
+    """Return the authenticated user if session cookie or Bearer token exists and is valid, else None."""
+    raw_token = request.cookies.get(SESSION_COOKIE_NAME)
+    if not raw_token:
+        auth_header = request.headers.get("authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            raw_token = auth_header[7:].strip()
+        else:
+            return None
+
+    try:
+        result = await AuthService.get_session_and_user(db, raw_token)
+        return result[1] if result else None
+    except Exception:
+        return None
 
 
 async def verify_csrf(

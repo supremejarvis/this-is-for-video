@@ -104,7 +104,11 @@ class QuoteService:
             stmt = (
                 select(ProductVariant, PriceVersion, Product)
                 .join(Product, ProductVariant.product_id == Product.id)
-                .join(PriceVersion, (PriceVersion.variant_id == ProductVariant.id) | (PriceVersion.product_id == Product.id))
+                .join(
+                    PriceVersion,
+                    (PriceVersion.variant_id == ProductVariant.id)
+                    | ((PriceVersion.product_id == Product.id) & (PriceVersion.variant_id.is_(None))),
+                )
                 .where(
                     filter_clause,
                     ProductVariant.is_active.is_(True),
@@ -303,7 +307,8 @@ class QuoteService:
                 select(PriceVersion)
                 .join(
                     ProductVariant,
-                    (ProductVariant.id == PriceVersion.variant_id) | (ProductVariant.product_id == PriceVersion.product_id),
+                    (ProductVariant.id == PriceVersion.variant_id)
+                    | ((ProductVariant.product_id == PriceVersion.product_id) & (PriceVersion.variant_id.is_(None))),
                 )
                 .where(
                     ProductVariant.sku == item.sku,

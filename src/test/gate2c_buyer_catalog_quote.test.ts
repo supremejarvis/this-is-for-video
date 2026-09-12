@@ -226,8 +226,8 @@ describe('Gate 2C: Buyer Catalog & Authoritative Cart Quote', () => {
           prepaid_total: '110.80',
           cod_surcharge: '2.77',
           cod_raw_total: '113.57',
-          cod_total: '114.00',
-          rounding_multiple: 1,
+          cod_total: '115.00',
+          rounding_multiple: 5,
           expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
           created_at: new Date().toISOString(),
         }),
@@ -268,7 +268,7 @@ describe('Gate 2C: Buyer Catalog & Authoritative Cart Quote', () => {
       expect(quote.shipping_total).toBe('70.80');
       expect(quote.prepaid_total).toBe('110.80');
       expect(quote.cod_surcharge).toBe('2.77');
-      expect(quote.cod_total).toBe('114.00');
+      expect(quote.cod_total).toBe('115.00');
     });
   });
 
@@ -295,8 +295,8 @@ describe('Gate 2C: Buyer Catalog & Authoritative Cart Quote', () => {
           prepaid_total: '110.80',
           cod_surcharge: '2.77',
           cod_raw_total: '113.57',
-          cod_total: '114.00',
-          rounding_multiple: 1,
+          cod_total: '115.00',
+          rounding_multiple: 5,
           expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
           created_at: new Date().toISOString(),
         },

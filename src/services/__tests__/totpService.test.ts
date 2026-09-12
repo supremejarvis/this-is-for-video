@@ -5,9 +5,10 @@ import {
   bytesToBase32, 
   generateTOTP, 
   verifyTOTP, 
-  getOtpAuthUrl,
-  APOLLO_ADMIN_TOTP_SECRET 
+  getOtpAuthUrl 
 } from '../totpService';
+
+const TEST_TOTP_SECRET = 'JBSWY3DPEHPK3PXP';
 
 describe('Google Authenticator & TOTP Service (RFC 6238)', () => {
   it('encodes and decodes Base32 accurately', () => {
@@ -19,37 +20,37 @@ describe('Google Authenticator & TOTP Service (RFC 6238)', () => {
   });
 
   it('generates valid 6-digit TOTP code', async () => {
-    const code = await generateTOTP(APOLLO_ADMIN_TOTP_SECRET);
+    const code = await generateTOTP(TEST_TOTP_SECRET);
     expect(code).toHaveLength(6);
     expect(/^\d{6}$/.test(code)).toBe(true);
   });
 
   it('verifies generated TOTP code successfully', async () => {
     const now = Date.now();
-    const code = await generateTOTP(APOLLO_ADMIN_TOTP_SECRET, now);
-    const isValid = await verifyTOTP(code, APOLLO_ADMIN_TOTP_SECRET, 1, now);
+    const code = await generateTOTP(TEST_TOTP_SECRET, now);
+    const isValid = await verifyTOTP(code, TEST_TOTP_SECRET, 1, now);
     expect(isValid).toBe(true);
   });
 
   it('rejects incorrect TOTP codes', async () => {
-    const isValid = await verifyTOTP('000000', APOLLO_ADMIN_TOTP_SECRET);
+    const isValid = await verifyTOTP('000000', TEST_TOTP_SECRET);
     // Unless by extreme coincidence the current OTP is 000000
-    const currentOtp = await generateTOTP(APOLLO_ADMIN_TOTP_SECRET);
+    const currentOtp = await generateTOTP(TEST_TOTP_SECRET);
     if (currentOtp !== '000000') {
       expect(isValid).toBe(false);
     }
   });
 
   it('generates standard otpauth URL for Google Authenticator app import', () => {
-    const url = getOtpAuthUrl('admin@apolloengineering.co.in', 'Apollo Engineering', APOLLO_ADMIN_TOTP_SECRET);
+    const url = getOtpAuthUrl('admin@apolloengineering.co.in', 'Apollo Engineering', TEST_TOTP_SECRET);
     expect(url).toContain('otpauth://totp/Apollo%20Engineering:admin%40apolloengineering.co.in');
-    expect(url).toContain(`secret=${APOLLO_ADMIN_TOTP_SECRET}`);
+    expect(url).toContain(`secret=${TEST_TOTP_SECRET}`);
     expect(url).toContain('period=30');
     expect(url).toContain('digits=6');
   });
 
   it('generates QR code URL for scanning', () => {
-    const otpauth = getOtpAuthUrl();
+    const otpauth = getOtpAuthUrl('admin@apolloengineering.co.in', 'Apollo Engineering', TEST_TOTP_SECRET);
     const qrUrl = totpService.getQrCodeUrl(otpauth);
     expect(qrUrl).toContain('api.qrserver.com');
     expect(qrUrl).toContain(encodeURIComponent(otpauth));

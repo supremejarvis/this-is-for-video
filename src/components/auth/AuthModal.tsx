@@ -99,6 +99,14 @@ export const AuthModal: React.FC = () => {
     };
   }, [otpStep, countdown]);
 
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Automatic India Post Pincode Lookup for Signup
   useEffect(() => {
     if (authMode === 'SIGNUP' && pincode.trim().length === 6) {
@@ -108,18 +116,25 @@ export const AuthModal: React.FC = () => {
 
   const handlePincodeLookup = async (pin: string) => {
     setIsLoadingPincode(true);
-    const res = await lookupPincode(pin);
-    setIsLoadingPincode(false);
+    try {
+      const res = await lookupPincode(pin);
+      if (!isMountedRef.current) return;
+      setIsLoadingPincode(false);
 
-    if (res && res.postOffices.length > 0) {
-      setAvailablePostOffices(res.postOffices);
-      setSelectedPostOffice(res.postOffices[0]);
-      setCity(res.district);
-      setState(res.state);
-      setStateCode(res.stateCode);
-    } else {
-      setAvailablePostOffices([]);
-      setSelectedPostOffice(null);
+      if (res && res.postOffices.length > 0) {
+        setAvailablePostOffices(res.postOffices);
+        setSelectedPostOffice(res.postOffices[0]);
+        setCity(res.district);
+        setState(res.state);
+        setStateCode(res.stateCode);
+      } else {
+        setAvailablePostOffices([]);
+        setSelectedPostOffice(null);
+      }
+    } catch {
+      if (isMountedRef.current) {
+        setIsLoadingPincode(false);
+      }
     }
   };
 
@@ -307,7 +322,7 @@ export const AuthModal: React.FC = () => {
       if (authMode === 'SIGNUP' && pincode) {
         const postOfficeToSave = selectedPostOffice || availablePostOffices[0] || {
           name: 'KATHWADA GIDC S.O.',
-          branchType: 'Sub Post Office',
+          branchType: 'Sub Hub Facility',
           deliveryStatus: 'Delivery',
           circle: 'Gujarat',
           district: 'Ahmedabad',
@@ -997,7 +1012,7 @@ export const AuthModal: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-900">2. Transit & Replacement Policy</h4>
-                  <p>Every shipment is dispatched via priority postal transit from Kathwada Factory Hub (382430). Any damage during transit is replaced at zero cost upon verification within 7 days of delivery.</p>
+                  <p>Every shipment is dispatched via Priority Express transit from Kathwada Factory Hub (382430). Any damage during transit is replaced at zero cost upon verification within 7 days of delivery.</p>
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-900">3. Cancellation & Refunds</h4>

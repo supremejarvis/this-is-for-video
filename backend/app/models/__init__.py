@@ -18,6 +18,7 @@ from app.models.order import (
     ReplacementShipment,
     ReplacementStatus,
     Shipment,
+    WebhookEvent,
 )
 from app.models.outbox import OutboxEvent
 from app.models.price import PriceVersion, TaxMode
@@ -51,5 +52,6 @@ __all__ = [
     "User",
     "UserRole",
     "UserSession",
+    "WebhookEvent",
 ]
 

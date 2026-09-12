@@ -372,7 +372,7 @@ export const CheckoutModal: React.FC = () => {
                 {appMode === 'B2B' ? (
                   <span>🚚 Heavy Cargo Freight: <strong className="text-[#0054A6] font-mono font-bold">Dispatched from Kathwada GIDC Central Hub</strong></span>
                 ) : (
-                  <span>⚡ APE Standard Dispatch: <strong className="text-emerald-700 font-mono font-bold">Ships within 24-48 business hours via India Post Speed Post</strong></span>
+                  <span>⚡ APE Standard Dispatch: <strong className="text-emerald-700 font-mono font-bold">Ships within 24-48 business hours via Priority Express Delivery</strong></span>
                 )}
               </p>
             </div>
@@ -402,7 +402,7 @@ export const CheckoutModal: React.FC = () => {
                   <span className="w-6 h-6 rounded-full bg-[#0054A6] text-white font-black text-xs flex items-center justify-center shadow-sm">
                     1
                   </span>
-                  <span className="font-bold text-slate-900 text-sm">Delivery Address & India Post Sub Office</span>
+                  <span className="font-bold text-slate-900 text-sm">Delivery Address & Delivery Hub</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-[#0054A6] font-bold">
@@ -416,7 +416,7 @@ export const CheckoutModal: React.FC = () => {
                   <div className="p-6 rounded-2xl bg-amber-50/70 border border-amber-200 text-center space-y-3">
                     <div className="text-amber-800 font-bold text-sm">No Delivery Address Found</div>
                     <p className="text-xs text-slate-600 max-w-md mx-auto">
-                      Please add your delivery address to calculate verified Speed Post delivery to your doorstep.
+                      Please add your delivery address to calculate verified Priority Express delivery to your doorstep.
                     </p>
                     <button
                       type="button"
@@ -441,7 +441,7 @@ export const CheckoutModal: React.FC = () => {
                       </p>
                       <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
                         <span className="bg-white border border-slate-200 text-[#0054A6] px-2.5 py-1 rounded-lg font-bold">
-                          📮 Post Office: {activeAddress.postOffice?.name || 'KATHWADA GIDC S.O.'}
+                          📍 Delivery Hub: {activeAddress.postOffice?.name || 'KATHWADA GIDC S.O.'}
                         </span>
                         <span className="bg-white border border-slate-200 text-slate-900 px-2.5 py-1 rounded-lg font-bold">
                           PIN: {activeAddress.pincode}
@@ -506,7 +506,7 @@ export const CheckoutModal: React.FC = () => {
                                 {addr.flatBuilding}, {addr.streetArea}, {addr.city}
                               </p>
                               <div className="text-[11px] text-[#0054A6] font-mono font-bold bg-blue-50 px-2 py-0.5 rounded inline-block">
-                                📮 {addr.postOffice?.name || 'KATHWADA GIDC S.O.'} ({addr.pincode})
+                                📍 {addr.postOffice?.name || 'KATHWADA GIDC S.O.'} ({addr.pincode})
                               </div>
                             </div>
 
@@ -761,7 +761,7 @@ export const CheckoutModal: React.FC = () => {
                 </div>
 
                 <div className="flex justify-between text-slate-600">
-                  <span>India Post Speed Post Shipping:</span>
+                  <span>Priority Express Shipping:</span>
                   <span className="font-mono text-emerald-700 font-bold">
                     ₹{totalShipping.toLocaleString('en-IN')}
                   </span>

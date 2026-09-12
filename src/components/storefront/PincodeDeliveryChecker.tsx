@@ -24,7 +24,7 @@ export const PincodeDeliveryChecker: React.FC = () => {
       } else {
         if (pin.startsWith('38') || pin.startsWith('39')) setCityInfo('Gujarat Rapid Transit');
         else if (pin.startsWith('40') || pin.startsWith('41')) setCityInfo('Maharashtra Express');
-        else if (pin.startsWith('11') || pin.startsWith('12')) setCityInfo('North Hub Speed Post');
+        else if (pin.startsWith('11') || pin.startsWith('12')) setCityInfo('North Hub Express Delivery');
         else setCityInfo('All-India Priority Air Freight');
       }
     }

@@ -85,7 +85,7 @@ export const GstInvoice: React.FC<GstInvoiceProps> = ({ order, onClose }) => {
                 <span className="font-bold text-[10px] uppercase text-slate-500 block mb-1">SHIPPING DESTINATION (APE LOGISTICS):</span>
                 <div className="font-bold text-slate-900">{order.deliveryAddress.fullName}</div>
                 <div className="text-slate-700 font-bold text-blue-900">
-                  Delivery Postal Hub: {order.deliveryAddress.postOffice.name}
+                  Delivery Dispatch Hub: {order.deliveryAddress.postOffice.name}
                 </div>
                 <div className="text-slate-700">Destination Pincode: {order.deliveryAddress.pincode}</div>
                 <div className="font-mono text-slate-700">APE Tracking AWB: {order.shipments[0]?.shippingDetail.articleNumber}</div>
@@ -157,7 +157,7 @@ export const GstInvoice: React.FC<GstInvoiceProps> = ({ order, onClose }) => {
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-slate-600">APE Shipping Postage:</span>
+                  <span className="text-slate-600">APE Shipping Freight:</span>
                   <span className="font-mono">₹{order.pricingSummary.shippingTotal.toLocaleString('en-IN')}</span>
                 </div>
                 {Boolean(order.pricingSummary.codFee) && (

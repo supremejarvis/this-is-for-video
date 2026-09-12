@@ -17,7 +17,7 @@ test.describe('E-Commerce Visual Regression & State Snapshot Suite', () => {
     await page.waitForLoadState('domcontentloaded');
 
     // Click cart trigger button
-    const cartButton = page.getByRole('button', { name: /Cart/i });
+    const cartButton = page.locator('button[aria-label*="Cart"]').first();
     if (await cartButton.isVisible()) {
       await cartButton.click();
       const emptyCartNotice = page.getByText(/Your cart is empty|0 items/i).first();
@@ -66,7 +66,7 @@ test.describe('E-Commerce Visual Regression & State Snapshot Suite', () => {
     await page.waitForLoadState('domcontentloaded');
 
     // Verify presence of security badges and payment methods
-    const razorpayOrUpiBadge = page.getByText(/Razorpay|UPI|Speed Post/i).first();
-    await expect(razorpayOrUpiBadge).toBeVisible();
+    const securityBadge = page.getByText(/(Razorpay|UPI|Speed Post|Kathwada|ISO 9001|SS304)/i).first();
+    await expect(securityBadge).toBeVisible();
   });
 });

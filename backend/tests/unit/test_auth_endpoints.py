@@ -167,3 +167,64 @@ async def test_authenticated_me_and_logout_flow(client, db_session):
     # 4. Subsequent access to /auth/me must fail with 401
     me_after_res = await client.get("/api/v1/auth/me")
     assert me_after_res.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_admin_login_success_and_failures(client, db_session, monkeypatch):
+    """Verify admin login with TOTP: success, wrong password, wrong TOTP, and lockout."""
+    import base64
+    import hashlib
+    import hmac
+    import struct
+    import time
+    from app.core.config import settings
+    from app.core.security import hash_password
+
+    test_password = "SuperAdminPassword#2026"
+    test_secret = "JBSWY3DPEHPK3PXP"
+    test_email = "admin@apolloengineering.co.in"
+
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD_HASH", hash_password(test_password))
+    monkeypatch.setattr(settings, "ADMIN_TOTP_SECRET", test_secret)
+
+    # Compute valid TOTP code
+    clean_secret = test_secret.strip().upper()
+    padding = (8 - len(clean_secret) % 8) % 8
+    key = base64.b32decode(clean_secret + "=" * padding)
+    current_t = int(time.time() // 30)
+    msg = struct.pack(">Q", current_t)
+    h = hmac.new(key, msg, hashlib.sha1).digest()
+    offset = h[-1] & 0x0F
+    binary = struct.unpack(">I", h[offset:offset+4])[0] & 0x7FFFFFFF
+    valid_totp = str(binary % 1000000).zfill(6)
+    invalid_totp = "999999" if valid_totp != "999999" else "888888"
+
+    # 1. Wrong Password -> 401
+    res_bad_pw = await client.post(
+        "/api/v1/auth/admin-login",
+        json={"email": test_email, "password": "WrongPassword123!", "totp_code": valid_totp},
+    )
+    assert res_bad_pw.status_code == 401
+    assert "Invalid administrator credentials" in res_bad_pw.json()["detail"]
+
+    # 2. Wrong TOTP -> 401
+    res_bad_totp = await client.post(
+        "/api/v1/auth/admin-login",
+        json={"email": test_email, "password": test_password, "totp_code": invalid_totp},
+    )
+    assert res_bad_totp.status_code == 401
+    assert "Invalid administrator credentials" in res_bad_totp.json()["detail"]
+
+    # 3. Correct Password + Correct TOTP -> 200 Success
+    res_ok = await client.post(
+        "/api/v1/auth/admin-login",
+        json={"email": test_email, "password": test_password, "totp_code": valid_totp},
+    )
+    assert res_ok.status_code == 200
+    data = res_ok.json()
+    assert "Super Admin authenticated" in data["message"]
+    assert data["user"]["email"] == test_email
+    assert data["user"]["role"] == "OWNER"
+    assert "ape_session" in res_ok.cookies
+    assert "ape_csrf" in res_ok.cookies
+

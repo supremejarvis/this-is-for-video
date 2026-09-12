@@ -573,6 +573,76 @@ class Msg91OtpService {
     }
     return false;
   }
+
+  /**
+   * Dispatch notification via MSG91 WhatsApp Official API
+   */
+  async sendWhatsAppDispatchAlert(
+    mobile: string,
+    orderNumber: string,
+    awb: string,
+    courierName: string,
+    trackingUrl: string
+  ): Promise<boolean> {
+    try {
+      const cleanPhone = mobile.replace(/\D/g, '');
+      const formattedMobile = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+
+      const url = `${this.getApiBaseUrl()}/whatsapp/whatsapp-outbound-message/bulk/`;
+      const payload = {
+        integrated_number: MSG91_CONFIG.whatsappNumber || '918511626267',
+        content_type: 'template',
+        payload: {
+          to: formattedMobile,
+          type: 'template',
+          template: {
+            name: 'apollo_order_dispatched',
+            language: { code: 'en', policy: 'deterministic' },
+            components: [
+              {
+                type: 'body',
+                parameters: [
+                  { type: 'text', text: orderNumber },
+                  { type: 'text', text: awb || 'EXP-AWB-PENDING' },
+                  { type: 'text', text: courierName || 'Priority Express Delivery' },
+                  { type: 'text', text: trackingUrl || 'https://apolloengineering.co.in/track' }
+                ]
+              }
+            ]
+          }
+        }
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'authkey': this.authKey,
+          'Content-Type': 'application/json',
+          'accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        if (import.meta.env?.DEV) {
+          console.log(`[MSG91 WhatsApp Dispatch Alert Sent] Order: ${orderNumber}, AWB: ${awb}`);
+        }
+        return true;
+      }
+    } catch (e) {
+      console.warn('[MSG91 WhatsApp Dispatch Alert Exception]:', e);
+    }
+    return false;
+  }
+
+  /**
+   * Generate direct 1-click WhatsApp Web chat URL
+   */
+  generateWhatsAppWebUrl(phone: string, message: string): string {
+    const cleanPhone = phone.replace(/\D/g, '');
+    const fullPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    return `https://api.whatsapp.com/send?phone=${fullPhone}&text=${encodeURIComponent(message)}`;
+  }
 }
 
 export const msg91OtpService = new Msg91OtpService();

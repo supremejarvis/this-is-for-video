@@ -62,15 +62,17 @@ export const BuyerCatalog: React.FC = () => {
       const cat = (selectedCategory || 'ALL').toUpperCase();
       const isSprinkler = p.name.toLowerCase().includes('sprinkler');
       const isClamp = p.name.toLowerCase().includes('clamp') || p.name.toLowerCase().includes('drain');
+      const prodCat = ((p as any).category || '').toUpperCase();
 
       const matchesCategory = 
         cat === 'ALL' ||
-        (cat === 'SS304 GRADE' && (isSprinkler || isClamp)) ||
-        (cat === 'GI SERIES' && !isSprinkler && !isClamp) ||
-        (cat === 'FITTING SERIES' && !isSprinkler && !isClamp) ||
-        (cat === 'COMPLETE KIT' && (isSprinkler || isClamp)) ||
-        (cat === 'POWER SERIES' && isSprinkler) ||
-        (cat === 'CONTROL SERIES' && isSprinkler);
+        (prodCat && prodCat.includes(cat)) ||
+        (cat === 'SS304 GRADE' && (isSprinkler || isClamp || prodCat.includes('SS304'))) ||
+        (cat === 'GI SERIES' && (prodCat.includes('GI') || (!isSprinkler && !isClamp))) ||
+        (cat === 'FITTING SERIES' && (prodCat.includes('FITTING') || (!isSprinkler && !isClamp))) ||
+        (cat === 'COMPLETE KIT' && (prodCat.includes('KIT') || isSprinkler || isClamp)) ||
+        (cat === 'POWER SERIES' && (prodCat.includes('POWER') || isSprinkler)) ||
+        (cat === 'CONTROL SERIES' && (prodCat.includes('CONTROL') || isSprinkler));
 
       return matchesSearch && matchesCategory;
     });
@@ -98,7 +100,8 @@ export const BuyerCatalog: React.FC = () => {
 
   const handleAddToCart = (product: ApiProduct, variant: ApiProductVariant) => {
     const isSprinkler = product.name.toLowerCase().includes('sprinkler') || variant.sku.toLowerCase().includes('sprinkler');
-    const productImage = isSprinkler ? '/solar_sprinkler.webp' : '/Drain_clips.webp';
+    const isDrain = product.name.toLowerCase().includes('drain') || product.name.toLowerCase().includes('clamp');
+    const productImage = (product as any).image || (isSprinkler ? '/solar_sprinkler.webp' : (isDrain ? '/Drain_clips.webp' : '/logo.webp'));
     const unitPrice = typeof variant.unit_price === 'number' && variant.unit_price > 0 
       ? variant.unit_price 
       : (isSprinkler ? 220 : 20);
@@ -108,6 +111,7 @@ export const BuyerCatalog: React.FC = () => {
       productId: product.id,
       variantId: variant.id || variant.sku,
       parentAsin: product.id,
+      asin: product.id,
       productTitle: product.name,
       variantTitle: variant.display_label || (isSprinkler ? 'SS304 Solar Sprinkler' : `${variant.frame_thickness_mm || ''} mm SS304 Solar Clamp`),
       attributes: {

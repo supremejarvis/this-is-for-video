@@ -116,7 +116,7 @@ export const AddressModal: React.FC = () => {
                   }}
                   className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-colors flex items-center gap-1"
                 >
-                  + Add New Address & Post Office
+                  + Add New Address & Delivery Hub
                 </button>
               </div>
 
@@ -161,7 +161,7 @@ export const AddressModal: React.FC = () => {
 
                         <p className="text-xs text-slate-300">{addr.flatBuilding}, {addr.streetArea}</p>
 
-                        {/* Locked Sub Post Office Tag */}
+                        {/* Locked Delivery Hub Tag */}
                         <div className="mt-2.5 pt-2 border-t border-slate-700/60 flex items-center justify-between text-[11px]">
                           <span className="text-amber-400 font-mono font-medium flex items-center gap-1">
                             📮 {addr.postOffice.name}
@@ -248,7 +248,7 @@ export const AddressModal: React.FC = () => {
             /* New Address Form with India Post Sub Post Office Resolver */
             <form onSubmit={handleSaveAddress} className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <span className="text-xs font-bold text-white uppercase tracking-wide">Enter Address & Bind Post Office</span>
+                <span className="text-xs font-bold text-white uppercase tracking-wide">Enter Address & Bind Delivery Hub</span>
                 <button
                   type="button"
                   onClick={() => setIsCreatingNew(false)}
@@ -336,7 +336,7 @@ export const AddressModal: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-amber-400 font-bold text-xs">
                     <Sparkles className="w-4 h-4" />
-                    APE Delivery Postal Hub Binding (Mandatory)
+                    APE Delivery Hub Binding (Mandatory)
                   </div>
                   <span className="text-[11px] text-slate-400 font-mono">
                     Origin: <strong className="text-white">{ORIGIN_HUB_PINCODE}</strong>
@@ -359,7 +359,7 @@ export const AddressModal: React.FC = () => {
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      Select Delivery Sub Post Office ({availablePostOffices.length} Found) *
+                      Select Delivery Hub ({availablePostOffices.length} Found) *
                     </label>
                     <select
                       value={selectedPostOffice?.facilityId || ''}
@@ -429,7 +429,7 @@ export const AddressModal: React.FC = () => {
                   disabled={!selectedPostOffice}
                   className="px-5 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20"
                 >
-                  Save & Bind Post Office
+                  Save & Bind Delivery Hub
                 </button>
               </div>
             </form>

@@ -63,8 +63,8 @@ describe('CartDrawer Checkout Flow & Invariant Tests', () => {
         prepaid_total: '110.80',
         cod_surcharge: '2.77',
         cod_raw_total: '113.57',
-        cod_total: '114.00',
-        rounding_multiple: 1,
+        cod_total: '115.00',
+        rounding_multiple: 5,
         expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
         created_at: new Date().toISOString(),
       }
@@ -106,8 +106,8 @@ describe('CartDrawer Checkout Flow & Invariant Tests', () => {
         prepaid_total: '110.80',
         cod_surcharge: '2.77',
         cod_raw_total: '113.57',
-        cod_total: '114.00',
-        rounding_multiple: 1,
+        cod_total: '115.00',
+        rounding_multiple: 5,
         expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
         created_at: new Date().toISOString(),
       }

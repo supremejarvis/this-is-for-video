@@ -209,7 +209,7 @@ export interface Product {
   videoUrl?: string;
   sellerListings: Record<string, SellerListing[]>;
   aPlusContent: APlusModule[];
-  badges: ('BEST_SELLER' | 'APE_CHOICE' | 'PRIME' | 'B2B_BULK' | 'DEAL_OF_DAY' | 'FLIPKART_ASSURE')[];
+  badges: ('BEST_SELLER' | 'APE_CHOICE' | 'PRIME' | 'B2B_BULK' | 'DEAL_OF_DAY' | 'ENTERPRISE_ASSURED' | 'FLIPKART_ASSURE')[];
   isLive: boolean;
   createdAt?: string;
   lastUpdated?: string;
@@ -734,3 +734,71 @@ export interface ReturnRequest {
   updatedAt: string;
   adminNotes?: string;
 }
+
+// ─────────────────────────────────────────────────────────────
+// ADMIN ROLES & AUDIT LOGGING (ENTERPRISE RBAC)
+// ─────────────────────────────────────────────────────────────
+
+export type AdminRole = 'SUPER_ADMIN' | 'WAREHOUSE_DISPATCH' | 'ACCOUNTANT';
+
+export type AuditActionType = 
+  | 'STOCK_UPDATE' 
+  | 'PRICE_UPDATE' 
+  | 'MOQ_UPDATE' 
+  | 'ORDER_DISPATCH' 
+  | 'COUPON_CREATED' 
+  | 'GSTIN_VERIFIED'
+  | 'STATUS_CHANGE';
+
+export interface AdminAuditLog {
+  id: string;
+  timestamp: string;
+  userEmail: string;
+  actionType: AuditActionType;
+  entityId: string;
+  entityTitle: string;
+  oldValue: string | number;
+  newValue: string | number;
+  notes?: string;
+}
+
+export interface PaymentReconciliationRecord {
+  id: string;
+  date: string;
+  orderNumber: string;
+  customerName: string;
+  method: 'RAZORPAY_PREPAID' | 'COD' | 'DIRECT_UPI_NEFT';
+  grossAmount: number;
+  gatewayFee: number;
+  gatewayGst: number;
+  netSettlement: number;
+  status: 'SETTLED' | 'PENDING_SETTLEMENT' | 'IN_TRANSIT' | 'RECONCILED';
+  settlementDate?: string;
+  referenceId: string;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SOLAR CONTRACTOR INQUIRIES & CALL LOG
+// ─────────────────────────────────────────────────────────────
+
+export type InquiryStatus = 'NEW' | 'FOLLOW_UP' | 'QUOTATION_SENT' | 'CONVERTED' | 'CLOSED';
+
+export interface SolarContractorInquiry {
+  id: string;
+  contractorName: string;
+  firmName: string;
+  phone: string;
+  city: string;
+  state: string;
+  pincode: string;
+  panelBrand: string; // e.g. 'Adani Solar 550W Bifacial', 'Waaree 540W Mono PERC'
+  recommendedFrameThickness: '30mm' | '35mm' | '40mm';
+  productOfInterest: string; // e.g. 'SS304 Water Drain Clips', 'Solar Mid Clamps'
+  estimatedQty: number;
+  status: InquiryStatus;
+  notes: string;
+  nextFollowUpDate: string;
+  createdAt: string;
+  lastContactedAt: string;
+}
+

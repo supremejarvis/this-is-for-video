@@ -84,7 +84,7 @@ export const CustomerAccountModal: React.FC = () => {
     });
 
     setIsEditingShipping(false);
-    showToast('Shipping address updated with verified India Post Sub Post Office', 'success');
+    showToast('Shipping address updated with verified Delivery Facility Hub', 'success');
   };
 
   return (
@@ -224,7 +224,7 @@ export const CustomerAccountModal: React.FC = () => {
                           <div className="text-slate-300">{activeAddress.flatBuilding}, {activeAddress.streetArea}</div>
                           <div className="text-amber-400 font-bold flex items-center gap-1">
                             <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                            {activeAddress.postOffice?.name || 'Speed Post Hub'} ({activeAddress.pincode})
+                            {activeAddress.postOffice?.name || 'Delivery Hub'} ({activeAddress.pincode})
                           </div>
                           <div className="text-slate-400 text-[11px]">
                             {activeAddress.city}, {activeAddress.state} (State Code: {activeAddress.stateCode || '24'})
@@ -278,7 +278,7 @@ export const CustomerAccountModal: React.FC = () => {
                             />
                           </div>
                           <div>
-                            <label className="block text-slate-300 font-semibold mb-0.5">Near Post Office *</label>
+                            <label className="block text-slate-300 font-semibold mb-0.5">Delivery Facility Hub *</label>
                             <select
                               value={selectedPostOffice?.facilityId || ''}
                               onChange={(e) => {

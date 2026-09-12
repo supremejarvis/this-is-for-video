@@ -6,6 +6,7 @@ from app.core.security import (
     verify_csrf_token,
     verify_password,
     verify_token_hash,
+    verify_totp_code,
 )
 
 
@@ -68,3 +69,35 @@ def test_csrf_token_verification():
 
     assert verify_csrf_token(raw_csrf, stored_hash) is True
     assert verify_csrf_token("invalid_csrf_token", stored_hash) is False
+
+
+def test_rfc_6238_totp_verification():
+    """Security Invariant: TOTP codes must be validated strictly against RFC 6238."""
+    import base64
+    import hashlib
+    import hmac
+    import struct
+    import time
+
+    secret = "JBSWY3DPEHPK3PXP"  # Standard test secret
+
+    # Generate current TOTP code for testing
+    clean_secret = secret.strip().upper()
+    padding = (8 - len(clean_secret) % 8) % 8
+    key = base64.b32decode(clean_secret + "=" * padding)
+    current_t = int(time.time() // 30)
+    msg = struct.pack(">Q", current_t)
+    h = hmac.new(key, msg, hashlib.sha1).digest()
+    offset = h[-1] & 0x0F
+    binary = struct.unpack(">I", h[offset:offset+4])[0] & 0x7FFFFFFF
+    valid_code = str(binary % 1000000).zfill(6)
+
+    # 1. Valid code must pass
+    assert verify_totp_code(secret, valid_code) is True
+
+    # 2. Invalid codes must fail
+    assert verify_totp_code(secret, "000000" if valid_code != "000000" else "111111") is False
+    assert verify_totp_code(secret, "12345") is False  # Length != 6
+    assert verify_totp_code(secret, "abcdef") is False  # Non-digit
+    assert verify_totp_code("", valid_code) is False    # Missing secret
+

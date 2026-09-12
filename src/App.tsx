@@ -197,7 +197,7 @@ export const App: React.FC = () => {
               } />
               <Route path="/orders" element={
                 <>
-                  <SEOHead title="Track Orders" description="Track your Apollo Engineering orders with real-time India Post Speed Post tracking." path="/orders" />
+                  <SEOHead title="Track Orders" description="Track your Apollo Engineering orders with real-time Priority Express tracking." path="/orders" />
                   <LiveOrderTracker />
                 </>
               } />

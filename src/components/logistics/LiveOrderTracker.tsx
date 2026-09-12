@@ -260,10 +260,10 @@ export const LiveOrderTracker: React.FC = () => {
               <strong className="text-slate-900 text-sm block">{activeOrder.deliveryAddress.fullName}</strong>
               <p>{activeOrder.deliveryAddress.flatBuilding}, {activeOrder.deliveryAddress.streetArea}</p>
               
-              {/* Bound Postal Hub */}
+              {/* Bound Dispatch Hub */}
               <div className="bg-blue-50/70 p-3 rounded-xl border border-blue-200 space-y-1 my-2">
                 <span className="text-[10px] text-[#0054A6] font-bold block uppercase tracking-wider">
-                  Bound Delivery Postal Hub / Office:
+                  Bound Delivery Dispatch Hub:
                 </span>
                 <div className="font-bold text-slate-900 font-mono text-xs">{activeOrder.deliveryAddress.postOffice.name}</div>
                 <div className="text-slate-600">

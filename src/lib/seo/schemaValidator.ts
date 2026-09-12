@@ -92,7 +92,7 @@ export class SeoSchemaValidator {
         errors.push('Availability must be a valid Schema.org URI (e.g. InStock)');
       }
       if (!schema.offers.shippingDetails) {
-        errors.push('Shipping details must be specified for Indian Speed Post dispatch');
+        errors.push('Shipping details must be specified for Priority Express dispatch');
       }
       if (!schema.offers.hasMerchantReturnPolicy) {
         errors.push('Merchant return and replacement policy is mandatory for sizing compliance');

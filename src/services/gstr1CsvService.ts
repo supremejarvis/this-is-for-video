@@ -9,7 +9,7 @@
  */
 
 import { Order } from '../types';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 export interface Gstr1Table4Row {
   gstin: string;
@@ -1690,8 +1690,8 @@ export function getEcoSheetData(orders: Order[]): any[][] {
     ],
     [
       '24AACA0000A1Z0',
-      'Amazon Seller Services Pvt Ltd',
-      'AMZN-APOLLO-MFG',
+      'Priority Express Marketplace Logistics',
+      'EXP-APOLLO-MFG',
       15800.00,
       13389.83,
       1205.08,
@@ -1701,8 +1701,8 @@ export function getEcoSheetData(orders: Order[]): any[][] {
     ],
     [
       '24AACCF0000A1Z1',
-      'Flipkart Internet Pvt Ltd',
-      'FK-APOLLO-DIRECT',
+      'National Enterprise B2B Network',
+      'NET-APOLLO-DIRECT',
       9200.00,
       7796.61,
       701.69,
@@ -1754,7 +1754,7 @@ export function getAllOrdersSheetData(orders: Order[]): any[][] {
       'Payment Transaction ID',
       'Payment Status',
       'Fulfillment / Delivery Status',
-      'Speed Post Article Number',
+      'Priority Express Article AWB',
       'Origin Hub (Kathwada 382430)'
     ]
   ];
@@ -2009,7 +2009,7 @@ export function getAllDetailsSheetData(orders: Order[]): any[][] {
 }
 
 /**
- * 15. Sheet "shipping_logistics": Speed Post Logistics Register (Kathwada Origin Hub 382430)
+ * 15. Sheet "shipping_logistics": Priority Express Logistics Register (Kathwada Origin Hub 382430)
  */
 export function getShippingLogisticsSheetData(orders: Order[]): any[][] {
   const shippingAoa: any[][] = [
@@ -2017,7 +2017,7 @@ export function getShippingLogisticsSheetData(orders: Order[]): any[][] {
       'Package ID',
       'Order ID',
       'Invoice Number',
-      'Speed Post Article Number',
+      'Priority Express Article AWB',
       'Barcode 128',
       'Origin Pincode',
       'Origin Hub Name',
@@ -2058,7 +2058,7 @@ export function getShippingLogisticsSheetData(orders: Order[]): any[][] {
         `EK3824300${10 + idx}IN`,
         `EK3824300${10 + idx}IN`,
         '382430',
-        'Kathwada GIDC Speed Post Hub',
+        'Kathwada GIDC Express Logistics Hub',
         destPincode,
         destPo,
         destCity,
@@ -2072,7 +2072,7 @@ export function getShippingLogisticsSheetData(orders: Order[]): any[][] {
         59.00,
         'MNF-PENDING',
         bookingDate,
-        'India Post Speed Post',
+        'Priority Express Delivery',
         'CONFIRMED'
       ]);
     } else {
@@ -2085,7 +2085,7 @@ export function getShippingLogisticsSheetData(orders: Order[]): any[][] {
           sd?.articleNumber || `EK3824300${10 + idx}IN`,
           sd?.barcode128 || sd?.articleNumber || `EK3824300${10 + idx}IN`,
           sd?.originPincode || '382430',
-          sd?.originHubName || 'Kathwada GIDC Speed Post Hub',
+          sd?.originHubName || 'Kathwada GIDC Express Logistics Hub',
           sd?.destinationPincode || destPincode,
           sd?.destinationPostOffice || destPo,
           destCity,
@@ -2099,7 +2099,7 @@ export function getShippingLogisticsSheetData(orders: Order[]): any[][] {
           sd?.totalPostage || 59.00,
           sd?.manifestId || 'MNF-PENDING',
           sd?.bookingTimestamp ? sd.bookingTimestamp.slice(0, 10) : bookingDate,
-          sd?.carrier || 'India Post Speed Post',
+          sd?.carrier || 'Priority Express Delivery',
           s.status || 'CONFIRMED'
         ]);
       });
@@ -2192,7 +2192,7 @@ export function getTaxSummarySheetData(orders: Order[], fromDate?: string, toDat
     ['STATUTORY COMPLIANCE AUDIT CHECKS', 'VERIFICATION STATUS', 'VARIANCE (INR)'],
     ['1. Taxable Base + Total GST === Gross Outward Value', 'PASSED (100% RECONCILED)', 0.00],
     ['2. Intra-State Central Tax (9%) === State Tax (9%)', 'PASSED (EQUAL STATUTORY SPLIT)', 0.00],
-    ['3. India Post Speed Post Freight 18% GST Compliance', 'PASSED (ORIGIN HUB 382430 VERIFIED)', 0.00]
+    ['3. Priority Express Freight 18% GST Compliance', 'PASSED (ORIGIN HUB 382430 VERIFIED)', 0.00]
   ];
 }
 
@@ -2207,7 +2207,7 @@ export function getTaxSummarySheetData(orders: Order[], fromDate?: string, toDat
  * 7. Sheet "doc_issue": Table 13 - (alias for compatibility)
  * 8. Sheet "all_orders": Full Master Order Ledger
  * 9. Sheet "all_details": Deep Line-item level audit log
- * 10. Sheet "shipping_logistics": Speed Post dispatch register
+ * 10. Sheet "shipping_logistics": Priority Express dispatch register
  * 11. Sheet "tax_summary": Executive Tax & Revenue Reconciliation
  * 12. Sheet "cdnr": Table 9B - Credit/Debit notes registered
  * 13. Sheet "cdnur": Table 9B - Credit/Debit notes unregistered
@@ -2217,139 +2217,118 @@ export function getTaxSummarySheetData(orders: Order[], fromDate?: string, toDat
  * 17. Sheet "exemp": Table 8 - Nil rated & exempted supplies
  * 18. Sheet "eco": Table 14/15 - E-Commerce operator supplies
  */
-export function generateGstr1MultiSheetExcel(
+export async function generateGstr1MultiSheetExcel(
   orders: Order[],
   fromDate?: string,
   toDate?: string
-): Uint8Array {
-  const wb = XLSX.utils.book_new();
+): Promise<Uint8Array> {
+  const wb = new ExcelJS.Workbook();
+  const sheets: { name: string; data: (string | number)[][] }[] = [
+    { name: 'b2b', data: getB2bSheetData(orders) },
+    { name: 'b2c', data: getB2cSheetData(orders) },
+    { name: 'b2cs', data: getB2csSheetData(orders) },
+    { name: 'b2cl', data: getB2clSheetData(orders) },
+    { name: 'hsn', data: getHsnSheetData(orders) },
+    { name: 'docs', data: getDocsSheetData(orders) },
+    { name: 'doc_issue', data: getDocIssueSheetData(orders) },
+    { name: 'all_orders', data: getAllOrdersSheetData(orders) },
+    { name: 'all_details', data: getAllDetailsSheetData(orders) },
+    { name: 'shipping_logistics', data: getShippingLogisticsSheetData(orders) },
+    { name: 'tax_summary', data: getTaxSummarySheetData(orders, fromDate, toDate) },
+    { name: 'cdnr', data: getCdnrSheetData(orders) },
+    { name: 'cdnur', data: getCdnurSheetData(orders) },
+    { name: 'exp', data: getExpSheetData(orders) },
+    { name: 'at', data: getAtSheetData(orders) },
+    { name: 'atadj', data: getAtadjSheetData(orders) },
+    { name: 'exemp', data: getExempSheetData(orders) },
+    { name: 'eco', data: getEcoSheetData(orders) },
+  ];
 
-  // 1. Statutory Return Sheets
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getB2bSheetData(orders)), 'b2b');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getB2cSheetData(orders)), 'b2c');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getB2csSheetData(orders)), 'b2cs');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getB2clSheetData(orders)), 'b2cl');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getHsnSheetData(orders)), 'hsn');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getDocsSheetData(orders)), 'docs');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getDocIssueSheetData(orders)), 'doc_issue');
+  for (const s of sheets) {
+    const ws = wb.addWorksheet(s.name);
+    ws.addRows(s.data);
+  }
 
-  // 2. Comprehensive Operational & Audit Sheets (Full Data)
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getAllOrdersSheetData(orders)), 'all_orders');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getAllDetailsSheetData(orders)), 'all_details');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getShippingLogisticsSheetData(orders)), 'shipping_logistics');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getTaxSummarySheetData(orders, fromDate, toDate)), 'tax_summary');
+  const buffer = await wb.xlsx.writeBuffer();
+  return new Uint8Array(buffer);
+}
 
-  // 3. Complete Statutory Extension Sheets
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getCdnrSheetData(orders)), 'cdnr');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getCdnurSheetData(orders)), 'cdnur');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getExpSheetData(orders)), 'exp');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getAtSheetData(orders)), 'at');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getAtadjSheetData(orders)), 'atadj');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getExempSheetData(orders)), 'exemp');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getEcoSheetData(orders)), 'eco');
-
-  const output = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  return new Uint8Array(output);
+async function generateSingleSheetExcel(sheetName: string, data: (string | number)[][]): Promise<Uint8Array> {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(sheetName);
+  ws.addRows(data);
+  const buffer = await wb.xlsx.writeBuffer();
+  return new Uint8Array(buffer);
 }
 
 /**
  * Standalone: Table 4 B2B Invoices Excel (.xlsx) [Sheet: "b2b"]
  */
-export function generateB2bExcel(orders: Order[]): Uint8Array {
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getB2bSheetData(orders)), 'b2b');
-  const output = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  return new Uint8Array(output);
+export function generateB2bExcel(orders: Order[]): Promise<Uint8Array> {
+  return generateSingleSheetExcel('b2b', getB2bSheetData(orders));
 }
 
 /**
  * Standalone: Table 7 B2C Supplies Excel (.xlsx) [Sheet: "b2c"]
  */
-export function generateB2cExcel(orders: Order[]): Uint8Array {
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getB2cSheetData(orders)), 'b2c');
-  const output = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  return new Uint8Array(output);
+export function generateB2cExcel(orders: Order[]): Promise<Uint8Array> {
+  return generateSingleSheetExcel('b2c', getB2cSheetData(orders));
 }
 
 /**
  * Standalone: Table 7 B2CS Small Supplies Excel (.xlsx) [Sheet: "b2cs"]
  */
-export function generateB2csExcel(orders: Order[]): Uint8Array {
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getB2csSheetData(orders)), 'b2cs');
-  const output = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  return new Uint8Array(output);
+export function generateB2csExcel(orders: Order[]): Promise<Uint8Array> {
+  return generateSingleSheetExcel('b2cs', getB2csSheetData(orders));
 }
 
 /**
  * Standalone: Table 5 B2CL Large Supplies Excel (.xlsx) [Sheet: "b2cl"]
  */
-export function generateB2clExcel(orders: Order[]): Uint8Array {
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getB2clSheetData(orders)), 'b2cl');
-  const output = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  return new Uint8Array(output);
+export function generateB2clExcel(orders: Order[]): Promise<Uint8Array> {
+  return generateSingleSheetExcel('b2cl', getB2clSheetData(orders));
 }
 
 /**
  * Standalone: Table 12 HSN Summary Excel (.xlsx) [Sheet: "hsn"]
  */
-export function generateHsn12Excel(orders: Order[]): Uint8Array {
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getHsnSheetData(orders)), 'hsn');
-  const output = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  return new Uint8Array(output);
+export function generateHsn12Excel(orders: Order[]): Promise<Uint8Array> {
+  return generateSingleSheetExcel('hsn', getHsnSheetData(orders));
 }
 
 /**
  * Standalone: Table 13 Documents Issued Excel (.xlsx) [Sheet: "docs"]
  */
-export function generateDocIssueExcel(orders: Order[]): Uint8Array {
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getDocsSheetData(orders)), 'docs');
-  const output = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  return new Uint8Array(output);
+export function generateDocIssueExcel(orders: Order[]): Promise<Uint8Array> {
+  return generateSingleSheetExcel('docs', getDocsSheetData(orders));
 }
 
 /**
  * Standalone: All Orders Master Ledger Excel (.xlsx) [Sheet: "all_orders"]
  */
-export function generateAllOrdersExcel(orders: Order[]): Uint8Array {
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getAllOrdersSheetData(orders)), 'all_orders');
-  const output = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  return new Uint8Array(output);
+export function generateAllOrdersExcel(orders: Order[]): Promise<Uint8Array> {
+  return generateSingleSheetExcel('all_orders', getAllOrdersSheetData(orders));
 }
 
 /**
  * Standalone: Deep Line-Item Audit Log Excel (.xlsx) [Sheet: "all_details"]
  */
-export function generateAllDetailsExcel(orders: Order[], fromDate?: string, toDate?: string): Uint8Array {
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getAllDetailsSheetData(orders)), 'all_details');
-  const output = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  return new Uint8Array(output);
+export function generateAllDetailsExcel(orders: Order[], fromDate?: string, toDate?: string): Promise<Uint8Array> {
+  return generateSingleSheetExcel('all_details', getAllDetailsSheetData(orders));
 }
 
 /**
- * Standalone: Speed Post Shipping Logistics Register Excel (.xlsx) [Sheet: "shipping_logistics"]
+ * Standalone: Priority Express Shipping Logistics Register Excel (.xlsx) [Sheet: "shipping_logistics"]
  */
-export function generateShippingLogisticsExcel(orders: Order[]): Uint8Array {
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getShippingLogisticsSheetData(orders)), 'shipping_logistics');
-  const output = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  return new Uint8Array(output);
+export function generateShippingLogisticsExcel(orders: Order[]): Promise<Uint8Array> {
+  return generateSingleSheetExcel('shipping_logistics', getShippingLogisticsSheetData(orders));
 }
 
 /**
  * Standalone: Statutory Tax Reconciliation Summary Excel (.xlsx) [Sheet: "tax_summary"]
  */
-export function generateTaxSummaryExcel(orders: Order[], fromDate?: string, toDate?: string): Uint8Array {
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getTaxSummarySheetData(orders, fromDate, toDate)), 'tax_summary');
-  const output = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  return new Uint8Array(output);
+export function generateTaxSummaryExcel(orders: Order[], fromDate?: string, toDate?: string): Promise<Uint8Array> {
+  return generateSingleSheetExcel('tax_summary', getTaxSummarySheetData(orders, fromDate, toDate));
 }
 
 

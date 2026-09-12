@@ -7,14 +7,18 @@ from decimal import Decimal
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.database import Base, get_db
 from app.main import app
+from app.models import InventoryItem, InventoryReservation, User, UserRole, WebhookEvent
 from app.schemas.pricing import PriceVersionCreate, TaxMode
 from app.schemas.product import ProductCreate, ProductVariantCreate
+from app.services.auth_service import AuthService
 from app.services.catalog_service import CatalogService
 from app.services.pricing_service import PricingService
 
@@ -341,4 +345,137 @@ async def test_guest_session_order_creation_persists(client: AsyncClient, seeded
     assert order["order_status"] == "CONFIRMED"
     assert order["payment_status"] == "PENDING"
     assert float(order["total_payable"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_order_status_state_machine_transitions(client: AsyncClient, db_session: AsyncSession, seeded_catalog: dict):
+    """Verify OrderStateMachine rejects invalid transitions with 422 and RBAC protects status endpoint."""
+    sku = seeded_catalog["sku"]
+    order_res = await client.post(
+        "/api/v1/orders",
+        json={"items": [{"sku": sku, "quantity": 1}], "destination_pincode": "382430"},
+    )
+    assert order_res.status_code == 201
+    order_id = order_res.json()["id"]
+
+    # 1. Unauthenticated PATCH must be rejected with 401
+    unauth_patch = await client.patch(
+        f"/api/v1/orders/{order_id}/status",
+        json={"order_status": "COMPLETED"},
+    )
+    assert unauth_patch.status_code == 401
+
+    # Override current user as OWNER
+    mock_owner = User(
+        id=uuid.uuid4(),
+        email="owner@apolloengineering.co.in",
+        full_name="Apollo Admin",
+        role=UserRole.OWNER,
+        password_hash="fakehash",
+    )
+    app.dependency_overrides[get_current_user] = lambda: mock_owner
+
+    # 2. Invalid status enum value must return 422
+    bad_enum = await client.patch(
+        f"/api/v1/orders/{order_id}/status",
+        json={"order_status": "NOT_A_VALID_STATUS"},
+    )
+    assert bad_enum.status_code == 422
+
+    # 3. Disallowed transition (CONFIRMED -> DRAFT) must return 422
+    invalid_trans = await client.patch(
+        f"/api/v1/orders/{order_id}/status",
+        json={"order_status": "DRAFT"},
+    )
+    assert invalid_trans.status_code == 422
+    assert "Invalid order_status transition" in invalid_trans.json()["detail"]
+
+    # 4. Allowed transition (CONFIRMED -> COMPLETED) must return 200
+    valid_trans = await client.patch(
+        f"/api/v1/orders/{order_id}/status",
+        json={"order_status": "COMPLETED"},
+    )
+    assert valid_trans.status_code == 200
+    assert valid_trans.json()["order_status"] == "COMPLETED"
+
+
+@pytest.mark.asyncio
+async def test_webhook_event_persisted_in_database(client: AsyncClient, db_session: AsyncSession, seeded_catalog: dict):
+    """Verify webhook events are recorded in WebhookEvent PostgreSQL table and idempotency is DB-backed."""
+    sku = seeded_catalog["sku"]
+    order_res = await client.post(
+        "/api/v1/orders",
+        json={"items": [{"sku": sku, "quantity": 1}], "destination_pincode": "382430"},
+    )
+    order_id = order_res.json()["id"]
+    evt_id = f"evt_db_test_{uuid.uuid4().hex[:8]}"
+
+    event_payload = {
+        "id": evt_id,
+        "event": "payment.captured",
+        "payload": {
+            "payment": {
+                "entity": {
+                    "id": f"pay_{uuid.uuid4().hex[:8]}",
+                    "notes": {"order_id": order_id},
+                }
+            }
+        },
+    }
+    raw_body = json.dumps(event_payload).encode("utf-8")
+    sig = hmac.new(settings.RAZORPAY_KEY_SECRET.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+
+    # Dispatch webhook
+    res1 = await client.post(
+        "/api/v1/payments/razorpay/webhook",
+        content=raw_body,
+        headers={"Content-Type": "application/json", "X-Razorpay-Signature": sig},
+    )
+    assert res1.status_code == 200
+    assert res1.json()["status"] == "processed"
+
+    # Query WebhookEvent table directly to verify persistence
+    stmt = select(WebhookEvent).where(WebhookEvent.event_id == evt_id)
+    wh_event = (await db_session.execute(stmt)).scalar_one_or_none()
+    assert wh_event is not None
+    assert wh_event.event_id == evt_id
+    assert wh_event.provider == "razorpay"
+
+    # Duplicate call must be ignored authoritatively
+    res2 = await client.post(
+        "/api/v1/payments/razorpay/webhook",
+        content=raw_body,
+        headers={"Content-Type": "application/json", "X-Razorpay-Signature": sig},
+    )
+    assert res2.status_code == 200
+    assert res2.json()["status"] == "ignored"
+    assert res2.json()["reason"] == "already_processed"
+
+
+@pytest.mark.asyncio
+async def test_inventory_reservation_on_order_creation(client: AsyncClient, db_session: AsyncSession, seeded_catalog: dict):
+    """Verify that creating an order creates an InventoryReservation and increments quantity_reserved."""
+    sku = seeded_catalog["sku"]
+    # Check initial inventory
+    stmt_item = select(InventoryItem).where(InventoryItem.sku == sku)
+    item_before = (await db_session.execute(stmt_item)).scalar_one()
+    initial_reserved = item_before.quantity_reserved
+
+    res = await client.post(
+        "/api/v1/orders",
+        json={"items": [{"sku": sku, "quantity": 7}], "destination_pincode": "382430"},
+    )
+    assert res.status_code == 201
+    order_id = uuid.UUID(res.json()["id"])
+
+    # Query reservations
+    stmt_res = select(InventoryReservation).where(InventoryReservation.order_id == order_id)
+    reservation = (await db_session.execute(stmt_res)).scalar_one_or_none()
+    assert reservation is not None
+    assert reservation.quantity == 7
+    assert reservation.sku == sku
+
+    # Verify inventory item quantity_reserved was incremented
+    await db_session.refresh(item_before)
+    assert item_before.quantity_reserved == initial_reserved + 7
 

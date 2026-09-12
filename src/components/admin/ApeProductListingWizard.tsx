@@ -52,7 +52,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
   const [selectedCatalogAsins, setSelectedCatalogAsins] = useState<string[]>([]);
   const [catalogSearchTerm, setCatalogSearchTerm] = useState('');
 
-  // Manual 5-Item Custom Builder state (જાતે 5 આઈટમ્સ લખીને ઉમેરવા)
+  // Manual 5-Item Custom Builder state (Add 5 items manually)
   const [isManualBuilderOpen, setIsManualBuilderOpen] = useState(false);
   const [manualEntryMode, setManualEntryMode] = useState<'TABLE' | 'QUICK'>('TABLE');
   const [manualItems, setManualItems] = useState<{
@@ -116,13 +116,13 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
   );
   const [includeAPlusComparison, setIncludeAPlusComparison] = useState(true);
 
-  // Amazon Seller Central Vital Info Identifiers
+  // Industrial Catalog Vital Info Identifiers
   const [productIdType, setProductIdType] = useState<'ASIN' | 'UPC' | 'EAN' | 'GTIN_EXEMPTION'>('ASIN');
   const [productIdValue, setProductIdValue] = useState(initialProduct?.asin || 'B0H3ZJ1J5L');
   const [hasGtinExemption, setHasGtinExemption] = useState(false);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // TAB 2: MEDIA UPLOADS & AMAZON 6-IMAGE GALLERY COMPLIANCE
+  // TAB 2: MEDIA UPLOADS & 6-IMAGE GALLERY SPECIFICATION
   // ─────────────────────────────────────────────────────────────────────────
   const [image1, setImage1] = useState<string>(
     initialProduct?.variants[0]?.images[0] || '/Drain_clips.webp'
@@ -167,7 +167,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
   };
 
   // ─────────────────────────────────────────────────────────────────────────
-  // TAB 3: VARIATIONS MATRIX (APE STORE ASIN + FLIPKART FSN DUAL MATRIX)
+  // TAB 3: VARIATIONS MATRIX (APE STORE ASIN + ENTERPRISE FSN DUAL MATRIX)
   // ─────────────────────────────────────────────────────────────────────────
   const [selectedVariationThemes, setSelectedVariationThemes] = useState<{
     size: boolean;
@@ -380,7 +380,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
     });
   };
 
-  // Amazon-Style Catalog Item Merger: Combine selected catalog products as variations in this listing
+  // Catalog Item Merger: Combine selected catalog products as variations in this listing
   const handleCombineSelectedCatalogItems = () => {
     if (selectedCatalogAsins.length === 0) {
       showToast('Please select at least 1 product from catalog to combine.', 'error');
@@ -438,7 +438,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
   };
 
   // ─────────────────────────────────────────────────────────────────────────
-  // ✍️ MANUAL 5-ITEM CUSTOM BUILDER HANDLERS (જાતે 5 આઈટમ્સ લખીને ઉમેરવા)
+  // ✍️ MANUAL 5-ITEM CUSTOM BUILDER HANDLERS (Add 5 items manually)
   // ─────────────────────────────────────────────────────────────────────────
   const handleUpdateManualItem = (index: number, field: string, value: any) => {
     setManualItems(prev => {
@@ -567,7 +567,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
     showToast(`Added manual blank row #${nextNum}! Type directly in the matrix table.`, 'success');
   };
 
-  const handleGenerateAmazonTitle = () => {
+  const handleGenerateIndustrialTitle = () => {
     const brandStr = brand || 'Apollo Engineering';
     const materialStr = category.includes('SS304') ? 'AISI SS304 Stainless Steel' : 'Heavy Duty Industrial';
     const sizeStr = variantsList.length >= 5 
@@ -577,10 +577,10 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
       : `(${variantsList[0]?.attributes?.size || '35mm'} Frame)`;
     const generated = `${brandStr} ${materialStr} Solar Panel Water Drain Clips ${sizeStr} - Auto Capillary Siphon Sludge Cleaner - Pack of 50`;
     setTitle(generated.slice(0, 200));
-    showToast('Generated Amazon Seller Central standard title!', 'success');
+    showToast('Generated standard industrial title!', 'success');
   };
 
-  const handleFormatBulletsToAmazonStandard = () => {
+  const handleFormatBulletsToIndustrialStandard = () => {
     const formatted = highlights.map((hl) => {
       if (/^\[.+\]/.test(hl)) return hl;
       const clean = hl.replace(/^[•\-\*⚠️]\s*/, '').trim();
@@ -596,17 +596,17 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
       return `[${headline}] - ${body || clean}`;
     });
     setHighlights(formatted);
-    showToast('Formatted bullet points to Amazon [HEADLINE] standard!', 'success');
+    showToast('Formatted bullet points to [HEADLINE] standard!', 'success');
   };
 
-  const handleLoadSampleAmazonImages = () => {
+  const handleLoadSampleIndustrialImages = () => {
     setImage1('/Drain_clips.webp');
     setImage2('/solar_sprinkler.webp');
     setImage3('/gi_pipe_clamp.webp');
     setImage4('/Drain_clips.webp');
     setImage5('/solar_sprinkler.webp');
     setImage6('/gi_pipe_clamp.webp');
-    showToast('Loaded complete 6-image Amazon compliant gallery!', 'success');
+    showToast('Loaded complete 6-image compliant gallery!', 'success');
   };
 
   const handleLoadApolloDrainClipsPreset = () => {
@@ -863,7 +863,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
   // BULK CSV EXPORT & IMPORT (WITH GST & UNIT)
   // ─────────────────────────────────────────────────────────────────────────
   const handleExportCSV = () => {
-    const headers = ['Size', 'SKU', 'Unit', 'GST_Rate_Percent', 'APE_ASIN', 'Flipkart_FSN', 'MRP', 'B2C_Price', 'B2B_Price', 'Inventory', 'Low_Stock_Threshold', 'Weight_Grams', 'HSN'];
+    const headers = ['Size', 'SKU', 'Unit', 'GST_Rate_Percent', 'APE_ASIN', 'Enterprise_FSN', 'MRP', 'B2C_Price', 'B2B_Price', 'Inventory', 'Low_Stock_Threshold', 'Weight_Grams', 'HSN'];
     const rows = variantsList.map(v => [
       `"${v.attributes.size || ''}"`,
       `"${v.sku}"`,
@@ -1039,8 +1039,8 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
     if (image4 && image5 && image6) score += 5;
     if (videoUrl) score += 5;
 
-    const hasAmazonFormattedBullets = highlights.filter(h => /^\[.+\]/.test(h)).length >= 3;
-    if (highlights.length >= 4 && hasAmazonFormattedBullets) score += 15;
+    const hasIndustrialFormattedBullets = highlights.filter(h => /^\[.+\]/.test(h)).length >= 3;
+    if (highlights.length >= 4 && hasIndustrialFormattedBullets) score += 15;
     else if (highlights.length >= 4) score += 10;
     else if (highlights.length > 0) score += 5;
 
@@ -1161,7 +1161,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
       videoUrl: videoUrl,
       sellerListings: generatedSellerListings,
       aPlusContent: includeAPlusComparison ? aPlusModules : (initialProduct?.aPlusContent || []),
-      badges: ['PRIME', 'BEST_SELLER', 'FLIPKART_ASSURE'],
+      badges: ['PRIME', 'BEST_SELLER', 'ENTERPRISE_ASSURED'],
       isLive: true,
       createdAt: initialProduct?.createdAt || new Date().toISOString(),
       lastUpdated: new Date().toISOString()
@@ -1321,11 +1321,11 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                   </span>
                 </div>
 
-                {/* Amazon Standard Title Formula Helper Banner */}
+                {/* Industrial Standard Title Formula Helper Banner */}
                 <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 flex flex-wrap items-center justify-between gap-2 text-xs">
                   <div className="space-y-0.5">
                     <span className="font-bold text-[#0054A6] flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Amazon Title Formula Standard:
+                      <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Industrial Standard Title Formula:
                     </span>
                     <span className="text-[11px] text-slate-600 font-mono">
                       [Brand] + [Material/Specification] + [Product Type] + [Model/Size] + [Pack Size]
@@ -1333,10 +1333,10 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                   </div>
                   <button
                     type="button"
-                    onClick={handleGenerateAmazonTitle}
+                    onClick={handleGenerateIndustrialTitle}
                     className="px-3 py-1.5 rounded-lg bg-[#0054A6] hover:bg-[#003d7a] text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-300" /> ⚡ Auto-Generate Amazon Title
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" /> ⚡ Auto-Generate Industrial Title
                   </button>
                 </div>
 
@@ -1344,7 +1344,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="block text-xs text-slate-700 font-semibold">
-                      Product Title (Amazon Standard: 80 - 150 characters recommended) *
+                      Product Title (Standard: 80 - 150 characters recommended) *
                     </label>
                     <span className="text-[10px] font-mono text-slate-500">
                       Chars: <strong className={title.length > 150 ? 'text-amber-600' : 'text-emerald-700'}>{title.length}/200</strong>
@@ -1360,17 +1360,17 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                     className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-medium focus:outline-none focus:border-[#0054A6] focus:ring-1 focus:ring-[#0054A6]"
                   />
                   <div className="flex justify-between text-[10px] text-slate-500">
-                    <span>Amazon Seller Policy: Do not include promotional claims ("Free Delivery", "Lowest Price", "#1").</span>
+                    <span>Listing Guidelines: Do not include promotional claims ("Free Delivery", "Lowest Price", "#1").</span>
                     <span>Max 200 Characters</span>
                   </div>
                 </div>
 
-                {/* Amazon Product ID & GTIN Exemption Standard */}
+                {/* Product ID & GTIN Exemption Standard */}
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-slate-900 font-mono uppercase tracking-wider">
-                        Amazon Product Identifier (GTIN / ASIN / UPC / EAN)
+                        Universal Product Identifier (GTIN / ASIN / UPC / EAN)
                       </span>
                       <span className="px-2 py-0.5 rounded-full bg-blue-100 text-[#0054A6] text-[10px] font-mono font-bold">
                         Mandatory
@@ -1402,7 +1402,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                           onChange={(e) => setProductIdType(e.target.value as any)}
                           className="w-full h-10 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-xs focus:outline-none focus:border-[#0054A6]"
                         >
-                          <option value="ASIN">ASIN (Amazon Standard Identification Number)</option>
+                          <option value="ASIN">ASIN (Standard Identification Number)</option>
                           <option value="UPC">UPC (Universal Product Code - 12 Digits)</option>
                           <option value="EAN">EAN (European Article Number - 13 Digits)</option>
                         </select>
@@ -1600,7 +1600,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h3 className="text-sm font-bold text-[#0054A6] uppercase tracking-wider font-mono flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-amber-500" /> Amazon 5-Bullet Standard (Key Product Features)
+                      <Sparkles className="w-4 h-4 text-amber-500" /> Key Product Highlights (5-Point Standard)
                     </h3>
                     <p className="text-[11px] text-slate-500 mt-0.5 font-mono">
                       Format: [FEATURE BENEFIT IN CAPS] - Detailed technical description
@@ -1609,7 +1609,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={handleFormatBulletsToAmazonStandard}
+                      onClick={handleFormatBulletsToIndustrialStandard}
                       className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-amber-600" /> ⚡ Format to [HEADLINE]
@@ -1700,16 +1700,16 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
           )}
 
           {/* ═══════════════════════════════════════════════════════════════════ */}
-          {/* TAB 2: AMAZON 6-IMAGE GALLERY & 1 HD VIDEO (SELLER CENTRAL SPEC)    */}
+          {/* TAB 2: 6-IMAGE GALLERY & 1 HD VIDEO (ENTERPRISE SPEC)              */}
           {/* ═══════════════════════════════════════════════════════════════════ */}
           {activeListingTab === 'MEDIA' && (
             <div className="space-y-6 max-w-6xl mx-auto">
-              {/* Amazon Image Standards Compliance Guide */}
+              {/* Media Standards Compliance Guide */}
               <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
                 <div className="flex items-center gap-3">
                   <Camera className="w-5 h-5 text-amber-600 shrink-0" />
                   <div>
-                    <strong className="block text-amber-950 font-bold">Amazon Seller Central Media Compliance Checklist</strong>
+                    <strong className="block text-amber-950 font-bold">High-Resolution Media Quality Checklist</strong>
                     <span>White background (RGB 255,255,255), minimum 1000×1000px resolution for high-res zoom, 6 dedicated angles, no promotional watermarks.</span>
                   </div>
                 </div>
@@ -1718,7 +1718,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                   <span className="px-2.5 py-1 rounded-lg bg-purple-100 text-purple-800 font-bold border border-purple-300">✓ 1 HD Video</span>
                   <button
                     type="button"
-                    onClick={handleLoadSampleAmazonImages}
+                    onClick={handleLoadSampleIndustrialImages}
                     className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-sm transition-all flex items-center gap-1"
                   >
                     <Sparkles className="w-3.5 h-3.5" /> ⚡ 1-Click: Load 6 SS304 Images
@@ -1726,7 +1726,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                 </div>
               </div>
 
-              {/* 6 Dedicated Amazon Image Cards */}
+              {/* 6 Dedicated Enterprise Image Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 
                 {/* IMAGE 1: MAIN HERO IMAGE */}
@@ -2157,7 +2157,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
           {/* ═══════════════════════════════════════════════════════════════════ */}
           {activeListingTab === 'VARIATIONS' && (
             <div className="space-y-6">
-              {/* Amazon Seller Central Header: Variations */}
+              {/* Product Variations Header */}
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2.5">
@@ -2205,7 +2205,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                 </div>
               </div>
 
-              {/* Amazon Seller Central Variation Configuration Card */}
+              {/* Variation Configuration Card */}
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
                 {/* Header row */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -2215,7 +2215,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                         Variation Theme & Attributes
                       </span>
                       <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[#0054A6] text-[10px] font-bold font-mono">
-                        Amazon Parent-Child Family
+                        Parent-Child Listing Family
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-0.5">
@@ -2255,7 +2255,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                       Theme Differentiation Behavior:
                     </span>
                     <p className="text-xs text-slate-600">
-                      Customers will select from <strong className="text-slate-900 font-semibold">{variationTheme}</strong> options on the Apollo Storefront and Amazon listing. Pricing, statutory GST (18%), stock, and SKUs are configured individually in the matrix below.
+                      Customers will select from <strong className="text-slate-900 font-semibold">{variationTheme}</strong> options on the Apollo Storefront. Pricing, statutory GST (18%), stock, and SKUs are configured individually in the matrix below.
                     </p>
                   </div>
                 </div>
@@ -2388,7 +2388,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                       onClick={handleAddBlankManualRow}
                       className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5"
                     >
-                      <Plus className="w-3.5 h-3.5" /> ➕ Add Custom Row (જાતે નવી રો ઉમેરો)
+                      <Plus className="w-3.5 h-3.5" /> Add Custom Row
                     </button>
                     <button
                       type="button"
@@ -2423,8 +2423,8 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                         <th className="p-3">* SKU</th>
                         <th className="p-3 text-center">* Unit (UOM)</th>
                         <th className="p-3 text-center">* GST %</th>
-                        <th className="p-3">* APE Catalog ASIN</th>
-                        <th className="p-3">* Flipkart FSN</th>
+                        <th className="p-3">* Catalog ASIN</th>
+                        <th className="p-3">* Enterprise FSN</th>
                         <th className="p-3">Images</th>
                         <th className="p-3 text-right">* MRP (₹)</th>
                         <th className="p-3 text-right">* B2C Price (₹)</th>
@@ -2505,13 +2505,13 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                             />
                           </td>
 
-                          {/* Flipkart FSN */}
+                          {/* Enterprise FSN */}
                           <td className="p-3">
                             <input
                               type="text"
                               value={variant.flipkartFsn || ''}
                               onChange={(e) => handleUpdateVariantRow(idx, 'flipkartFsn', e.target.value)}
-                              placeholder="Flipkart FSN"
+                              placeholder="Enterprise FSN"
                               className="h-8 px-2 rounded-lg bg-white border border-slate-300 text-blue-700 font-mono text-xs w-28 focus:outline-none focus:border-[#0054A6]"
                             />
                           </td>
@@ -3057,7 +3057,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
         </div>
 
         {/* ───────────────────────────────────────────────────────────────────── */}
-        {/* 🏷️ MODAL: 1-CLICK PRINTABLE BARCODE & FBA / FLIPKART LABEL          */}
+        {/* 🏷️ MODAL: 1-CLICK PRINTABLE BARCODE & PACKAGING LABEL               */}
         {/* ───────────────────────────────────────────────────────────────────── */}
         {printingBarcodeVariant && (
           <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
@@ -3206,7 +3206,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                   </div>
 
                   <div className="space-y-1">
-                    <label className="block text-slate-700 font-semibold">Flipkart FSN</label>
+                    <label className="block text-slate-700 font-semibold">Enterprise FSN</label>
                     <input
                       type="text"
                       value={variantsList[editingVariantIndex].flipkartFsn || ''}
@@ -3361,7 +3361,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
         )}
 
         {/* ───────────────────────────────────────────────────────────────── */}
-        {/* 🔗 AMAZON VARIATION MERGER: SELECT CATALOG PRODUCTS MODAL        */}
+        {/* 🔗 VARIATION MERGER: SELECT CATALOG PRODUCTS MODAL               */}
         {/* ───────────────────────────────────────────────────────────────── */}
         {isCatalogPickerOpen && (
           <div className="fixed inset-0 z-[250] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
@@ -3373,7 +3373,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                     <Grid className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm">Combine Existing Catalog Products (Amazon Variation Merger)</h3>
+                    <h3 className="font-bold text-sm">Combine Existing Catalog Products (Listing Variation Merger)</h3>
                     <p className="text-xs text-blue-200">
                       Select up to 5 products to merge as child variations into this 1 parent product listing.
                     </p>

@@ -9,9 +9,11 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user, get_optional_current_user, require_roles
 from app.core.config import settings
 from app.core.database import get_db
-from app.models import Order, OrderStatus, Payment, PaymentStatus
+from app.models import Order, OrderStatus, Payment, PaymentStatus, WebhookEvent
+from app.models.auth import User, UserRole
 from app.schemas.order import (
     RazorpayCreateOrderRequest,
     RazorpayCreateOrderResponse,
@@ -21,14 +23,12 @@ from app.schemas.order import (
 
 router = APIRouter()
 
-# In-memory processed webhook event cache for idempotency
-_processed_webhook_events: set[str] = set()
-
 
 @router.post("/razorpay/create-order", response_model=RazorpayCreateOrderResponse)
 async def razorpay_create_order(
     payload: RazorpayCreateOrderRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
 ) -> RazorpayCreateOrderResponse:
     """Create an authoritative Razorpay payment order tied to a PostgreSQL order."""
     stmt = select(Order).where(Order.id == payload.order_id)
@@ -78,6 +78,7 @@ async def razorpay_create_order(
 async def razorpay_verify_payment(
     payload: RazorpayVerifyPaymentRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
 ) -> RazorpayVerifyPaymentResponse:
     """Verify Razorpay payment signature server-side using HMAC SHA256."""
     stmt = select(Order).where(Order.id == payload.order_id)
@@ -173,11 +174,23 @@ async def razorpay_webhook(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON payload") from e
 
     event_id = event.get("id") or event.get("event")
-    if event_id and event_id in _processed_webhook_events:
-        return {"status": "ignored", "reason": "already_processed"}
+    event_type = event.get("event")
 
+    # Persistent PostgreSQL idempotency check
     if event_id:
-        _processed_webhook_events.add(event_id)
+        stmt_evt = select(WebhookEvent).where(WebhookEvent.event_id == event_id)
+        existing_event = (await db.execute(stmt_evt)).scalar_one_or_none()
+        if existing_event is not None:
+            return {"status": "ignored", "reason": "already_processed"}
+
+        db.add(
+            WebhookEvent(
+                event_id=event_id,
+                provider="razorpay",
+                event_type=event_type or "unknown",
+            )
+        )
+        await db.flush()
 
     event_type = event.get("event")
     payload_data = event.get("payload", {})

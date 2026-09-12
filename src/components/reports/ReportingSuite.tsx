@@ -114,8 +114,8 @@ export const ReportingSuite: React.FC = () => {
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-6">
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
             <div>
-              <h3 className="font-bold text-white text-base">Cash on Delivery (COD) & Post Office Collection Ledger</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Tracks cash collected at destination Sub Post Offices vs bank remittances</p>
+              <h3 className="font-bold text-white text-base">Cash on Delivery (COD) & Carrier Collection Ledger</h3>
+              <p className="text-xs text-slate-400 mt-0.5">Tracks cash collected at destination delivery hubs vs bank remittances</p>
             </div>
           </div>
 

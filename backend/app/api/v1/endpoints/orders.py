@@ -8,6 +8,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.api.deps import (
+    get_current_user,
+    get_optional_current_user,
+    require_roles,
+    verify_csrf,
+)
 from app.core.database import get_db
 from app.models import (
     FulfilmentStatus,
@@ -22,6 +28,7 @@ from app.models import (
     ReplacementStatus,
     Shipment,
 )
+from app.models.auth import User, UserRole
 from app.schemas.order import (
     CreateOrderRequest,
     OrderItemResponse,
@@ -29,6 +36,8 @@ from app.schemas.order import (
     UpdateOrderStatusRequest,
 )
 from app.schemas.quote import CreateQuoteRequest, QuoteItemRequest
+from app.services.inventory import InsufficientStockError, InventoryService
+from app.services.order_state import InvalidStateTransitionError, OrderStateMachine
 from app.services.quote_service import (
     ExpiredQuoteError,
     InvalidSkuError,
@@ -78,6 +87,7 @@ def _to_order_response(order: Order) -> OrderResponse:
 async def create_order(
     payload: CreateOrderRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
 ) -> OrderResponse:
     """Create and persist an authoritative order in PostgreSQL.
     
@@ -85,9 +95,10 @@ async def create_order(
     - Product SKU / variant existence
     - Authorised active catalog price (never trusts client totals)
     - MOQ constraints
-    - Available inventory stock
+    - Available inventory stock with row-level locking
     - Statutory GST and shipping rates
     - Idempotency key to prevent duplicate submissions
+    - Atomically creates inventory reservations
     """
     # 1. Idempotency Check
     if payload.idempotency_key:
@@ -118,7 +129,6 @@ async def create_order(
 
         # 3. If no quote_id provided, create an authoritative quote atomically from DB
         if not quote_id:
-            # Check MOQ and stock for each item before generating quote
             quote_items: list[QuoteItemRequest] = []
             for item in payload.items:
                 if item.quantity <= 0:
@@ -127,8 +137,12 @@ async def create_order(
                         detail=f"Quantity for SKU '{item.sku}' must be greater than zero.",
                     )
 
-                # Check inventory if inventory item exists
-                stmt_inv = select(InventoryItem).where(InventoryItem.sku == item.sku)
+                # Acquire row-level lock on inventory to prevent overselling race conditions
+                stmt_inv = (
+                    select(InventoryItem)
+                    .where(InventoryItem.sku == item.sku)
+                    .with_for_update()
+                )
                 inv_item = (await db.execute(stmt_inv)).scalar_one_or_none()
                 if inv_item is not None:
                     avail = inv_item.quantity_on_hand - inv_item.quantity_reserved
@@ -183,6 +197,24 @@ async def create_order(
         )
         db.add(payment)
 
+        # 7. Reserve inventory atomically in PostgreSQL ledger for each order item
+        stmt_items = select(OrderItem).where(OrderItem.order_id == order.id)
+        order_items = (await db.execute(stmt_items)).scalars().all()
+        for o_item in order_items:
+            try:
+                await InventoryService.reserve_stock(
+                    session=db,
+                    sku=o_item.sku,
+                    quantity=o_item.quantity,
+                    order_id=order.id,
+                    user_id=current_user.id if current_user else None,
+                )
+            except InsufficientStockError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(exc),
+                ) from exc
+
         # Commit all changes atomically
         await db.commit()
 
@@ -214,10 +246,12 @@ async def create_order(
             detail="The checkout quote has expired. Please refresh your cart to re-verify current price and stock.",
         ) from e
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="We couldn’t confirm your order right now. Your cart is safe. Please try again.",
+            detail=f"ERROR: {type(e).__name__}: {e}",
         ) from e
 
 
@@ -225,8 +259,9 @@ async def create_order(
 async def get_order(
     order_id_or_number: str,
     db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
 ) -> OrderResponse:
-    """Retrieve an order by UUID or order number."""
+    """Retrieve an order by UUID or order number with BOLA authorization check."""
     order_uuid: uuid.UUID | None = None
     try:
         order_uuid = uuid.UUID(order_id_or_number)
@@ -234,13 +269,24 @@ async def get_order(
         pass
 
     if order_uuid:
-        stmt = select(Order).where(Order.id == order_uuid).options(selectinload(Order.items))
+        stmt = select(Order).where(Order.id == order_uuid).options(selectinload(Order.items), selectinload(Order.shipments))
     else:
-        stmt = select(Order).where(Order.order_number == order_id_or_number).options(selectinload(Order.items))
+        stmt = select(Order).where(Order.order_number == order_id_or_number).options(selectinload(Order.items), selectinload(Order.shipments))
 
     order = (await db.execute(stmt)).scalar_one_or_none()
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    # BOLA check: if order is tied to a user, caller must be owner or administrative staff
+    if order.user_id is not None:
+        if not current_user or (
+            current_user.id != order.user_id
+            and current_user.role not in (UserRole.OWNER, UserRole.ORDER_OPERATIONS, UserRole.CATALOG_MANAGER)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access forbidden: You do not have permission to access this order.",
+            )
 
     return _to_order_response(order)
 
@@ -248,23 +294,23 @@ async def get_order(
 @router.get("", response_model=list[OrderResponse])
 async def list_orders(
     db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
     limit: int = 50,
     offset: int = 0,
 ) -> list[OrderResponse]:
-    """List orders with items, ordered newest first."""
-    try:
-        stmt = (
-            select(Order)
-            .options(selectinload(Order.items))
-            .order_by(Order.created_at.desc())
-            .limit(min(limit, 100))
-            .offset(max(0, offset))
-        )
-        orders = (await db.execute(stmt)).scalars().all()
-        return [_to_order_response(o) for o in orders]
-    except Exception:
-        # Graceful empty return if local DB is currently offline/booting
-        return []
+    """List orders with items, restricted to user's orders or administrative staff."""
+    stmt = (
+        select(Order)
+        .options(selectinload(Order.items), selectinload(Order.shipments))
+        .order_by(Order.created_at.desc())
+        .limit(min(limit, 100))
+        .offset(max(0, offset))
+    )
+    if current_user.role not in (UserRole.OWNER, UserRole.ORDER_OPERATIONS, UserRole.CATALOG_MANAGER):
+        stmt = stmt.where(Order.user_id == current_user.id)
+
+    orders = (await db.execute(stmt)).scalars().all()
+    return [_to_order_response(o) for o in orders]
 
 
 @router.patch("/{order_id_or_number}/status", response_model=OrderResponse)
@@ -272,8 +318,9 @@ async def update_order_status(
     order_id_or_number: str,
     payload: UpdateOrderStatusRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(require_roles([UserRole.OWNER, UserRole.ORDER_OPERATIONS]))],
 ) -> OrderResponse:
-    """Update order or shipment status authoritatively in PostgreSQL."""
+    """Update order or shipment status authoritatively with state machine validation."""
     order_uuid: uuid.UUID | None = None
     try:
         order_uuid = uuid.UUID(order_id_or_number)
@@ -299,22 +346,53 @@ async def update_order_status(
 
     if payload.order_status:
         try:
-            order.order_status = OrderStatus(payload.order_status.upper())
+            target_order_status = OrderStatus(payload.order_status.upper())
         except ValueError:
-            pass
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid order status value: '{payload.order_status}'.",
+            )
+
+        try:
+            OrderStateMachine.transition_order_status(
+                order=order,
+                target=target_order_status,
+                actor_id=str(current_user.id),
+                reason=f"Status update by {current_user.role}",
+            )
+        except InvalidStateTransitionError as err:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(err),
+            ) from err
 
     if payload.fulfilment_status:
         try:
-            f_status = FulfilmentStatus(payload.fulfilment_status.upper())
-            order.fulfilment_status = f_status
+            target_f_status = FulfilmentStatus(payload.fulfilment_status.upper())
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid fulfilment status value: '{payload.fulfilment_status}'.",
+            )
+
+        try:
+            OrderStateMachine.transition_fulfilment_status(
+                order=order,
+                target=target_f_status,
+                actor_id=str(current_user.id),
+                reason=f"Fulfilment update by {current_user.role}",
+            )
             for shipment in order.shipments:
-                shipment.status = f_status
+                shipment.status = target_f_status
                 if payload.awb_number:
                     shipment.awb_number = payload.awb_number
                 if payload.carrier:
                     shipment.carrier = payload.carrier
-        except ValueError:
-            pass
+        except InvalidStateTransitionError as err:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(err),
+            ) from err
 
     await db.commit()
     await db.refresh(order)

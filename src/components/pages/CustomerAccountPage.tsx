@@ -49,7 +49,7 @@ export const CustomerAccountPage: React.FC = () => {
   // ─────────────────────────────────────────────────────────────
   const defaultHubPO: PostOfficeInfo = {
     name: 'Kathwada GIDC S.O.',
-    branchType: 'Sub Post Office',
+    branchType: 'Sub Hub Facility',
     deliveryStatus: 'Delivery',
     circle: 'Gujarat Circle',
     district: 'Ahmedabad',
@@ -180,7 +180,7 @@ export const CustomerAccountPage: React.FC = () => {
   const handleSaveBilling = (e: React.FormEvent) => {
     e.preventDefault();
     if (!billingSelectedPO) {
-      showToast('Please select a valid India Post Post Office', 'error');
+      showToast('Please select a valid Delivery Facility Hub', 'error');
       return;
     }
     const updated: DeliveryAddress = {
@@ -206,7 +206,7 @@ export const CustomerAccountPage: React.FC = () => {
   const handleSaveShipping = (e: React.FormEvent) => {
     e.preventDefault();
     if (!shippingSelectedPO) {
-      showToast('Please select a valid India Post Post Office', 'error');
+      showToast('Please select a valid Delivery Facility Hub', 'error');
       return;
     }
     const updated: DeliveryAddress = {
@@ -729,7 +729,7 @@ export const CustomerAccountPage: React.FC = () => {
                             </div>
                             <div className="text-[#0054A6] font-bold flex items-center gap-1.5 font-mono bg-blue-50/60 p-2 rounded-xl border border-blue-100">
                               <MapPin className="w-4 h-4 text-[#0054A6] shrink-0" />
-                              <span>{billingAddress.postOffice?.name || 'Speed Post Hub'} ({billingAddress.pincode})</span>
+                              <span>{billingAddress.postOffice?.name || 'Delivery Hub'} ({billingAddress.pincode})</span>
                             </div>
                             <div className="text-slate-500 text-[11px]">
                               {billingAddress.city}, {billingAddress.state} (State Code: {billingAddress.stateCode || '24'})
@@ -823,7 +823,7 @@ export const CustomerAccountPage: React.FC = () => {
                             </div>
 
                             <div>
-                              <label className="block text-slate-700 font-bold mb-1">Select Post Office *</label>
+                              <label className="block text-slate-700 font-bold mb-1">Select Delivery Hub *</label>
                               <select
                                 value={billingSelectedPO?.facilityId || billingSelectedPO?.name || ''}
                                 onChange={(e) => {
@@ -929,7 +929,7 @@ export const CustomerAccountPage: React.FC = () => {
                             </div>
                             <div className="text-emerald-800 font-bold flex items-center gap-1.5 font-mono bg-emerald-50/60 p-2 rounded-xl border border-emerald-100">
                               <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span>{billingAddress.postOffice?.name || 'Speed Post Hub'} ({billingAddress.pincode})</span>
+                              <span>{billingAddress.postOffice?.name || 'Delivery Hub'} ({billingAddress.pincode})</span>
                             </div>
                             <div className="text-slate-500 text-[11px]">
                               {billingAddress.city}, {billingAddress.state} (State Code: {billingAddress.stateCode || '24'})
@@ -977,7 +977,7 @@ export const CustomerAccountPage: React.FC = () => {
                             </div>
                             <div className="text-emerald-800 font-bold flex items-center gap-1.5 font-mono bg-emerald-50/60 p-2 rounded-xl border border-emerald-100">
                               <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span>{shippingAddress.postOffice?.name || 'Speed Post Hub'} ({shippingAddress.pincode})</span>
+                              <span>{shippingAddress.postOffice?.name || 'Delivery Hub'} ({shippingAddress.pincode})</span>
                             </div>
                             <div className="text-slate-500 text-[11px]">
                               {shippingAddress.city}, {shippingAddress.state} (State Code: {shippingAddress.stateCode || '24'})
@@ -1089,7 +1089,7 @@ export const CustomerAccountPage: React.FC = () => {
                             </div>
 
                             <div>
-                              <label className="block text-slate-700 font-bold mb-1">Select Post Office *</label>
+                              <label className="block text-slate-700 font-bold mb-1">Select Delivery Hub *</label>
                               <select
                                 value={shippingSelectedPO?.facilityId || shippingSelectedPO?.name || ''}
                                 onChange={(e) => {
@@ -1127,7 +1127,7 @@ export const CustomerAccountPage: React.FC = () => {
           )}
 
           {/* ───────────────────────────────────────────────────────────── */}
-          {/* SECTION 2: LIVE SPEED POST ORDERS & INVOICES */}
+          {/* SECTION 2: LIVE EXPRESS ORDERS & INVOICES */}
           {/* ───────────────────────────────────────────────────────────── */}
           {activeSubTab === 'ORDERS' && (() => {
             const inTransitCount = orders.filter(o => o.shipments?.[0]?.status === 'IN_TRANSIT').length;

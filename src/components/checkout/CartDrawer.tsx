@@ -418,7 +418,7 @@ export const CartDrawer: React.FC = () => {
                       <div className="flex items-center justify-between text-[11px] bg-slate-50 p-2 rounded-xl border border-slate-200 mt-1">
                         <span className="text-slate-600 font-mono flex items-center gap-1.5">
                           <Truck className="w-3.5 h-3.5 text-[#0054A6]" />
-                          {currentQuote.shipping_provider || 'India Post'} ({currentQuote.service_code || 'Speed Post'})
+                          {(currentQuote.shipping_provider && !currentQuote.shipping_provider.toLowerCase().includes('post')) ? currentQuote.shipping_provider : 'Priority Express'} ({(currentQuote.service_code && !currentQuote.service_code.toLowerCase().includes('speed') && !currentQuote.service_code.toLowerCase().includes('post')) ? currentQuote.service_code : 'Direct Hub'})
                         </span>
                         <span className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-bold ${
                           currentQuote.is_live_rate

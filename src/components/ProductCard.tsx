@@ -392,7 +392,7 @@ export function ProductCard({
 
                 <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-[11px] font-mono text-slate-600">
                   <span className="flex items-center gap-1 text-emerald-700 font-bold">
-                    <Zap className="w-3.5 h-3.5 text-emerald-600" /> ⚡ Delivered Fast by Speed Post Express Delivery
+                    <Zap className="w-3.5 h-3.5 text-emerald-600" /> ⚡ Delivered Fast by Priority Express Delivery
                   </span>
                   <span className="text-[10px] text-slate-400">
                     Kathwada GIDC Central Hub

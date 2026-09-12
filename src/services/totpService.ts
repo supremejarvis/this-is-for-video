@@ -6,8 +6,6 @@
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
-// Default Production Secret for Apollo Engineering Super Admin
-export const APOLLO_ADMIN_TOTP_SECRET = 'JBSWY3DPEHPK3PXP'; // Base32 for Apollo Admin
 export const APOLLO_ADMIN_ISSUER = 'Apollo Engineering';
 export const APOLLO_ADMIN_ACCOUNT = 'admin@apolloengineering.co.in';
 
@@ -115,7 +113,7 @@ async function computeHmacSha1(keyBytes: Uint8Array, messageBytes: Uint8Array): 
  * Generate 6-digit TOTP code for a given timestamp (default: now) and time step (default: 30s)
  */
 export async function generateTOTP(
-  secret: string = APOLLO_ADMIN_TOTP_SECRET,
+  secret: string,
   timestampMs: number = Date.now(),
   timeStepSec: number = 30,
   digits: number = 6
@@ -143,7 +141,7 @@ export async function generateTOTP(
  */
 export async function verifyTOTP(
   token: string,
-  secret: string = APOLLO_ADMIN_TOTP_SECRET,
+  secret: string,
   windowTolerance: number = 1,
   timestampMs: number = Date.now(),
   timeStepSec: number = 30
@@ -176,7 +174,7 @@ export async function verifyTOTP(
 export function getOtpAuthUrl(
   account: string = APOLLO_ADMIN_ACCOUNT,
   issuer: string = APOLLO_ADMIN_ISSUER,
-  secret: string = APOLLO_ADMIN_TOTP_SECRET
+  secret: string = ''
 ): string {
   const encodedIssuer = encodeURIComponent(issuer);
   const encodedAccount = encodeURIComponent(account);
@@ -199,7 +197,6 @@ export const totpService = {
   verifyTOTP,
   getOtpAuthUrl,
   getQrCodeUrl,
-  DEFAULT_SECRET: APOLLO_ADMIN_TOTP_SECRET,
   DEFAULT_ISSUER: APOLLO_ADMIN_ISSUER,
   DEFAULT_ACCOUNT: APOLLO_ADMIN_ACCOUNT,
 };

@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        'exceljs': path.resolve(__dirname, 'node_modules/exceljs/dist/exceljs.min.js'),
       },
     },
     server: {
@@ -28,6 +29,14 @@ export default defineConfig(({ mode }) => {
           target: 'http://127.0.0.1:8000',
           changeOrigin: true,
           secure: false,
+          configure: (proxy) => {
+            proxy.on('error', (_err, _req, res) => {
+              if (res && 'writeHead' in res && !res.headersSent) {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ detail: 'Backend offline or unauthenticated' }));
+              }
+            });
+          },
         },
         '/api/msg91': {
           target: 'https://control.msg91.com/api/v5',
@@ -37,6 +46,9 @@ export default defineConfig(({ mode }) => {
         }
       }
     },
+    optimizeDeps: {
+      include: ['exceljs'],
+    },
     build: {
       chunkSizeWarningLimit: 600,
       rollupOptions: {
@@ -45,6 +57,7 @@ export default defineConfig(({ mode }) => {
             'react-vendor': ['react', 'react-dom'],
             'ui-vendor': ['lucide-react', 'motion', 'canvas-confetti'],
             'pdf-vendor': ['jspdf', 'html-to-image'],
+            'excel-vendor': ['exceljs'],
           },
         },
       },

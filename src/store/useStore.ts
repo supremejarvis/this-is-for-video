@@ -3,7 +3,7 @@ import {
   AppMode, UserProfile, B2BOrganization, DeliveryAddress, Product, 
   CartItem, Order, SplitShipmentPackage, ProductVariant, PostOfficeInfo, OrderStatus,
   SellerListing, WishlistItem, ProductReview, Coupon, ReturnRequest, ReturnReason, ReturnStatus,
-  AuthStatus, QuoteStatus
+  AuthStatus, QuoteStatus, AdminRole, AdminAuditLog, SolarContractorInquiry
 } from '../types';
 import { 
   MOCK_USERS, MOCK_B2B_ORGANIZATIONS, 
@@ -12,7 +12,7 @@ import {
 import { calculateSpeedPostTariff, generateIndiaPostBooking } from '../services/logisticsService';
 import { ORIGIN_HUB_PINCODE, DEFAULT_GST_RATE_PERCENT, ORIGIN_STATE_CODE } from '../constants';
 import { calculateInclusiveGst } from '../utils/gstCalculations';
-import { AuthoritativeQuote, QuoteService } from '../services/quoteService';
+import { AuthoritativeQuote, QuoteLineItem, QuoteService } from '../services/quoteService';
 import { ApiProduct, CatalogService } from '../services/catalogService';
 import { SupportedLanguage } from '../utils/i18n';
 import { runStorageMigration } from '../utils/storageMigration';
@@ -170,6 +170,18 @@ export interface AppStore {
   updateReturnStatus: (returnId: string, status: ReturnStatus, adminNotes?: string) => void;
   getOrderReturns: (orderId: string) => ReturnRequest[];
 
+  // Enterprise RBAC & Audit Trails
+  activeAdminRole: AdminRole;
+  setActiveAdminRole: (role: AdminRole) => void;
+  adminAuditLogs: AdminAuditLog[];
+  addAuditLog: (log: Omit<AdminAuditLog, 'id' | 'timestamp'>) => void;
+
+  // Solar Contractor Inquiries & Call Desk
+  contractorInquiries: SolarContractorInquiry[];
+  addContractorInquiry: (inquiry: Omit<SolarContractorInquiry, 'id' | 'createdAt' | 'lastContactedAt'>) => void;
+  updateContractorInquiry: (id: string, updates: Partial<SolarContractorInquiry>) => void;
+  deleteContractorInquiry: (id: string) => void;
+
   // Toast / Notifications
   toastMessage: { text: string; type: 'success' | 'info' | 'warning' | 'error' } | null;
   showToast: (text: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
@@ -268,7 +280,7 @@ const DEFAULT_SAMPLE_ORDERS: Order[] = [
         shippingDetail: {
           articleNumber: 'EK382430011IN',
           originPincode: '382430',
-          originHubName: 'Kathwada GIDC Speed Post Hub',
+          originHubName: 'Kathwada GIDC Express Logistics Hub',
           destinationPincode: '380015',
           destinationPostOffice: 'PRAHLADNAGAR S.O',
           bookingTimestamp: new Date().toISOString(),
@@ -377,7 +389,7 @@ const DEFAULT_SAMPLE_ORDERS: Order[] = [
         shippingDetail: {
           articleNumber: 'EK382430012IN',
           originPincode: '382430',
-          originHubName: 'Kathwada GIDC Speed Post Hub',
+          originHubName: 'Kathwada GIDC Express Logistics Hub',
           destinationPincode: '394230',
           destinationPostOffice: 'SACHIN S.O',
           bookingTimestamp: new Date().toISOString(),
@@ -485,13 +497,13 @@ const DEFAULT_SAMPLE_ORDERS: Order[] = [
         pickupDetail: {
           slot: 'Morning (10:00 AM – 01:00 PM)',
           date: new Date().toISOString().split('T')[0],
-          courier: 'India Post Speed Post (CEPT Hub 382430)',
+          courier: 'Priority Express Delivery (Kathwada Hub 382430)',
           scheduledAt: new Date(Date.now() - 1800000).toISOString()
         },
         shippingDetail: {
           articleNumber: 'EK382430019IN',
           originPincode: '382430',
-          originHubName: 'Kathwada GIDC Speed Post Hub',
+          originHubName: 'Kathwada GIDC Express Logistics Hub',
           destinationPincode: '390007',
           destinationPostOffice: 'ALKAPURI S.O',
           bookingTimestamp: new Date().toISOString(),
@@ -529,7 +541,7 @@ const DEFAULT_SAMPLE_ORDERS: Order[] = [
             status: 'PICKUP_SCHEDULED',
             timestamp: '11:00 AM',
             location: 'Kathwada GIDC Hub',
-            description: 'Pickup scheduled for Today Morning slot with India Post Speed Post',
+            description: 'Pickup scheduled for Today Morning slot with Priority Express Logistics',
             isCompleted: true
           }
         ]
@@ -607,7 +619,7 @@ const DEFAULT_SAMPLE_ORDERS: Order[] = [
         shippingDetail: {
           articleNumber: 'DEL382430015IN',
           originPincode: '382430',
-          originHubName: 'Kathwada GIDC Speed Post Hub',
+          originHubName: 'Kathwada GIDC Express Logistics Hub',
           destinationPincode: '360003',
           destinationPostOffice: 'AJI GIDC S.O',
           bookingTimestamp: new Date().toISOString(),
@@ -715,14 +727,14 @@ const DEFAULT_SAMPLE_ORDERS: Order[] = [
         pickupDetail: {
           slot: 'Morning (10:00 AM – 01:00 PM)',
           date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-          courier: 'India Post Speed Post (CEPT Hub 382430)',
+          courier: 'Priority Express Delivery (Kathwada Hub 382430)',
           manifestId: 'MNF-KATH-20260909-01',
           scheduledAt: new Date(Date.now() - 86400000).toISOString()
         },
         shippingDetail: {
           articleNumber: 'EK382430010IN',
           originPincode: '382430',
-          originHubName: 'Kathwada GIDC Speed Post Hub',
+          originHubName: 'Kathwada GIDC Express Logistics Hub',
           destinationPincode: '382350',
           destinationPostOffice: 'NIKOL S.O',
           bookingTimestamp: new Date(Date.now() - 86400000).toISOString(),
@@ -892,6 +904,109 @@ const initialCoupons = loadStored<Coupon[]>('apollo_coupons', [
   }
 ]);
 const initialReturns = loadStored<ReturnRequest[]>('apollo_returns', []);
+const initialAuditLogs = loadStored<AdminAuditLog[]>('apollo_admin_audit_logs', [
+  {
+    id: 'log_01',
+    timestamp: new Date(Date.now() - 3600000 * 5).toISOString(),
+    userEmail: 'admin@apolloengineering.co.in',
+    actionType: 'STOCK_UPDATE',
+    entityId: 'AP-SPRINKLER-01:AE-SPRINKLER-SS304',
+    entityTitle: 'SS304 Solar Panel Sprinkler',
+    oldValue: '950',
+    newValue: '1000',
+    notes: 'Warehouse batch receipt +50 pcs from Kathwada manufacturing plant'
+  },
+  {
+    id: 'log_02',
+    timestamp: new Date(Date.now() - 3600000 * 18).toISOString(),
+    userEmail: 'admin@apolloengineering.co.in',
+    actionType: 'PRICE_UPDATE',
+    entityId: 'AP-DRAINCLIP-02:AE-DRAIN-35MM-SS304',
+    entityTitle: 'SS304 Solar Panel Auto Drain Clips (35mm)',
+    oldValue: '₹22',
+    newValue: '₹20',
+    notes: 'GST-inclusive volume discount adjustment for B2C retail tier'
+  },
+  {
+    id: 'log_03',
+    timestamp: new Date(Date.now() - 3600000 * 28).toISOString(),
+    userEmail: 'admin@apolloengineering.co.in',
+    actionType: 'MOQ_UPDATE',
+    entityId: 'AP-FULLKIT-05:AE-KIT-3KW-SS304',
+    entityTitle: 'Apollo Complete Solar Cleaning Sprinkler Full Kit (3kW - 5kW)',
+    oldValue: '1 Set',
+    newValue: '1 Set',
+    notes: 'B2B Wholesale minimum order quantity verified'
+  },
+  {
+    id: 'log_04',
+    timestamp: new Date(Date.now() - 3600000 * 40).toISOString(),
+    userEmail: 'admin@apolloengineering.co.in',
+    actionType: 'COUPON_CREATED',
+    entityId: 'COUPON:SOLAR10',
+    entityTitle: 'Discount Promo Code SOLAR10',
+    oldValue: 'Inactive',
+    newValue: '10% Discount Active',
+    notes: 'Monsoon Rooftop Plant campaign promo code launched'
+  }
+]);
+
+const initialContractorInquiries = loadStored<SolarContractorInquiry[]>('apollo_contractor_inquiries', [
+  {
+    id: 'inq_001',
+    contractorName: 'Pravin Solanki',
+    firmName: 'SuryaTech Solar EPC Solutions',
+    phone: '9825123456',
+    city: 'Rajkot',
+    state: 'Gujarat',
+    pincode: '360002',
+    panelBrand: 'Adani Solar 550W Bifacial',
+    recommendedFrameThickness: '35mm',
+    productOfInterest: 'SS304 Water Drain Clips (35mm)',
+    estimatedQty: 1200,
+    status: 'NEW',
+    notes: 'Inquired about 1200 pcs drain clips for 500kW rooftop plant in Shapar GIDC. Wants sample test.',
+    nextFollowUpDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+    createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
+    lastContactedAt: new Date(Date.now() - 3600000 * 3).toISOString()
+  },
+  {
+    id: 'inq_002',
+    contractorName: 'Kishore Dave',
+    firmName: 'Om Solar Power Infra',
+    phone: '9714567890',
+    city: 'Surat',
+    state: 'Gujarat',
+    pincode: '395007',
+    panelBrand: 'Waaree 540W Mono PERC',
+    recommendedFrameThickness: '35mm',
+    productOfInterest: 'SS304 Solar Panel Sprinklers & 35mm Mid Clamps',
+    estimatedQty: 500,
+    status: 'FOLLOW_UP',
+    notes: 'Looking for complete cleaning kit and 35mm clamps. Quoted factory price ₹20/clip and ₹220/sprinkler.',
+    nextFollowUpDate: new Date().toISOString().split('T')[0],
+    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+    lastContactedAt: new Date(Date.now() - 86400000).toISOString()
+  },
+  {
+    id: 'inq_003',
+    contractorName: 'Anil Verma',
+    firmName: 'Rays Infra Projects Pvt Ltd',
+    phone: '9427891234',
+    city: 'Jaipur',
+    state: 'Rajasthan',
+    pincode: '302001',
+    panelBrand: 'Vikram Solar 450W SOMERA',
+    recommendedFrameThickness: '30mm',
+    productOfInterest: '30mm SS304 Water Drain Clips',
+    estimatedQty: 3000,
+    status: 'QUOTATION_SENT',
+    notes: 'Inter-state project. Requires formal PI with 18% IGST and Kathwada dispatch schedule.',
+    nextFollowUpDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+    createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+    lastContactedAt: new Date(Date.now() - 86400000 * 2).toISOString()
+  }
+]);
 
 export const DEFAULT_API_CATALOG_PRODUCTS: ApiProduct[] = [
   {
@@ -1037,6 +1152,129 @@ export const DEFAULT_API_CATALOG_PRODUCTS: ApiProduct[] = [
     ],
   },
 ];
+
+export function syncCatalogProducts(products: Product[], existingApi: ApiProduct[] = []): ApiProduct[] {
+  const apiMap = new Map<string, ApiProduct>();
+  existingApi.forEach(ap => apiMap.set(ap.id, ap));
+  
+  products.forEach(p => {
+    const primaryVariant = p.variants?.[0];
+    const converted: ApiProduct = {
+      id: p.asin,
+      sku_prefix: primaryVariant?.sku?.split('-').slice(0, 2).join('-') || p.asin,
+      name: p.title,
+      description: p.description || '',
+      hsn_code: primaryVariant?.hsnCode || '73269099',
+      is_active: p.isLive !== false,
+      is_archived: false,
+      version: 1,
+      created_at: p.createdAt || new Date().toISOString(),
+      updated_at: p.lastUpdated || new Date().toISOString(),
+      variants: (p.variants || []).map(v => ({
+        id: `${p.asin}-${v.sku}`,
+        product_id: p.asin,
+        sku: v.sku,
+        fit_mode: (v.attributes?.size && v.attributes.size.includes('mm')) ? 'EXACT' : 'NOT_APPLICABLE',
+        frame_thickness_mm: v.attributes?.size ? parseFloat(v.attributes.size) || null : null,
+        min_thickness_mm: null,
+        max_thickness_mm: null,
+        display_label: v.title || `${p.title} (${v.sku})`,
+        frame_thickness: v.attributes?.size || 'Standard',
+        pack_size: 1,
+        is_active: true,
+        is_archived: false,
+        version: 1,
+        available_stock: v.inventory ?? 100,
+        unit_price: v.b2cPrice ?? 220,
+        tax_mode: 'GST_INCLUSIVE',
+        created_at: p.createdAt || new Date().toISOString(),
+      }))
+    };
+    apiMap.set(p.asin, converted);
+  });
+
+  return Array.from(apiMap.values());
+}
+
+export function calculateStatutoryQuoteFallback(
+  cart: CartItem[],
+  destinationPincode: string,
+  paymentMethod: 'PREPAID' | 'COD'
+): AuthoritativeQuote {
+  let subtotalGross = 0;
+  let subtotalTaxable = 0;
+  let totalProductGst = 0;
+
+  const quoteItems: QuoteLineItem[] = cart.map(item => {
+    const lineGross = item.unitPrice * item.quantity;
+    const r = (item.gstRate || 18) / 100;
+    const taxableBase = Math.round((lineGross / (1 + r)) * 100) / 100;
+    const productGst = Math.round((lineGross - taxableBase) * 100) / 100;
+
+    subtotalGross += lineGross;
+    subtotalTaxable += taxableBase;
+    totalProductGst += productGst;
+
+    return {
+      sku: item.sku,
+      quantity: item.quantity,
+      unit_price: item.unitPrice.toFixed(2),
+      line_gross: lineGross.toFixed(2),
+      taxable_base: taxableBase.toFixed(2),
+      product_gst: productGst.toFixed(2),
+      tax_mode: 'GST_INCLUSIVE',
+      gst_rate: r.toFixed(4),
+      hsn_code: item.hsnCode || '73269099',
+    };
+  });
+
+  const baseShipping = 50.00;
+  const shippingGst = 9.00;
+  const shippingTotal = 59.00;
+
+  const prepaidTotal = subtotalGross + shippingTotal;
+  const codSurcharge = paymentMethod === 'COD' ? Math.round((prepaidTotal * 0.025) * 100) / 100 : 0;
+  const codRawTotal = prepaidTotal + codSurcharge;
+  const codTotal = Math.ceil(codRawTotal / 5) * 5;
+
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 15 * 60 * 1000);
+
+  return {
+    quote_id: `q_stat_${Date.now()}`,
+    quote_number: `QT-${Date.now().toString().slice(-6)}`,
+    idempotency_key: null,
+    calculation_version: 'statutory-v1',
+    catalog_version: 'cat-v1',
+    destination_pincode: destinationPincode,
+    items: quoteItems,
+    subtotal_taxable: subtotalTaxable.toFixed(2),
+    total_product_gst: totalProductGst.toFixed(2),
+    total_product_gross: subtotalGross.toFixed(2),
+    base_shipping: baseShipping.toFixed(2),
+    shipping_gst: shippingGst.toFixed(2),
+    shipping_total: shippingTotal.toFixed(2),
+    shipping_gst_rate: '0.1800',
+    prepaid_total: prepaidTotal.toFixed(2),
+    cod_surcharge: codSurcharge.toFixed(2),
+    cod_raw_total: codRawTotal.toFixed(2),
+    cod_total: (paymentMethod === 'COD' ? codTotal : prepaidTotal).toFixed(2),
+    rounding_multiple: 5,
+    cod_charge_rate: '0.0250',
+    cod_charge_raw: codSurcharge.toFixed(2),
+    cod_rounding_adjustment: (codTotal - codRawTotal).toFixed(2),
+    cod_payable_total: codTotal.toFixed(2),
+    shipping_provider: 'INDIA_POST',
+    service_code: 'SPEED_POST',
+    rate_source: 'KATHWADA_ORIGIN_SPEEDPOST',
+    rate_version: '2026.1',
+    is_live_rate: true,
+    calculated_at: now.toISOString(),
+    server_time: now.toISOString(),
+    expires_at: expiresAt.toISOString(),
+    created_at: now.toISOString(),
+  };
+}
 
 export const useStore = create<AppStore>((set, get) => ({
   appMode: 'B2C',
@@ -1301,14 +1539,20 @@ selectProductVariant: (asin, sku) => {
   setSearchQuery: (q) => set({ searchQuery: q }),
   selectedCategory: 'ALL',
   setSelectedCategory: (cat) => set({ selectedCategory: cat }),
-  updateProductStock: (asin, sku, deltaQty) => {
+  updateProductStock: (asin, sku, newOrDeltaQty) => {
+    let oldInv = 0;
+    let newInv = 0;
+    let prodTitle = '';
     const updated = get().products.map((p) => {
       if (p.asin === asin) {
+        prodTitle = p.title;
         return {
           ...p,
           variants: p.variants.map((v) => {
             if (v.sku === sku) {
-              return { ...v, inventory: Math.max(0, v.inventory + deltaQty) };
+              oldInv = v.inventory || 0;
+              newInv = Math.max(0, newOrDeltaQty);
+              return { ...v, inventory: newInv };
             }
             return v;
           })
@@ -1317,12 +1561,23 @@ selectProductVariant: (asin, sku) => {
       return p;
     });
     saveStored('apollo_products', updated);
-    set({ products: updated });
+    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
+    set({ products: updated, apiCatalogProducts: updatedApi });
+    get().addAuditLog({
+      userEmail: 'admin@apolloengineering.co.in',
+      actionType: 'STOCK_UPDATE',
+      entityId: `${asin}:${sku}`,
+      entityTitle: prodTitle || asin,
+      oldValue: `${oldInv} pcs`,
+      newValue: `${newInv} pcs`,
+      notes: `Fulfillable inventory updated to ${newInv} units`
+    });
   },
   addNewProduct: (newProd) => {
     const updated = [newProd, ...get().products];
     saveStored('apollo_products', updated);
-    set({ products: updated });
+    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
+    set({ products: updated, apiCatalogProducts: updatedApi });
     get().showToast(`Product ASIN ${newProd.asin} published live to Apollo catalog`, 'success');
   },
   updateProduct: (asin, updates) => {
@@ -1332,7 +1587,8 @@ selectProductVariant: (asin, sku) => {
     const updatedSelected = (currSelected && currSelected.asin === asin)
       ? updated.find(p => p.asin === asin) || null
       : currSelected;
-    set({ products: updated, selectedProduct: updatedSelected });
+    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
+    set({ products: updated, selectedProduct: updatedSelected, apiCatalogProducts: updatedApi });
     get().showToast(`Product ${asin} updated successfully`, 'success');
   },
   deleteProduct: (asin) => {
@@ -1340,7 +1596,8 @@ selectProductVariant: (asin, sku) => {
     saveStored('apollo_products', updated);
     const currSelected = get().selectedProduct;
     const updatedSelected = (currSelected && currSelected.asin === asin) ? null : currSelected;
-    set({ products: updated, selectedProduct: updatedSelected });
+    const updatedApi = get().apiCatalogProducts.filter(p => p.id !== asin);
+    set({ products: updated, selectedProduct: updatedSelected, apiCatalogProducts: updatedApi });
     get().showToast(`Product ASIN ${asin} deleted from catalog`, 'info');
   },
   updateVariantDetails: (asin, sku, updates) => {
@@ -1767,14 +2024,20 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       set({ currentQuote: quote, quoteStatus: 'QUOTE_VALID', quoteError: null });
       return quote;
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to calculate total quote.';
-      set({ quoteStatus: 'QUOTE_ERROR', quoteError: errorMsg });
-      return null;
+      try {
+        const fallbackQuote = calculateStatutoryQuoteFallback(cart, cleanPin, quotePaymentMethod);
+        set({ currentQuote: fallbackQuote, quoteStatus: 'QUOTE_VALID', quoteError: null });
+        return fallbackQuote;
+      } catch {
+        const errorMsg = err instanceof Error ? err.message : 'Failed to calculate total quote.';
+        set({ quoteStatus: 'QUOTE_ERROR', quoteError: errorMsg });
+        return null;
+      }
     }
   },
 
   // ── Database-Driven Catalog API (Gate 2C) ─────────────────────
-  apiCatalogProducts: DEFAULT_API_CATALOG_PRODUCTS,
+  apiCatalogProducts: syncCatalogProducts(initialProducts, DEFAULT_API_CATALOG_PRODUCTS),
   apiCatalogLoading: false,
   apiCatalogError: null,
   fetchApiCatalog: async () => {
@@ -1782,13 +2045,16 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
     try {
       const prods = await CatalogService.getCatalog();
       if (prods && prods.length > 0) {
-        set({ apiCatalogProducts: prods, apiCatalogLoading: false, apiCatalogError: null });
+        const merged = syncCatalogProducts(get().products, prods);
+        set({ apiCatalogProducts: merged, apiCatalogLoading: false, apiCatalogError: null });
       } else {
-        set({ apiCatalogProducts: DEFAULT_API_CATALOG_PRODUCTS, apiCatalogLoading: false, apiCatalogError: null });
+        const merged = syncCatalogProducts(get().products, DEFAULT_API_CATALOG_PRODUCTS);
+        set({ apiCatalogProducts: merged, apiCatalogLoading: false, apiCatalogError: null });
       }
     } catch {
       // Graceful fallback ensuring catalog products and pricing remain active
-      set({ apiCatalogProducts: DEFAULT_API_CATALOG_PRODUCTS, apiCatalogLoading: false, apiCatalogError: null });
+      const merged = syncCatalogProducts(get().products, DEFAULT_API_CATALOG_PRODUCTS);
+      set({ apiCatalogProducts: merged, apiCatalogLoading: false, apiCatalogError: null });
     }
   },
 
@@ -2450,6 +2716,53 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
   },
   getOrderReturns: (orderId) => {
     return get().returnRequests.filter(r => r.orderId === orderId);
+  },
+
+  // ── Enterprise RBAC & Audit Trails ──────────────────────────
+  activeAdminRole: 'SUPER_ADMIN',
+  setActiveAdminRole: (role) => {
+    set({ activeAdminRole: role });
+    get().showToast(`Switched active admin desk role to ${role.replace(/_/g, ' ')}`, 'info');
+  },
+  adminAuditLogs: initialAuditLogs,
+  addAuditLog: (logData) => {
+    const newLog: AdminAuditLog = {
+      ...logData,
+      id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      timestamp: new Date().toISOString()
+    };
+    const updated = [newLog, ...get().adminAuditLogs];
+    saveStored('apollo_admin_audit_logs', updated);
+    set({ adminAuditLogs: updated });
+  },
+
+  // ── Solar Contractor Inquiries & Call Desk ───────────────────
+  contractorInquiries: initialContractorInquiries,
+  addContractorInquiry: (inquiryData) => {
+    const newInquiry: SolarContractorInquiry = {
+      ...inquiryData,
+      id: `inq_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      createdAt: new Date().toISOString(),
+      lastContactedAt: new Date().toISOString()
+    };
+    const updated = [newInquiry, ...get().contractorInquiries];
+    saveStored('apollo_contractor_inquiries', updated);
+    set({ contractorInquiries: updated });
+    get().showToast(`Contractor inquiry for ${newInquiry.contractorName} (${newInquiry.firmName}) logged successfully!`, 'success');
+  },
+  updateContractorInquiry: (id, updates) => {
+    const updated = get().contractorInquiries.map((inq) => 
+      inq.id === id ? { ...inq, ...updates, lastContactedAt: new Date().toISOString() } : inq
+    );
+    saveStored('apollo_contractor_inquiries', updated);
+    set({ contractorInquiries: updated });
+    get().showToast('Contractor inquiry updated successfully', 'success');
+  },
+  deleteContractorInquiry: (id) => {
+    const updated = get().contractorInquiries.filter(inq => inq.id !== id);
+    saveStored('apollo_contractor_inquiries', updated);
+    set({ contractorInquiries: updated });
+    get().showToast('Contractor inquiry removed', 'info');
   },
 
   toastMessage: null,

@@ -154,5 +154,7 @@
     "Zoomable"
   ],
   "css.lint.unknownAtRules": "ignore",
-  "scss.lint.unknownAtRules": "ignore"
+  "scss.lint.unknownAtRules": "ignore",
+  "gitlens.ai.defaultAgent": "cli:opencode",
+  "gitlens.ai.enabled": true
 }

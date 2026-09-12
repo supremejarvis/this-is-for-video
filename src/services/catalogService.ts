@@ -23,6 +23,11 @@ export interface ApiProductVariant {
   unit_price?: number | null;
   tax_mode?: string | null;
   created_at: string;
+  b2bTierPricing?: any[];
+  images?: string[];
+  weightGrams?: number;
+  hsnCode?: string;
+  mrp?: number;
 }
 
 export interface ApiProduct {
@@ -37,6 +42,15 @@ export interface ApiProduct {
   variants: ApiProductVariant[];
   created_at: string;
   updated_at: string;
+  category?: string;
+  image?: string;
+  images?: string[];
+  brand?: string;
+  rating?: number;
+  reviewCount?: number;
+  badges?: string[];
+  highlights?: string[];
+  rawProduct?: any;
 }
 
 const API_BASE = '/api/v1';

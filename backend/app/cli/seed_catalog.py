@@ -244,8 +244,142 @@ async def seed_catalog() -> None:
                 session.add(pv_b2b)
                 await session.commit()
 
+        # Seed other authentic Apollo Engineering catalog products
+        additional_products = [
+            {
+                "sku_prefix": "AE-CLAMP-GI",
+                "name": "GI Solar Pipe Clamp (Galvanized Iron · L-Shape Adjustable)",
+                "description": "Heavy-duty corrosion-resistant GI Pipe Clamps designed for tool-free installation on solar frames.",
+                "hsn_code": "73269099",
+                "variants": [
+                    {
+                        "sku": "AE-CLAMP-GI-HALF",
+                        "display_label": 'GI Solar Pipe Clamp - ½" Pipe Mount (Pack of 25 pcs)',
+                        "price": "480.00",
+                        "stock": 1800,
+                    }
+                ],
+            },
+            {
+                "sku_prefix": "AE-PIPE-FITTING",
+                "name": "CPVC / UPVC Solar Water Pipe Fittings & Connectors",
+                "description": "Industrial grade UV-stabilized UPVC/CPVC high pressure pipe elbows, tees, and adaptors for solar cleaning lines.",
+                "hsn_code": "39174000",
+                "variants": [
+                    {
+                        "sku": "AE-FITTING-HALF-UPVC",
+                        "display_label": 'CPVC / UPVC High-Pressure Solar Fittings (Pack of 50 pcs)',
+                        "price": "650.00",
+                        "stock": 3000,
+                    }
+                ],
+            },
+            {
+                "sku_prefix": "AE-PUMP-DC",
+                "name": "High Pressure DC Solar Panel Cleaning Booster Pump (12V / 24V DC)",
+                "description": "Self-priming high pressure diaphragm booster pump delivering 100+ PSI for solar array washing.",
+                "hsn_code": "84137010",
+                "variants": [
+                    {
+                        "sku": "AE-PUMP-DC-24V",
+                        "display_label": "High Pressure Solar Booster Pump (24V DC Industrial)",
+                        "price": "2850.00",
+                        "stock": 450,
+                    }
+                ],
+            },
+            {
+                "sku_prefix": "AE-TIMER-AUTO",
+                "name": "Automatic Digital Solar Cleaning Water Timer & Solenoid Valve",
+                "description": "Programmable digital water cycle timer with weather-proof IP65 enclosure and brass solenoid valve.",
+                "hsn_code": "84818090",
+                "variants": [
+                    {
+                        "sku": "AE-TIMER-DIGITAL",
+                        "display_label": "Automatic Digital Solar Cleaning Water Timer",
+                        "price": "1450.00",
+                        "stock": 600,
+                    }
+                ],
+            },
+            {
+                "sku_prefix": "AE-KIT-FULL",
+                "name": "Complete Automatic Solar Panel Cleaning System Kit (Full Set)",
+                "description": "Turnkey rooftop solar cleaning solution including SS304 sprinklers, drain clips, DC pump, digital timer, and pipe fittings.",
+                "hsn_code": "84248990",
+                "variants": [
+                    {
+                        "sku": "AE-KIT-FULL-SET",
+                        "display_label": "Complete Automatic Solar Panel Cleaning System Kit (Full Set)",
+                        "price": "5800.00",
+                        "stock": 250,
+                    }
+                ],
+            },
+        ]
+
+        from app.models.inventory import InventoryItem
+
+        for pdata in additional_products:
+            stmt_check = select(Product).where(Product.sku_prefix == pdata["sku_prefix"])
+            p_obj = (await session.execute(stmt_check)).scalar_one_or_none()
+            if p_obj is None:
+                p_obj = Product(
+                    id=uuid.uuid4(),
+                    sku_prefix=pdata["sku_prefix"],
+                    name=pdata["name"],
+                    description=pdata["description"],
+                    hsn_code=pdata["hsn_code"],
+                    is_active=True,
+                    is_archived=False,
+                )
+                session.add(p_obj)
+                await session.flush()
+
+            for vdata in pdata["variants"]:
+                stmt_v_check = select(ProductVariant).where(ProductVariant.sku == vdata["sku"])
+                v_existing = (await session.execute(stmt_v_check)).scalar_one_or_none()
+                if not v_existing:
+                    v_existing = ProductVariant(
+                        id=uuid.uuid4(),
+                        product_id=p_obj.id,
+                        sku=vdata["sku"],
+                        fit_mode=FitMode.NOT_APPLICABLE,
+                        frame_thickness="not_applicable",
+                        display_label=vdata["display_label"],
+                        pack_size=1,
+                        is_active=True,
+                        is_archived=False,
+                    )
+                    session.add(v_existing)
+                    await session.flush()
+
+                    inv_item = InventoryItem(
+                        id=uuid.uuid4(),
+                        variant_id=v_existing.id,
+                        sku=vdata["sku"],
+                        quantity_on_hand=vdata["stock"],
+                        quantity_reserved=0,
+                    )
+                    session.add(inv_item)
+
+                    pv_b2c = PriceVersion(
+                        id=uuid.uuid4(),
+                        variant_id=v_existing.id,
+                        product_id=p_obj.id,
+                        currency="INR",
+                        channel="B2C",
+                        min_quantity=1,
+                        unit_price=Decimal(vdata["price"]),
+                        gst_rate=Decimal("0.1800"),
+                        hsn_code=pdata["hsn_code"],
+                        tax_mode=TaxMode.GST_INCLUSIVE,
+                        reason="Standard Seed B2C Price",
+                    )
+                    session.add(pv_b2c)
+
         await session.commit()
-        print(f"Catalog seeding complete. Products ready in database.")
+        print(f"Catalog seeding complete. All 7 authentic Apollo products ready in database.")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,23 @@
+# Apollo Engineering
+
+> India's premier manufacturer of SS304 solar panel sprinklers, auto drain water clips, GI pipe clamps, and solar maintenance hardware.
+> Origin Hub: Kathwada GIDC (382430), Ahmedabad, Gujarat, India.
+
+## Core Products & Specifications
+- [SS304 Solar Panel Cleaning Sprinkler System](https://www.apolloengineering.co.in/)
+  - Material: 100% Genuine AISI SS304 Stainless Steel
+  - Working Pressure: 1.5 bar - 3.5 bar
+  - Flow Rate: 1.2 LPM - 2.8 LPM per nozzle
+  - Coverage: 360-degree high-velocity shadowless water mist spray
+- [SS304 Solar Panel Auto Drain Water Clips](https://www.apolloengineering.co.in/)
+  - Sizes: 28mm, 30mm, 33mm, 35mm, 40mm frame thicknesses
+  - Mechanism: Capillary siphon drainage preventing sludge banding and hot-spot cell degradation
+- [B2B Wholesale & Bulk Supply Portal](https://www.apolloengineering.co.in/b2b)
+  - Tiered volume pricing, GST invoice input tax credit (ITC), India Post Speed Post freight calculation
+
+## Documentation & Links
+- Storefront: https://www.apolloengineering.co.in/
+- B2B Bulk Order: https://www.apolloengineering.co.in/b2b
+- Order Tracker: https://www.apolloengineering.co.in/track-order
+- About Apollo Engineering: https://www.apolloengineering.co.in/about
+- Contact Us: https://www.apolloengineering.co.in/contact

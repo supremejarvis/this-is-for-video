@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Apollo A6 Shipping Label</title>
+  <style>
+    /* Exact thermal page: 104 × 148 mm */
+    @page { size: 104mm 148mm; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #e9edf2; }
+    body { font-family: "Arial Narrow", Arial, Helvetica, sans-serif; color: #000; }
+    .print-button { display:block; width:104mm; margin:8px auto; text-align:right; }
+    .print-button button { padding:7px 13px; font:700 13px Arial; cursor:pointer; }
+    .label {
+      position: relative;
+      width: 104mm;
+      height: 148mm;
+      margin: 0 auto 10px;
+      padding: 7mm 4.5mm 2mm;
+      overflow: hidden;
+      background: #fff;
+      font-size: 5.8pt;
+      line-height: 1.08;
+    }
+
+    /* Content begins 2mm lower; the shorter section removes excess space above QR row. */
+    .top { display:grid; grid-template-columns:50.5mm 19.5mm 22mm; column-gap:1.5mm; height:66.5mm; }
+    .barcode-area { width:50.5mm; height:29.5mm; padding-top:9mm; text-align:center; }
+    #awbBarcode { display:block; width:48.5mm; height:15.3mm; margin:0 auto; }
+    .awb-number { margin-top:.3mm; font-size:6.4pt; font-weight:900; letter-spacing:.02mm; }
+    .ship-title { margin-top:1.2mm; font-size:6.6pt; font-weight:900; }
+    .ship-address { margin-top:1.2mm; font-size:6.65pt; font-weight:600; line-height:1.17; white-space:pre-line; }
+    .order-info { margin-top:3mm; font-size:6pt; font-weight:800; line-height:1.16; white-space:pre-line; }
+
+    .center-boxes { width:19.5mm; }
+    .box { border:.38mm solid #000; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:900; }
+    .service { height:9.4mm; font-size:12.5pt; }
+    .weight { height:5.1mm; margin-top:.6mm; font-size:7.2pt; }
+    .blank { height:5.1mm; margin-top:.75mm; }
+    .date { height:8.6mm; margin-top:.8mm; font-size:11pt; }
+    .payment {
+      height:8.6mm;
+      margin-top:.8mm;
+      padding:0 .6mm;
+      overflow:hidden;
+      white-space:nowrap;
+      font-size:10.2pt;
+      letter-spacing:-.18mm;
+    }
+    .parcel { height:7.5mm; margin-top:.8mm; font-size:6.3pt; }
+    /* Route strip intentionally extends across the centre + right columns. */
+    .route {
+      position:relative;
+      z-index:3;
+      width:43mm;
+      height:9.1mm;
+      margin-top:.6mm;
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      background:#fff;
+    }
+    .route-cell { border:.38mm solid #000; border-right:0; text-align:center; font-weight:900; overflow:hidden; }
+    .route-cell:last-child { border-right:.38mm solid #000; }
+    .route-cell small { display:block; height:2.8mm; padding-top:.5mm; font-size:3.15pt; white-space:nowrap; }
+    .route-cell strong { display:block; padding:0 .35mm; font-size:9.2pt; line-height:5.4mm; letter-spacing:-.12mm; white-space:nowrap; }
+    .route-cell.dark { color:#fff; background:#000; }
+    .vertical-code { height:28mm; margin:16mm auto 0; writing-mode:vertical-rl; transform:rotate(180deg); font-weight:900; font-size:5pt; letter-spacing:.2mm; }
+
+    .matrix-row { display:grid; grid-template-columns:repeat(4,17.8mm); gap:4.6mm; padding:1.5mm 5mm 1.9mm; border-bottom:.2mm solid #777; }
+    .matrix { width:17.8mm; height:17.8mm; border:.25mm solid #000; image-rendering:pixelated; }
+    .ship-from { padding:.8mm .4mm .6mm; min-height:8.5mm; border-bottom:.2mm solid #777; font-size:5.6pt; font-weight:600; line-height:1.15; }
+    .declaration { padding:.4mm .5mm; text-align:center; border-bottom:.2mm solid #777; font-size:4.45pt; font-weight:600; line-height:1.12; }
+
+    table { border-collapse:collapse; width:100%; table-layout:fixed; }
+    .invoice th,.invoice td { border:.25mm solid #111; padding:.45mm .65mm; overflow:hidden; vertical-align:top; }
+    .invoice th { height:4.6mm; background:#f4f4f4; font-size:5.9pt; font-weight:900; letter-spacing:.05mm; text-align:center; }
+    .invoice td { height:9.3mm; padding:.6mm .7mm; font-size:5.05pt; font-weight:600; line-height:1.14; }
+    .invoice .num { width:4mm; } .invoice .seller { width:19mm; } .invoice .gst { width:21mm; }
+    .invoice .inv { width:19mm; } .invoice .datecol { width:15mm; }
+    #gstin, #invoice, #invoiceDate { font-size:4.45pt; font-weight:700; letter-spacing:-.07mm; white-space:nowrap; }
+
+    .bottom { display:block; margin-top:1.2mm; }
+    .sort-grid { display:grid; width:100%; grid-template-columns:repeat(5,1fr); border:.4mm solid #000; }
+    .sort-cell { height:18.5mm; border-right:.35mm solid #000; padding:1mm .75mm; text-align:center; font-weight:900; font-size:10pt; letter-spacing:-.08mm; overflow:hidden; }
+    .sort-cell:last-child { border-right:0; }
+    .sort-cell .line2 { display:block; margin-top:2.4mm; font-size:9.2pt; line-height:1.02; }
+    .black { display:inline-block; min-width:4.2mm; padding:.4mm .55mm; margin-right:.5mm; color:#fff; background:#000; text-align:center; }
+    
+    /* Authentic Apollo Engineering Lion Logo */
+    .logo {
+      position:absolute;
+      z-index:5;
+      top:7mm;
+      left:4.5mm;
+      width:22mm;
+      height:8mm;
+      margin:0;
+      overflow:hidden;
+      background:#fff;
+      display:flex;
+      align-items:center;
+    }
+    .logo img {
+      height:8mm;
+      width:auto;
+      max-width:100%;
+      object-fit:contain;
+      display:block;
+    }
+
+    .sold {
+      position:absolute;
+      z-index:6;
+      left:4.5mm;
+      bottom:4mm;
+      margin:0;
+      padding-right:1mm;
+      background:#fff;
+      font-size:4.5pt;
+      line-height:2.2mm;
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    @media print {
+      html,body { width:104mm; height:148mm; background:#fff; margin:0!important; padding:0!important; }
+      .print-button { display:none; }
+      .label { margin:0; break-after:page; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-button"><button onclick="window.print()">Print A6 Label</button></div>
+
+  <main class="label">
+    <section class="top">
+      <div>
+        <div class="barcode-area">
+          <svg id="awbBarcode" role="img" aria-label="AWB barcode"></svg>
+          <div class="awb-number" id="awbNumber"></div>
+        </div>
+        <div class="ship-title">Ship To:</div>
+        <div class="ship-address" id="shipAddress"></div>
+        <div class="order-info" id="orderInfo"></div>
+      </div>
+
+      <div class="center-boxes">
+        <div class="box service" id="service"></div>
+        <div class="box weight" id="weight"></div>
+        <div class="box blank"></div>
+        <div class="box date" id="shortDate"></div>
+        <div class="box payment" id="payment"></div>
+        <div class="box parcel" id="parcel"></div>
+        <div class="route">
+          <div class="route-cell"><small>DELIVERY STATION</small><strong id="station"></strong></div>
+          <div class="route-cell dark"><small>SECTOR</small><strong id="sector"></strong></div>
+          <div class="route-cell"><small>SORTZONE</small><strong id="sortZone"></strong></div>
+        </div>
+      </div>
+
+      <div><div class="vertical-code" id="verticalCode"></div></div>
+    </section>
+
+    <section class="matrix-row" id="matrixRow"></section>
+    <section class="ship-from" id="shipFrom"></section>
+    <section class="declaration">Customer Self Declaration : The goods sold are intended for end user consumption. Not for resale.</section>
+
+    <table class="invoice">
+      <thead><tr><th class="num">#</th><th class="seller">SELLER</th><th class="gst">GSTIN</th><th class="inv">INVOICE</th><th class="datecol">DATE</th><th>ITEM TYPE</th></tr></thead>
+      <tbody><tr><td>1<br>1</td><td id="seller"></td><td id="gstin"></td><td id="invoice"></td><td id="invoiceDate"></td><td id="itemType"></td></tr></tbody>
+    </table>
+
+    <section class="bottom">
+      <div>
+        <div class="sort-grid" id="sortGrid"></div>
+        <div class="sold" id="soldOn"></div>
+      </div>
+      <div class="logo"><img src="logo.webp" alt="Apollo Engineering" /></div>
+    </section>
+  </main>
+
+  <script>
+    /* Change label details only here. The layout remains A6 fit-to-fit. */
+    const LABEL = {
+      awb: "EK632430019IN",
+      service: "SUR",
+      weight: "1.80 kgs",
+      shortDate: "09/12",
+      payment: "PREPAID",
+      parcel: "BOX 1 of 1",
+      recipient: "Amit Shah",
+      address: ["12, Alkapuri Arcade, R.C. Dutt Road", "Vadodara 390007", "GUJARAT", "Landmark: Near Railway Station"],
+      orderId: "APE-ORD-3819",
+      shipDate: "12/09/2026",
+      verticalCode: "FD0018R",
+      station: "GNNQ", sector: "S-01", sortZone: "GNNQ",
+      matrixPayloads: ["APE|EK632430019IN|01", "APE|ORD-3819|02", "APE|GNNQ|S-01|03", "APE|SOLAR-SPRINKLER|04"],
+      shipFrom: "NILESHKUMAR BHARATBHAI PATEL",
+      returnAddress: "UNIT NO.FF/B/111, SHREEHARI INDUSTRIAL PARK/ESTATE, NEAR HINGLAJ MATAJI MANDIR, Ahmedabad Ahmedabad GUJARAT 382430 India",
+      seller: "NILESHKUMAR\nBHARATBHAI\nPATEL",
+      gstin: "24DDPPS7036E1ZG",
+      invoice: "INV-2026-0019",
+      invoiceDate: "09-12-2026",
+      itemType: "SOLAR_SPRINKLER",
+      sort: [
+        {top:"GNNH", tag:"A", rest:"004"},
+        {top:"MAMA", tag:"3", rest:"C1W"},
+        {top:"NCRU", tag:"B", rest:"BB#"},
+        {top:"MIXD", tag:"R", rest:"2C5"},
+        {top:"SUR", tag:"", rest:""}
+      ],
+      soldOn: "Sold on: www.apolloengineering.co.in"
+    };
+
+    const $ = id => document.getElementById(id);
+    function fillLabel() {
+      $("awbNumber").textContent = "AWB " + LABEL.awb;
+      $("service").textContent = LABEL.service; $("weight").textContent = LABEL.weight;
+      $("shortDate").textContent = LABEL.shortDate; $("payment").textContent = LABEL.payment;
+      $("parcel").textContent = LABEL.parcel; $("verticalCode").textContent = LABEL.verticalCode;
+      $("station").textContent = LABEL.station; $("sector").textContent = LABEL.sector; $("sortZone").textContent = LABEL.sortZone;
+      $("shipAddress").textContent = [LABEL.recipient, ...LABEL.address].join("\n");
+      $("orderInfo").textContent = `Order Id: ${LABEL.orderId}\nShip Date: ${LABEL.shipDate}`;
+      $("shipFrom").innerHTML = `<b>Ship From: ${LABEL.shipFrom}</b><br>Return Address: ${LABEL.returnAddress}`;
+      ["seller","gstin","invoice","invoiceDate","itemType"].forEach(id => $(id).textContent = LABEL[id]);
+      $("soldOn").textContent = LABEL.soldOn;
+
+      LABEL.sort.forEach(item => {
+        const cell = document.createElement("div"); cell.className="sort-cell";
+        cell.innerHTML = `${item.top}<span class="line2">${item.tag ? `<b class="black">${item.tag}</b>` : ""}${item.rest}</span>`;
+        $("sortGrid").appendChild(cell);
+      });
+      drawCode128($("awbBarcode"), LABEL.awb);
+      const quadNames = ["HUB-01", "SORT-SEC", "DEST-PIN", "ROUTE-QC"];
+      LABEL.matrixPayloads.forEach((value,index) => {
+        const box = document.createElement("div");
+        box.style.cssText = "width:17.8mm;height:17.8mm;border:.25mm solid #000;background:#fafafa;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1mm;text-align:center;box-sizing:border-box;";
+        box.innerHTML = `<span style="font-size:4.2pt;font-weight:900;letter-spacing:.05mm;">${quadNames[index] || 'QUAD-' + (index+1)}</span><span style="font-size:3.4pt;font-weight:700;color:#444;margin-top:.8mm;">COURIER 2D</span><span style="font-size:3pt;color:#666;margin-top:.5mm;">UNAVAILABLE</span>`;
+        $("matrixRow").appendChild(box);
+      });
+    }
+
+    /* Native Code-128B generator: no internet or external library needed. */
+    const C128=["212222","222122","222221","121223","121322","131222","122213","122312","132212","221213","221312","231212","112232","122132","122231","113222","123122","123221","223211","221132","221231","213212","223112","312131","311222","321122","321221","312212","322112","322211","212123","212321","232121","111323","131123","131321","112313","132113","132311","211313","231113","231311","112133","112331","132131","113123","113321","133121","313121","211331","231131","213113","213311","213131","311123","311321","331121","312113","312311","332111","314111","221411","431111","111224","111422","121124","121421","141122","141221","112214","112412","122114","122411","142112","142211","241211","221114","413111","241112","134111","111242","121142","121241","114212","124112","124211","411212","421112","421211","212141","214121","412121","111143","111341","131141","114113","114311","411113","411311","113141","114131","311141","411131","211412","211214","211232","2331112"];
+    function drawCode128(svg,text){
+      const values=[104,...[...text].map(ch=>ch.charCodeAt(0)-32)]; let checksum=104;
+      for(let i=1;i<values.length;i++) checksum+=values[i]*i;
+      values.push(checksum%103,106); let x=0,out="";
+      values.forEach(value=>[...C128[value]].forEach((width,i)=>{width=+width;if(i%2===0)out+=`<rect x="${x}" y="0" width="${width}" height="55"/>`;x+=width;}));
+      svg.setAttribute("viewBox",`0 0 ${x} 55`); svg.innerHTML=out;
+    }
+    fillLabel();
+  </script>
+</body>
+</html>

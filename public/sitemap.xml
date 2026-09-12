@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://www.apolloengineering.co.in/</loc>
+    <lastmod>2026-08-09</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://www.apolloengineering.co.in/logo.webp</image:loc>
+      <image:title>Apollo Engineering - SS304 Solar Sprinklers &amp; Auto Drain Clips Manufacturer India</image:title>
+      <image:caption>Apollo Engineering Logo</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.apolloengineering.co.in/solar_sprinkler.webp</image:loc>
+      <image:title>SS304 Solar Panel Sprinkler (Model AE-S400 / 01)</image:title>
+      <image:caption>Medical grade SS304 shadowless solar panel sprinkler</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.apolloengineering.co.in/Drain_clips.webp</image:loc>
+      <image:title>SS304 Solar Auto Drain Clips (Model AE-DC100 / 02)</image:title>
+      <image:caption>Capillary action water and dust auto drain clip for solar panels</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.apolloengineering.co.in/gi_pipe_clamp.webp</image:loc>
+      <image:title>GI Solar Pipe Clamp (Model AE-PC200 / 03)</image:title>
+      <image:caption>Galvanized Iron pipe clamp for solar washing networks</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.apolloengineering.co.in/cpvc_upvc.webp</image:loc>
+      <image:title>UPVC / CPVC Threaded Tee (Model AE-TT300 / 04)</image:title>
+      <image:caption>Brass insert threaded tee fitting for solar cleaning pipelines</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.apolloengineering.co.in/solar_cleaning_fullset.webp</image:loc>
+      <image:title>Solar Cleaning Sprinkler Set (Model AE-KIT500 / 05)</image:title>
+      <image:caption>Complete automated solar cleaning sprinkler kit</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.apolloengineering.co.in/pump.webp</image:loc>
+      <image:title>Submersible Pump for Solar Cleaning (Model AE-PUMP600 / 06)</image:title>
+      <image:caption>0.5 HP high head copper wound submersible water pump</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.apolloengineering.co.in/auto_timer.webp</image:loc>
+      <image:title>Auto Timer Switch for Solar Sprinklers (Model AE-TIMER700 / 07)</image:title>
+      <image:caption>Digital programmable automatic timer switch for solar washing</image:caption>
+    </image:image>
+  </url>
+</urlset>

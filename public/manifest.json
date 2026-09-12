@@ -1,0 +1,17 @@
+{
+  "name": "Apollo Engineering | SS304 Solar Maintenance Solutions",
+  "short_name": "Apollo Engineering",
+  "description": "India's first manufacturer of Shadowless SS304 Solar Sprinklers and Auto Drain Clips.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0054A6",
+  "icons": [
+    {
+      "src": "/logo.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    }
+  ]
+}

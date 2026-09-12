@@ -1,0 +1,81 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production Builds & Output
+dist/
+build/
+coverage/
+.vercel
+
+# Environment & Secrets (NEVER COMMIT)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+*.cert
+*.crt
+id_rsa
+id_ed25519
+credentials.json
+client_secret*.json
+
+# Test payment secrets & mock artifacts
+*secret*
+*payment_key*
+*token*.txt
+
+# Downloaded customer documents & invoices
+downloads/
+customer_documents/
+customer_uploads/
+*.vyb
+*.dxf
+*.pdf
+!public/*.pdf
+*.xlsx
+*.xls
+*.csv
+*.mp4
+*.jpeg
+*.jpg
+!public/*.webp
+!public/*.svg
+!public/*.png
+
+# Test runs & Playwright artifacts
+test-results/
+playwright-report/
+.playwright-mcp/
+desktop_1440x900.png
+mobile_390x844.png
+desktop_a11y_snapshot.md
+mobile_a11y_snapshot.md
+zap-reports/
+lighthouse-report/
+
+# OS & Logs
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python & Backend Artifacts
+backend/.venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+.mutmut-cache/
+.mypy_cache/
+.ruff_cache/

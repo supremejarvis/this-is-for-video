@@ -1,0 +1,191 @@
+
+Running 6 tests using 4 workers
+
+[WebServer] 11:57:48 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:48 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:48 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:48 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:48 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:48 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:48 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:48 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:52 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:52 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:52 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:52 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+  ok 2 [Desktop Chrome] › tests\e2e\admin_audit.spec.ts:90:3 › Apollo Engineering Admin Page — Comprehensive Audit Suite › Admin Desk renders responsively on mobile viewport (14.6s)
+  ok 1 [Desktop Chrome] › tests\e2e\admin_audit.spec.ts:5:3 › Apollo Engineering Admin Page — Comprehensive Audit Suite › Admin Login Screen renders securely with accessible inputs and branding (14.7s)
+[WebServer] 11:57:57 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:57 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:58 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:58 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:58 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:57:58 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+  x  4 [Desktop Chrome] › tests\e2e\admin_audit.spec.ts:26:3 › Apollo Engineering Admin Page — Comprehensive Audit Suite › Admin Desk loads all 6 pillars and functions without console errors (19.8s)
+[WebServer] 11:58:02 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:58:02 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+  x  3 [Mobile Safari / Chrome] › tests\e2e\admin_audit.spec.ts:5:3 › Apollo Engineering Admin Page — Comprehensive Audit Suite › Admin Login Screen renders securely with accessible inputs and branding (19.5s)
+[WebServer] 11:58:02 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:58:02 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+  ok 6 [Mobile Safari / Chrome] › tests\e2e\admin_audit.spec.ts:90:3 › Apollo Engineering Admin Page — Comprehensive Audit Suite › Admin Desk renders responsively on mobile viewport (4.5s)
+[WebServer] 11:58:06 pm [vite] http proxy error: /api/v1/products/?include_archived=false
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:58:06 pm [vite] http proxy error: /api/v1/products/?include_archived=false
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:58:08 pm [vite] http proxy error: /api/v1/products/?include_archived=false
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:58:08 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:58:08 pm [vite] http proxy error: /api/v1/products/?include_archived=false
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+[WebServer] 11:58:08 pm [vite] http proxy error: /api/v1/auth/me
+[WebServer] Error: connect ECONNREFUSED 127.0.0.1:8000
+[WebServer]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16)
+  x  5 [Mobile Safari / Chrome] › tests\e2e\admin_audit.spec.ts:26:3 › Apollo Engineering Admin Page — Comprehensive Audit Suite › Admin Desk loads all 6 pillars and functions without console errors (10.5s)
+
+
+  1) [Desktop Chrome] › tests\e2e\admin_audit.spec.ts:26:3 › Apollo Engineering Admin Page — Comprehensive Audit Suite › Admin Desk loads all 6 pillars and functions without console errors 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: /\+ Add New ASIN/i })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('button', { name: /\+ Add New ASIN/i })
+
+
+      47 |     await productsTab.click();
+      48 |     await expect(page.getByText(/APE Store Product & Variant Matrix/i)).toBeVisible();
+    > 49 |     await expect(page.getByRole('button', { name: /\+ Add New ASIN/i })).toBeVisible();
+         |                                                                          ^
+      50 |     await expect(page.getByRole('button', { name: /\+ Build Combo Variant/i })).toBeVisible();
+      51 |
+      52 |     // Pillar 2: ORDERS & CARTS
+        at C:\Users\patel\OneDrive\Desktop\PRAVIN\web\tests\e2e\admin_audit.spec.ts:49:74
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\admin_audit-Apollo-Enginee-0baee-ions-without-console-errors-Desktop-Chrome\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\admin_audit-Apollo-Enginee-0baee-ions-without-console-errors-Desktop-Chrome\error-context.md
+
+  2) [Mobile Safari / Chrome] › tests\e2e\admin_audit.spec.ts:5:3 › Apollo Engineering Admin Page — Comprehensive Audit Suite › Admin Login Screen renders securely with accessible inputs and branding 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('input[type="email"], input[type="text"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for locator('input[type="email"], input[type="text"]').first()
+        7 × locator resolved to <input value="" type="text" placeholder="Search SS304 Sprinklers, Drain Clips, Clamps, Tees, Pumps..." class="w-full h-10 px-3 bg-transparent text-xs text-slate-900 placeholder-slate-400 focus:outline-none"/>
+          - unexpected value "hidden"
+
+
+      13 |     // Verify Email and Password fields
+      14 |     const emailInput = page.locator('input[type="email"], input[type="text"]').first();
+    > 15 |     await expect(emailInput).toBeVisible();
+         |                              ^
+      16 |
+      17 |     const passwordInput = page.locator('input[type="password"]').first();
+      18 |     await expect(passwordInput).toBeVisible();
+        at C:\Users\patel\OneDrive\Desktop\PRAVIN\web\tests\e2e\admin_audit.spec.ts:15:30
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\admin_audit-Apollo-Enginee-23eb9-essible-inputs-and-branding-Mobile-Safari-Chrome\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\admin_audit-Apollo-Enginee-23eb9-essible-inputs-and-branding-Mobile-Safari-Chrome\error-context.md
+
+  3) [Mobile Safari / Chrome] › tests\e2e\admin_audit.spec.ts:26:3 › Apollo Engineering Admin Page — Comprehensive Audit Suite › Admin Desk loads all 6 pillars and functions without console errors 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: /\+ Add New ASIN/i })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('button', { name: /\+ Add New ASIN/i })
+        - waiting for "http://localhost:3000/store" navigation to finish...
+        - navigated to "http://localhost:3000/store"
+
+
+      47 |     await productsTab.click();
+      48 |     await expect(page.getByText(/APE Store Product & Variant Matrix/i)).toBeVisible();
+    > 49 |     await expect(page.getByRole('button', { name: /\+ Add New ASIN/i })).toBeVisible();
+         |                                                                          ^
+      50 |     await expect(page.getByRole('button', { name: /\+ Build Combo Variant/i })).toBeVisible();
+      51 |
+      52 |     // Pillar 2: ORDERS & CARTS
+        at C:\Users\patel\OneDrive\Desktop\PRAVIN\web\tests\e2e\admin_audit.spec.ts:49:74
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\admin_audit-Apollo-Enginee-0baee-ions-without-console-errors-Mobile-Safari-Chrome\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\admin_audit-Apollo-Enginee-0baee-ions-without-console-errors-Mobile-Safari-Chrome\error-context.md
+
+  3 failed
+    [Desktop Chrome] › tests\e2e\admin_audit.spec.ts:26:3 › Apollo Engineering Admin Page — Comprehensive Audit Suite › Admin Desk loads all 6 pillars and functions without console errors 
+    [Mobile Safari / Chrome] › tests\e2e\admin_audit.spec.ts:5:3 › Apollo Engineering Admin Page — Comprehensive Audit Suite › Admin Login Screen renders securely with accessible inputs and branding 
+    [Mobile Safari / Chrome] › tests\e2e\admin_audit.spec.ts:26:3 › Apollo Engineering Admin Page — Comprehensive Audit Suite › Admin Desk loads all 6 pillars and functions without console errors 
+  3 passed (50.0s)

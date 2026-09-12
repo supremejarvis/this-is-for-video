@@ -1,0 +1,31 @@
+# Apollo Engineering Secret Detection Configuration (Gitleaks)
+title = "Apollo Engineering Gitleaks Config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowed mock hashes and test placeholders"
+regexes = [
+  '''(?i)example''',
+  '''(?i)placeholder''',
+  '''(?i)mock''',
+  '''(?i)test''',
+  '''8908511626011''',
+  '''24AAACP9999P1Z2''',
+  '''382430'''
+]
+paths = [
+  '''^\.env$''',
+  '''^\.env\.local$''',
+  '''^\.env\.example$''',
+  '''src/data/mockData\.ts$''',
+  '''src/test/setup\.ts$''',
+  '''tests/''',
+  '''backend/tests/''',
+  '''\.agents/''',
+  '''node_modules/''',
+  '''backend/\.venv/''',
+  '''\.venv/''',
+  '''dist/'''
+]

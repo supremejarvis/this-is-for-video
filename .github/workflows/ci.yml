@@ -1,0 +1,204 @@
+name: Apollo Engineering Enterprise CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 1. Frontend Typecheck & Lint
+  frontend-static-analysis:
+    name: Frontend Typecheck & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run TypeScript Strict Type Check
+        run: npm run typecheck
+
+  # 2. Frontend Unit & Business Logic Tests
+  frontend-unit-tests:
+    name: Vitest Unit & Business Logic Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Vitest Unit Tests with Coverage
+        run: npm run test:coverage
+
+  # 3. Security Audit & Secret Detection
+  security-and-secret-audit:
+    name: Gitleaks & NPM Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Run Gitleaks Secret Scanner
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Run NPM Security Audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+  # 4. Production Build Verification
+  production-build:
+    name: Production Bundle Build
+    runs-on: ubuntu-latest
+    needs: [frontend-static-analysis, frontend-unit-tests]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Production Distribution
+        run: npm run build
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-bundle
+          path: dist/
+          retention-days: 7
+
+  # 5. Playwright E2E & Accessibility Tests
+  playwright-e2e-and-a11y:
+    name: Playwright E2E & Axe A11y Suite
+    runs-on: ubuntu-latest
+    needs: [production-build]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright Tests (Desktop 1440x900 & Mobile 390x844)
+        run: npx playwright test
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # 6. Lighthouse CI Quality Gates
+  lighthouse-audit:
+    name: Lighthouse CI Performance & A11y
+    runs-on: ubuntu-latest
+    needs: [production-build]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Lighthouse CI CLI
+        run: npm install -g @lhci/cli@0.14.x
+
+      - name: Run Lighthouse CI
+        run: lhci autorun
+        continue-on-error: true
+
+  # 7. Backend Validation (Runs conditionally when FastAPI backend directory exists)
+  backend-quality-gate:
+    name: Python FastAPI Backend Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Check if backend exists
+        id: check_backend
+        run: |
+          if [ -d "backend" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Python 3.12
+        if: steps.check_backend.outputs.exists == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Backend Tooling & Dependencies
+        if: steps.check_backend.outputs.exists == 'true'
+        run: |
+          pip install ruff mypy pytest pytest-asyncio pytest-cov httpx pip-audit
+          pip install -r backend/requirements.txt || true
+
+      - name: Backend Ruff Linter & Formatter
+        if: steps.check_backend.outputs.exists == 'true'
+        run: ruff check backend/
+
+      - name: Backend Mypy Static Type Checking
+        if: steps.check_backend.outputs.exists == 'true'
+        run: mypy backend/ --strict
+
+      - name: Backend Pytest Test Suite
+        if: steps.check_backend.outputs.exists == 'true'
+        run: pytest backend/tests --cov=backend --cov-report=xml

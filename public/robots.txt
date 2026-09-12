@@ -1,0 +1,22 @@
+# Googlebot & General Search Engine Crawling Rules
+User-agent: *
+Allow: /
+Allow: /*.webp$
+Allow: /*.webm$
+Allow: /*.vtt$
+Allow: /*.pdf$
+Allow: /*.json$
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: Googlebot-Video
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+Sitemap: https://www.apolloengineering.co.in/sitemap.xml

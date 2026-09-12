@@ -1,0 +1,2462 @@
+import { create } from 'zustand';
+import { 
+  AppMode, UserProfile, B2BOrganization, DeliveryAddress, Product, 
+  CartItem, Order, SplitShipmentPackage, ProductVariant, PostOfficeInfo, OrderStatus,
+  SellerListing, WishlistItem, ProductReview, Coupon, ReturnRequest, ReturnReason, ReturnStatus,
+  AuthStatus, QuoteStatus
+} from '../types';
+import { 
+  MOCK_USERS, MOCK_B2B_ORGANIZATIONS, 
+  MOCK_PRODUCTS, MOCK_SELLERS 
+} from '../data/mockData';
+import { calculateSpeedPostTariff, generateIndiaPostBooking } from '../services/logisticsService';
+import { ORIGIN_HUB_PINCODE, DEFAULT_GST_RATE_PERCENT, ORIGIN_STATE_CODE } from '../constants';
+import { calculateInclusiveGst } from '../utils/gstCalculations';
+import { AuthoritativeQuote, QuoteService } from '../services/quoteService';
+import { ApiProduct, CatalogService } from '../services/catalogService';
+import { SupportedLanguage } from '../utils/i18n';
+import { runStorageMigration } from '../utils/storageMigration';
+import { apiService } from '../services/apiService';
+
+// Run storage migration immediately
+runStorageMigration();
+
+export interface AppStore {
+  // Navigation & Mode
+  appMode: AppMode;
+  setAppMode: (mode: AppMode) => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+
+  // Users & Organizations & Backend Session
+  authStatus: AuthStatus;
+  authDestination: 'HEADER' | 'CHECKOUT';
+  setAuthDestination: (dest: 'HEADER' | 'CHECKOUT') => void;
+  checkAuthSession: () => Promise<void>;
+  currentUser: UserProfile;
+  setCurrentUser: (user: UserProfile) => void;
+  updateUserProfile: (updates: Partial<UserProfile>) => void;
+  currentOrg: B2BOrganization;
+  updateOrgDetails: (org: Partial<B2BOrganization>) => void;
+  allUsers: UserProfile[];
+  logout: () => Promise<void>;
+
+  // Delivery & Addresses & Dual Billing/Shipping
+  addresses: DeliveryAddress[];
+  activeAddress: DeliveryAddress | null;
+  billingAddress: DeliveryAddress | null;
+  shippingAddress: DeliveryAddress | null;
+  isShippingSameAsBilling: boolean;
+  setIsShippingSameAsBilling: (same: boolean) => void;
+  setBillingAddress: (addr: DeliveryAddress) => void;
+  setShippingAddress: (addr: DeliveryAddress) => void;
+  addAddress: (addr: Omit<DeliveryAddress, 'id'> | DeliveryAddress) => void;
+  updateAddress: (addrId: string, updates: Partial<DeliveryAddress>) => void;
+  deleteAddress: (addrId: string) => void;
+  setActiveAddress: (addrId: string) => void;
+
+  // Catalog & Search
+  products: Product[];
+  selectedProduct: Product | null;
+  setSelectedProduct: (p: Product | null) => void;
+  selectProductVariant: (asin: string, sku: string) => void;
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+  selectedCategory: string;
+  setSelectedCategory: (cat: string) => void;
+  updateProductStock: (asin: string, sku: string, deltaQty: number) => void;
+  addNewProduct: (p: Product) => void;
+  updateProduct: (asin: string, updates: Partial<Product>) => void;
+  deleteProduct: (asin: string) => void;
+  updateVariantDetails: (asin: string, sku: string, updates: Partial<ProductVariant>) => void;
+  addNewVariantToProduct: (asin: string, variant: ProductVariant) => void;
+  deleteVariantFromProduct: (asin: string, sku: string) => void;
+  combineProductsIntoParentListing: (asins: string[], parentTitle?: string) => Product | null;
+
+  // Listing & Marketplace Operations
+  listingMode: 'B2C' | 'B2B' | 'AdminPublish';
+  setListingMode: (mode: 'B2C' | 'B2B' | 'AdminPublish') => void;
+  publishProduct: (product: Omit<Product, 'asin' | 'createdAt' | 'lastUpdated'>) => string;
+  updateProductListing: (asin: string, updates: Partial<Product>) => void;
+  deleteProductListing: (asin: string) => void;
+  updateVariantPricing: (asin: string, sku: string, price: number, quantity?: number) => void;
+  getWinningSellerForASIN: (asin: string) => SellerListing | null;
+  updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays: number, rating: number, fulfillment: 'FBF' | 'FBM') => void;
+  reorderProduct?: (asin: string) => void;
+
+  // Cart & Optimistic Checkout
+  cart: CartItem[];
+  addToCart: (item: Omit<CartItem, 'quantity'>, qty?: number) => void;
+  updateCartQuantity: (sku: string, qty: number) => void;
+  removeFromCart: (sku: string) => void;
+  clearCart: () => void;
+  isCartDrawerOpen: boolean;
+  setIsCartDrawerOpen: (open: boolean) => void;
+  getSplitShipments: () => SplitShipmentPackage[];
+
+  // Authoritative Quote & Statutory Engine (Gate 2C)
+  currentQuote: AuthoritativeQuote | null;
+  quoteStatus: QuoteStatus;
+  quoteError: string | null;
+  quotePaymentMethod: 'PREPAID' | 'COD';
+  setQuotePaymentMethod: (method: 'PREPAID' | 'COD') => void;
+  destinationPincode: string;
+  setDestinationPincode: (pincode: string) => void;
+  fetchAuthoritativeQuote: () => Promise<AuthoritativeQuote | null>;
+
+  // Database-driven Catalog API (Gate 2C)
+  apiCatalogProducts: ApiProduct[];
+  apiCatalogLoading: boolean;
+  apiCatalogError: string | null;
+  fetchApiCatalog: () => Promise<void>;
+
+  // Multi-Lingual Architecture
+  selectedLanguage: SupportedLanguage;
+  setSelectedLanguage: (lang: SupportedLanguage) => void;
+
+  // Orders & Logistics
+  orders: Order[];
+  createOrder: (paymentMethod: Order['paymentDetail']['method'], gstinClaim: boolean, paymentMeta?: { transactionId?: string; razorpayPaymentId?: string; razorpayOrderId?: string; razorpaySignature?: string }) => Order;
+  decrementInventory: (items: { sku: string; quantity: number }[]) => void;
+  updateOrderStatus: (orderId: string, packageId: string, status: OrderStatus, milestoneDesc: string, location: string) => void;
+  schedulePickupForOrder: (orderId: string, packageId: string, slot: string, courier: string, date: string) => void;
+  confirmPackedAndReady: (orderId: string, packageId: string) => void;
+  confirmHandoverToCourier: (orderId: string, packageId: string) => void;
+  batchSchedulePickup: (orderIds: string[], slot: string, courier: string, date: string) => void;
+  redispatchOrder: (orderId: string) => void;
+  selectedOrderForDetail: Order | null;
+  setSelectedOrderForDetail: (o: Order | null) => void;
+  orderFilterStatus: 'ALL' | 'DELIVERED' | 'NOT_DELIVERED';
+  setOrderFilterStatus: (filter: 'ALL' | 'DELIVERED' | 'NOT_DELIVERED') => void;
+
+  // Modals & UI states
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  isAddressModalOpen: boolean;
+  setIsAddressModalOpen: (open: boolean) => void;
+  isCheckoutOpen: boolean;
+  setIsCheckoutOpen: (open: boolean) => void;
+  isAccountModalOpen: boolean;
+  setIsAccountModalOpen: (open: boolean) => void;
+
+  // Wishlist
+  wishlist: WishlistItem[];
+  addToWishlist: (item: Omit<WishlistItem, 'id' | 'addedAt'>) => void;
+  removeFromWishlist: (id: string) => void;
+  moveWishlistToCart: (id: string) => void;
+  isInWishlist: (asin: string, sku: string) => boolean;
+
+  // Product Reviews
+  reviews: ProductReview[];
+  addReview: (review: Omit<ProductReview, 'id' | 'createdAt' | 'helpfulCount'>) => void;
+  deleteReview: (reviewId: string) => void;
+  markReviewHelpful: (reviewId: string) => void;
+  getProductReviews: (asin: string) => ProductReview[];
+  getAverageRating: (asin: string) => { avg: number; count: number };
+
+  // Coupons & Discounts
+  coupons: Coupon[];
+  appliedCoupon: Coupon | null;
+  couponDiscount: number;
+  addCoupon: (coupon: Omit<Coupon, 'id' | 'usedCount'>) => void;
+  updateCoupon: (couponId: string, updates: Partial<Coupon>) => void;
+  deleteCoupon: (couponId: string) => void;
+  applyCoupon: (code: string) => boolean;
+  removeCoupon: () => void;
+
+  // Return / Refund Management
+  returnRequests: ReturnRequest[];
+  createReturnRequest: (orderId: string, items: ReturnRequest['items'], reason: ReturnReason, reasonDetails?: string) => ReturnRequest | null;
+  updateReturnStatus: (returnId: string, status: ReturnStatus, adminNotes?: string) => void;
+  getOrderReturns: (orderId: string) => ReturnRequest[];
+
+  // Toast / Notifications
+  toastMessage: { text: string; type: 'success' | 'info' | 'warning' | 'error' } | null;
+  showToast: (text: string, type?: 'success' | 'info' | 'warning' | 'error') => void;
+}
+
+// In-Memory Storage Fallback for Private Browsing / Quota Exceeded Modes
+const memoryStore: Record<string, string> = {};
+
+const loadStored = <T>(key: string, fallback: T): T => {
+  try {
+    let raw: string | null = null;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      raw = localStorage.getItem(key);
+    }
+    if (!raw && memoryStore[key]) {
+      raw = memoryStore[key];
+    }
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return parsed ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const saveStored = <T>(key: string, value: T): void => {
+  try {
+    const serialized = JSON.stringify(value);
+    memoryStore[key] = serialized;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem(key, serialized);
+    }
+  } catch (err: unknown) {
+    if (err && typeof err === 'object' && ('name' in err && (err as { name: string }).name === 'QuotaExceededError' || 'code' in err && (err as { code: number }).code === 22)) {
+      try {
+        // Clear non-critical temporary session logs if quota exceeded
+        localStorage.removeItem('apollo_temp_manifest');
+      } catch {
+        // Keep in memory store safely
+      }
+    }
+  }
+};
+
+export const GUEST_USER: UserProfile = {
+  id: 'usr_guest',
+  name: '',
+  email: '',
+  phone: '',
+  role: 'GUEST',
+  isPrime: false,
+  createdAt: ''
+};
+
+const DEFAULT_SAMPLE_ORDERS: Order[] = [
+  {
+    id: 'ord_sample_8821',
+    orderNumber: 'APE-ORD-8821',
+    invoiceNumber: 'INV-2026-08821',
+    userId: 'usr_guest_8821',
+    customerName: 'Rajesh Patel',
+    customerEmail: 'rajesh.patel@gmail.com',
+    customerPhone: '9825012345',
+    orderType: 'B2C',
+    isInputTaxCreditClaimed: false,
+    deliveryAddress: {
+      id: 'addr_sample_1',
+      userId: 'usr_guest_8821',
+      fullName: 'Rajesh Patel',
+      phone: '9825012345',
+      addressType: 'HOME',
+      flatBuilding: 'B-402, Samruddhi Residency',
+      streetArea: 'Near Prahlad Nagar Garden',
+      city: 'Ahmedabad',
+      state: 'Gujarat',
+      stateCode: '24',
+      pincode: '380015',
+      postOffice: {
+        name: 'PRAHLADNAGAR S.O',
+        branchType: 'Sub Post Office',
+        deliveryStatus: 'Delivery',
+        circle: 'Gujarat',
+        district: 'Ahmedabad',
+        state: 'Gujarat',
+        facilityId: '21260015'
+      },
+      landmark: 'Opp Titanium City Center',
+      isDefault: true
+    },
+    shipments: [
+      {
+        packageId: 'PKG-APE-8821-01',
+        sellerId: 'apollo_mfg_kathwada',
+        sellerName: 'Apollo Engineering Direct Hub',
+        status: 'CONFIRMED',
+        shippingDetail: {
+          articleNumber: 'EK382430011IN',
+          originPincode: '382430',
+          originHubName: 'Kathwada GIDC Speed Post Hub',
+          destinationPincode: '380015',
+          destinationPostOffice: 'PRAHLADNAGAR S.O',
+          bookingTimestamp: new Date().toISOString(),
+          weightGrams: 360,
+          chargeableWeightGrams: 500,
+          tariffAmount: 50,
+          gstAmount: 9,
+          totalPostage: 59,
+          barcode128: 'EK382430011IN',
+          manifestId: 'MNF-PENDING',
+          carrier: 'INDIA_POST_SPEED_POST'
+        },
+        items: [
+          {
+            sku: 'AE-SPRINKLER-SS304',
+            parentAsin: 'AP-SPRINKLER-01',
+            productTitle: 'SS304 Solar Panel Sprinkler',
+            variantTitle: '180° Uniform Curtain / ½" BSP Male',
+            attributes: { material: 'SS304' },
+            imageUrl: '/solar_sprinkler.webp',
+            unitPrice: 220,
+            mrp: 350,
+            gstRate: 18,
+            hsnCode: '84248990',
+            sellerId: 'apollo_mfg',
+            sellerName: 'Apollo Engineering',
+            fulfillmentType: 'FBF',
+            weightGrams: 180,
+            quantity: 2,
+            isB2BPricingApplied: false
+          }
+        ],
+        milestones: [
+          {
+            status: 'ORDER_PLACED',
+            timestamp: '09:30 AM',
+            location: 'Kathwada GIDC Hub',
+            description: 'Order confirmed and verified via UPI Prepaid',
+            isCompleted: true
+          }
+        ]
+      }
+    ],
+    pricingSummary: {
+      itemsTotal: 440,
+      discountTotal: 0,
+      taxableValue: 372.88,
+      cgstAmount: 33.56,
+      sgstAmount: 33.56,
+      igstAmount: 0,
+      totalTax: 67.12,
+      shippingTotal: 0,
+      grandTotal: 440
+    },
+    paymentDetail: {
+      method: 'UPI',
+      transactionId: 'TXN_UPI_8821990',
+      paymentStatus: 'PAID',
+      paidAt: new Date().toISOString(),
+      idempotencyKey: 'idemp_8821'
+    },
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'ord_sample_8822',
+    orderNumber: 'APE-ORD-8822',
+    invoiceNumber: 'INV-2026-08822',
+    userId: 'usr_b2b_8822',
+    customerName: 'SunShine Solar EPC Ltd',
+    customerEmail: 'purchase@sunshinesolar.in',
+    customerPhone: '9714710854',
+    orderType: 'B2B',
+    gstin: '24AABCS1429B1Z1',
+    isInputTaxCreditClaimed: true,
+    deliveryAddress: {
+      id: 'addr_sample_2',
+      userId: 'usr_b2b_8822',
+      fullName: 'SunShine Solar EPC Ltd',
+      phone: '9714710854',
+      addressType: 'WAREHOUSE',
+      flatBuilding: 'Plot 45, GIDC Industrial Estate',
+      streetArea: 'Sachin GIDC',
+      city: 'Surat',
+      state: 'Gujarat',
+      stateCode: '24',
+      pincode: '394230',
+      postOffice: {
+        name: 'SACHIN S.O',
+        branchType: 'Sub Post Office',
+        deliveryStatus: 'Delivery',
+        circle: 'Gujarat',
+        district: 'Surat',
+        state: 'Gujarat',
+        facilityId: '21264230'
+      },
+      landmark: 'Near Water Tank',
+      isDefault: true
+    },
+    shipments: [
+      {
+        packageId: 'PKG-APE-8822-01',
+        sellerId: 'apollo_mfg_kathwada',
+        sellerName: 'Apollo Engineering Direct Hub',
+        status: 'CONFIRMED',
+        shippingDetail: {
+          articleNumber: 'EK382430012IN',
+          originPincode: '382430',
+          originHubName: 'Kathwada GIDC Speed Post Hub',
+          destinationPincode: '394230',
+          destinationPostOffice: 'SACHIN S.O',
+          bookingTimestamp: new Date().toISOString(),
+          weightGrams: 24000,
+          chargeableWeightGrams: 24000,
+          tariffAmount: 380,
+          gstAmount: 68.4,
+          totalPostage: 448.4,
+          barcode128: 'EK382430012IN',
+          manifestId: 'MNF-PENDING',
+          carrier: 'INDIA_POST_SPEED_POST'
+        },
+        items: [
+          {
+            sku: 'AE-CLIPS-SS304-35MM',
+            parentAsin: 'AP-DRAINCLIPS-02',
+            productTitle: 'SS304 Solar Auto Drain Clips 35mm',
+            variantTitle: '35mm SS304 Body - Snap-On Tool-Free',
+            attributes: { size: '35mm', material: 'SS304' },
+            imageUrl: '/Drain_clips.webp',
+            unitPrice: 12.75,
+            mrp: 120,
+            gstRate: 18,
+            hsnCode: '73269099',
+            sellerId: 'apollo_mfg',
+            sellerName: 'Apollo Engineering',
+            fulfillmentType: 'FBF',
+            weightGrams: 48,
+            quantity: 500,
+            isB2BPricingApplied: true
+          }
+        ],
+        milestones: [
+          {
+            status: 'ORDER_PLACED',
+            timestamp: '10:15 AM',
+            location: 'Kathwada GIDC Hub',
+            description: 'Corporate B2B Net 30 PO Verified',
+            isCompleted: true
+          }
+        ]
+      }
+    ],
+    pricingSummary: {
+      itemsTotal: 6375,
+      discountTotal: 0,
+      taxableValue: 5402.54,
+      cgstAmount: 486.23,
+      sgstAmount: 486.23,
+      igstAmount: 0,
+      totalTax: 972.46,
+      shippingTotal: 0,
+      grandTotal: 6375
+    },
+    paymentDetail: {
+      method: 'NET_30_PO',
+      transactionId: 'PO-SUN-2026-908',
+      paymentStatus: 'PAID',
+      paidAt: new Date().toISOString(),
+      idempotencyKey: 'idemp_8822'
+    },
+    createdAt: new Date(Date.now() - 7200000).toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'ord_sample_8819',
+    orderNumber: 'APE-ORD-8819',
+    invoiceNumber: 'INV-2026-08819',
+    userId: 'usr_guest_8819',
+    customerName: 'Amit Shah Solar Systems',
+    customerEmail: 'amit.shah@gmail.com',
+    customerPhone: '9824099887',
+    orderType: 'B2C',
+    isInputTaxCreditClaimed: false,
+    deliveryAddress: {
+      id: 'addr_sample_3',
+      userId: 'usr_guest_8819',
+      fullName: 'Amit Shah',
+      phone: '9824099887',
+      addressType: 'OFFICE',
+      flatBuilding: '12, Alkapuri Arcade',
+      streetArea: 'R.C. Dutt Road',
+      city: 'Vadodara',
+      state: 'Gujarat',
+      stateCode: '24',
+      pincode: '390007',
+      postOffice: {
+        name: 'ALKAPURI S.O',
+        branchType: 'Sub Post Office',
+        deliveryStatus: 'Delivery',
+        circle: 'Gujarat',
+        district: 'Vadodara',
+        state: 'Gujarat',
+        facilityId: '21263007'
+      },
+      landmark: 'Near Railway Station',
+      isDefault: true
+    },
+    shipments: [
+      {
+        packageId: 'PKG-APE-8819-01',
+        sellerId: 'apollo_mfg_kathwada',
+        sellerName: 'Apollo Engineering Direct Hub',
+        status: 'PROCESSING_PICK_PACK',
+        pickupDetail: {
+          slot: 'Morning (10:00 AM – 01:00 PM)',
+          date: new Date().toISOString().split('T')[0],
+          courier: 'India Post Speed Post (CEPT Hub 382430)',
+          scheduledAt: new Date(Date.now() - 1800000).toISOString()
+        },
+        shippingDetail: {
+          articleNumber: 'EK382430019IN',
+          originPincode: '382430',
+          originHubName: 'Kathwada GIDC Speed Post Hub',
+          destinationPincode: '390007',
+          destinationPostOffice: 'ALKAPURI S.O',
+          bookingTimestamp: new Date().toISOString(),
+          weightGrams: 1800,
+          chargeableWeightGrams: 2000,
+          tariffAmount: 90,
+          gstAmount: 16.2,
+          totalPostage: 106.2,
+          barcode128: 'EK382430019IN',
+          manifestId: 'MNF-PENDING',
+          carrier: 'INDIA_POST_SPEED_POST'
+        },
+        items: [
+          {
+            sku: 'AE-SPRINKLER-SS304',
+            parentAsin: 'AP-SPRINKLER-01',
+            productTitle: 'SS304 Solar Panel Sprinkler',
+            variantTitle: '180° Uniform Curtain / ½" BSP Male',
+            attributes: { material: 'SS304' },
+            imageUrl: '/solar_sprinkler.webp',
+            unitPrice: 220,
+            mrp: 350,
+            gstRate: 18,
+            hsnCode: '84248990',
+            sellerId: 'apollo_mfg',
+            sellerName: 'Apollo Engineering',
+            fulfillmentType: 'FBF',
+            weightGrams: 180,
+            quantity: 10,
+            isB2BPricingApplied: false
+          }
+        ],
+        milestones: [
+          {
+            status: 'PICKUP_SCHEDULED',
+            timestamp: '11:00 AM',
+            location: 'Kathwada GIDC Hub',
+            description: 'Pickup scheduled for Today Morning slot with India Post Speed Post',
+            isCompleted: true
+          }
+        ]
+      }
+    ],
+    pricingSummary: {
+      itemsTotal: 2200,
+      discountTotal: 0,
+      taxableValue: 1864.41,
+      cgstAmount: 167.80,
+      sgstAmount: 167.80,
+      igstAmount: 0,
+      totalTax: 335.60,
+      shippingTotal: 0,
+      grandTotal: 2200
+    },
+    paymentDetail: {
+      method: 'RAZORPAY',
+      transactionId: 'pay_rzp_881900',
+      paymentStatus: 'PAID',
+      paidAt: new Date(Date.now() - 10800000).toISOString(),
+      idempotencyKey: 'idemp_8819'
+    },
+    createdAt: new Date(Date.now() - 10800000).toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'ord_sample_8815',
+    orderNumber: 'APE-ORD-8815',
+    invoiceNumber: 'INV-2026-08815',
+    userId: 'usr_b2b_8815',
+    customerName: 'Gujarat Green Power Infra',
+    customerEmail: 'procurement@greengujarat.org',
+    customerPhone: '9988112233',
+    orderType: 'B2B',
+    gstin: '24AAACG1111A1Z9',
+    isInputTaxCreditClaimed: true,
+    deliveryAddress: {
+      id: 'addr_sample_4',
+      userId: 'usr_b2b_8815',
+      fullName: 'Gujarat Green Power Infra',
+      phone: '9988112233',
+      addressType: 'WAREHOUSE',
+      flatBuilding: 'Shed 88, Aji GIDC Industrial Area',
+      streetArea: 'Phase II',
+      city: 'Rajkot',
+      state: 'Gujarat',
+      stateCode: '24',
+      pincode: '360003',
+      postOffice: {
+        name: 'AJI GIDC S.O',
+        branchType: 'Sub Post Office',
+        deliveryStatus: 'Delivery',
+        circle: 'Gujarat',
+        district: 'Rajkot',
+        state: 'Gujarat',
+        facilityId: '21268003'
+      },
+      landmark: 'Near Substation',
+      isDefault: true
+    },
+    shipments: [
+      {
+        packageId: 'PKG-APE-8815-01',
+        sellerId: 'apollo_mfg_kathwada',
+        sellerName: 'Apollo Engineering Direct Hub',
+        status: 'AWB_GENERATED',
+        pickupDetail: {
+          slot: 'Afternoon (02:00 PM – 06:00 PM)',
+          date: new Date().toISOString().split('T')[0],
+          courier: 'Delhivery B2B Surface Logistics',
+          manifestId: 'MNF-KATH-20260910-01',
+          scheduledAt: new Date(Date.now() - 7200000).toISOString()
+        },
+        shippingDetail: {
+          articleNumber: 'DEL382430015IN',
+          originPincode: '382430',
+          originHubName: 'Kathwada GIDC Speed Post Hub',
+          destinationPincode: '360003',
+          destinationPostOffice: 'AJI GIDC S.O',
+          bookingTimestamp: new Date().toISOString(),
+          weightGrams: 15000,
+          chargeableWeightGrams: 15000,
+          tariffAmount: 250,
+          gstAmount: 45,
+          totalPostage: 295,
+          barcode128: 'DEL382430015IN',
+          manifestId: 'MNF-KATH-20260910-01',
+          carrier: 'INDIA_POST_SPEED_POST'
+        },
+        items: [
+          {
+            sku: 'AE-GICLAMP-03',
+            parentAsin: 'AP-GICLAMP-03',
+            productTitle: 'GI Solar Pipe Clamp (Galvanized Iron - L-Shape)',
+            variantTitle: 'GI Solar Pipe Clamp - ½" Pipe Mount (Pack of 24 pcs)',
+            attributes: { material: 'Galvanized Iron' },
+            imageUrl: '/solar_sprinkler.webp',
+            unitPrice: 120,
+            mrp: 180,
+            gstRate: 18,
+            hsnCode: '73269099',
+            sellerId: 'apollo_mfg',
+            sellerName: 'Apollo Engineering',
+            fulfillmentType: 'FBF',
+            weightGrams: 150,
+            quantity: 100,
+            isB2BPricingApplied: true
+          }
+        ],
+        milestones: [
+          {
+            status: 'PACKED_READY_FOR_PICKUP',
+            timestamp: '01:15 PM',
+            location: 'Kathwada GIDC Dispatch Bay',
+            description: 'Box packed, shipping label verified, included in manifest MNF-KATH-20260910-01',
+            isCompleted: true
+          }
+        ]
+      }
+    ],
+    pricingSummary: {
+      itemsTotal: 12000,
+      discountTotal: 0,
+      taxableValue: 10169.49,
+      cgstAmount: 915.25,
+      sgstAmount: 915.25,
+      igstAmount: 0,
+      totalTax: 1830.51,
+      shippingTotal: 0,
+      grandTotal: 12000
+    },
+    paymentDetail: {
+      method: 'NET_30_PO',
+      transactionId: 'PO-GGPI-7712',
+      paymentStatus: 'PAID',
+      paidAt: new Date(Date.now() - 14400000).toISOString(),
+      idempotencyKey: 'idemp_8815'
+    },
+    createdAt: new Date(Date.now() - 14400000).toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'ord_sample_8810',
+    orderNumber: 'APE-ORD-8810',
+    invoiceNumber: 'INV-2026-08810',
+    userId: 'usr_guest_8810',
+    customerName: 'Paresh Desai',
+    customerEmail: 'paresh.desai@yahoo.com',
+    customerPhone: '9426011223',
+    orderType: 'B2C',
+    isInputTaxCreditClaimed: false,
+    deliveryAddress: {
+      id: 'addr_sample_5',
+      userId: 'usr_guest_8810',
+      fullName: 'Paresh Desai',
+      phone: '9426011223',
+      addressType: 'HOME',
+      flatBuilding: '10, Gokul Farm',
+      streetArea: 'Nikol Gam Road',
+      city: 'Ahmedabad',
+      state: 'Gujarat',
+      stateCode: '24',
+      pincode: '382350',
+      postOffice: {
+        name: 'NIKOL S.O',
+        branchType: 'Sub Post Office',
+        deliveryStatus: 'Delivery',
+        circle: 'Gujarat',
+        district: 'Ahmedabad',
+        state: 'Gujarat',
+        facilityId: '21260350'
+      },
+      landmark: 'Near Nikol Canal',
+      isDefault: true
+    },
+    shipments: [
+      {
+        packageId: 'PKG-APE-8810-01',
+        sellerId: 'apollo_mfg_kathwada',
+        sellerName: 'Apollo Engineering Direct Hub',
+        status: 'IN_TRANSIT',
+        pickupDetail: {
+          slot: 'Morning (10:00 AM – 01:00 PM)',
+          date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+          courier: 'India Post Speed Post (CEPT Hub 382430)',
+          manifestId: 'MNF-KATH-20260909-01',
+          scheduledAt: new Date(Date.now() - 86400000).toISOString()
+        },
+        shippingDetail: {
+          articleNumber: 'EK382430010IN',
+          originPincode: '382430',
+          originHubName: 'Kathwada GIDC Speed Post Hub',
+          destinationPincode: '382350',
+          destinationPostOffice: 'NIKOL S.O',
+          bookingTimestamp: new Date(Date.now() - 86400000).toISOString(),
+          weightGrams: 500,
+          chargeableWeightGrams: 500,
+          tariffAmount: 45,
+          gstAmount: 8.1,
+          totalPostage: 53.1,
+          barcode128: 'EK382430010IN',
+          manifestId: 'MNF-KATH-20260909-01',
+          carrier: 'INDIA_POST_SPEED_POST'
+        },
+        items: [
+          {
+            sku: 'AE-SPRINKLER-SS304',
+            parentAsin: 'AP-SPRINKLER-01',
+            productTitle: 'SS304 Solar Panel Sprinkler',
+            variantTitle: '180° Uniform Curtain / ½" BSP Male',
+            attributes: { material: 'SS304' },
+            imageUrl: '/solar_sprinkler.webp',
+            unitPrice: 220,
+            mrp: 350,
+            gstRate: 18,
+            hsnCode: '84248990',
+            sellerId: 'apollo_mfg',
+            sellerName: 'Apollo Engineering',
+            fulfillmentType: 'FBF',
+            weightGrams: 180,
+            quantity: 1,
+            isB2BPricingApplied: false
+          }
+        ],
+        milestones: [
+          {
+            status: 'DISPATCHED',
+            timestamp: '03:40 PM',
+            location: 'Ahmedabad Sorting Hub',
+            description: 'Item dispatched from Kathwada GIDC Hub towards Nikol delivery sub-office',
+            isCompleted: true
+          }
+        ]
+      }
+    ],
+    pricingSummary: {
+      itemsTotal: 220,
+      discountTotal: 0,
+      taxableValue: 186.44,
+      cgstAmount: 16.78,
+      sgstAmount: 16.78,
+      igstAmount: 0,
+      totalTax: 33.56,
+      shippingTotal: 0,
+      grandTotal: 220
+    },
+    paymentDetail: {
+      method: 'UPI',
+      transactionId: 'TXN_UPI_8810',
+      paymentStatus: 'PAID',
+      paidAt: new Date(Date.now() - 90000000).toISOString(),
+      idempotencyKey: 'idemp_8810'
+    },
+    createdAt: new Date(Date.now() - 90000000).toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
+// Strict Zero PII & Zero Mock State for Guest Sessions
+const initialUsers: UserProfile[] = [];
+const initialAddresses: DeliveryAddress[] = [];
+const initialBillingAddress: DeliveryAddress | null = null;
+const initialShippingAddress: DeliveryAddress | null = null;
+const initialOrders: Order[] = loadStored<Order[]>('apollo_orders', DEFAULT_SAMPLE_ORDERS);
+const rawStoredProducts = loadStored<Product[]>('apollo_products', MOCK_PRODUCTS);
+const initialProducts = rawStoredProducts.map((p) => {
+  const freshMock = MOCK_PRODUCTS.find((m) => m.asin === p.asin);
+  if (freshMock && (freshMock.isComboBundle || freshMock.asin === 'AP-FULLKIT-05')) {
+    return {
+      ...freshMock,
+      ...p,
+      isComboBundle: freshMock.isComboBundle,
+      comboFormulaEnabled: freshMock.comboFormulaEnabled,
+      variants: freshMock.variants
+    };
+  }
+  return p;
+});
+const initialWishlist = loadStored<WishlistItem[]>('apollo_wishlist', []);
+const initialReviews = loadStored<ProductReview[]>('apollo_reviews', [
+  {
+    id: 'rev_001',
+    asin: MOCK_PRODUCTS[0]?.asin || 'AP-001',
+    userId: 'u_customer_b2c',
+    userName: 'Rajesh K. (Solar EPC Contractor)',
+    rating: 5,
+    title: 'Best SS304 Sprinkler for Solar Panel Cleaning',
+    body: 'Outstanding quality! The 180° water curtain is perfectly uniform. No shadow spots on panels. Using these across 50MW rooftop installations in Gujarat. Direct factory dispatch from Kathwada was super fast.',
+    isVerifiedPurchase: true,
+    helpfulCount: 24,
+    createdAt: '2026-07-15T10:30:00Z'
+  },
+  {
+    id: 'rev_002',
+    asin: MOCK_PRODUCTS[0]?.asin || 'AP-001',
+    userId: 'u_epc_procure',
+    userName: 'Nilesh P. (Plant Procurement Head)',
+    rating: 5,
+    title: 'Industrial grade quality at wholesale price',
+    body: 'We ordered 500 units for our EPC project. B2B pricing was excellent. The SS304 material is genuine — we tested with acid. 10-Year Rust-Proof Warranty gives confidence for large installations.',
+    isVerifiedPurchase: true,
+    helpfulCount: 18,
+    createdAt: '2026-08-02T14:20:00Z'
+  },
+  {
+    id: 'rev_003',
+    asin: MOCK_PRODUCTS[1]?.asin || 'AP-002',
+    userId: 'u_customer_b2c',
+    userName: 'Manish S. (Rooftop Owner)',
+    rating: 4,
+    title: 'Good drain clips, easy installation',
+    body: 'Clips fit perfectly on 35mm GI pipes. Installation took 10 minutes. Minor suggestion — include a small installation manual in the package.',
+    isVerifiedPurchase: true,
+    helpfulCount: 7,
+    createdAt: '2026-08-10T09:15:00Z'
+  }
+]);
+const initialCoupons = loadStored<Coupon[]>('apollo_coupons', [
+  {
+    id: 'coup_001',
+    code: 'APOLLO10',
+    description: '10% off on first order',
+    type: 'PERCENTAGE',
+    value: 10,
+    minOrderAmount: 500,
+    maxDiscount: 1000,
+    validFrom: '2026-01-01T00:00:00Z',
+    validUntil: '2026-12-31T23:59:59Z',
+    usageLimit: 100,
+    usedCount: 23,
+    isActive: true
+  },
+  {
+    id: 'coup_002',
+    code: 'FREESHIP',
+    description: 'Free shipping on orders above ₹2,000',
+    type: 'FREE_SHIPPING',
+    value: 0,
+    minOrderAmount: 2000,
+    validFrom: '2026-01-01T00:00:00Z',
+    validUntil: '2026-12-31T23:59:59Z',
+    usageLimit: 500,
+    usedCount: 87,
+    isActive: true
+  },
+  {
+    id: 'coup_003',
+    code: 'BULK500',
+    description: '₹500 flat off on B2B orders above ₹10,000',
+    type: 'FLAT_AMOUNT',
+    value: 500,
+    minOrderAmount: 10000,
+    validFrom: '2026-01-01T00:00:00Z',
+    validUntil: '2026-12-31T23:59:59Z',
+    usageLimit: 50,
+    usedCount: 12,
+    isActive: true,
+    applicableCategories: ['SS304 GRADE']
+  }
+]);
+const initialReturns = loadStored<ReturnRequest[]>('apollo_returns', []);
+
+export const DEFAULT_API_CATALOG_PRODUCTS: ApiProduct[] = [
+  {
+    id: 'b5a0f671-55fa-4f96-857e-e5adfa7f1396',
+    sku_prefix: 'APE-SC',
+    name: 'Apollo SS304 Solar Panel Clamps & Water Drain Clips',
+    description: 'Precision engineered AISI SS304 solar mounting clamps and sludge drain clips with structured thickness fits.',
+    hsn_code: '73269099',
+    is_active: true,
+    is_archived: false,
+    version: 1,
+    created_at: '2026-09-05T12:00:00Z',
+    updated_at: '2026-09-05T12:00:00Z',
+    variants: [
+      {
+        id: 'v-28mm',
+        product_id: 'b5a0f671-55fa-4f96-857e-e5adfa7f1396',
+        sku: 'APE-SC-28.00MM',
+        fit_mode: 'EXACT',
+        frame_thickness_mm: 28,
+        min_thickness_mm: null,
+        max_thickness_mm: null,
+        display_label: '28 mm Standard Clamp',
+        frame_thickness: '28mm',
+        pack_size: 1,
+        is_active: true,
+        is_archived: false,
+        version: 1,
+        available_stock: 500,
+        unit_price: 20,
+        tax_mode: 'INCLUSIVE',
+        created_at: '2026-09-05T12:00:00Z',
+      },
+      {
+        id: 'v-30mm',
+        product_id: 'b5a0f671-55fa-4f96-857e-e5adfa7f1396',
+        sku: 'APE-SC-30.00MM',
+        fit_mode: 'EXACT',
+        frame_thickness_mm: 30,
+        min_thickness_mm: null,
+        max_thickness_mm: null,
+        display_label: '30 mm Standard Clamp',
+        frame_thickness: '30mm',
+        pack_size: 1,
+        is_active: true,
+        is_archived: false,
+        version: 1,
+        available_stock: 500,
+        unit_price: 20,
+        tax_mode: 'INCLUSIVE',
+        created_at: '2026-09-05T12:00:00Z',
+      },
+      {
+        id: 'v-33mm',
+        product_id: 'b5a0f671-55fa-4f96-857e-e5adfa7f1396',
+        sku: 'APE-SC-33.00MM',
+        fit_mode: 'EXACT',
+        frame_thickness_mm: 33,
+        min_thickness_mm: null,
+        max_thickness_mm: null,
+        display_label: '33 mm Standard Clamp',
+        frame_thickness: '33mm',
+        pack_size: 1,
+        is_active: true,
+        is_archived: false,
+        version: 1,
+        available_stock: 500,
+        unit_price: 20,
+        tax_mode: 'INCLUSIVE',
+        created_at: '2026-09-05T12:00:00Z',
+      },
+      {
+        id: 'v-35mm',
+        product_id: 'b5a0f671-55fa-4f96-857e-e5adfa7f1396',
+        sku: 'APE-SC-35.00MM',
+        fit_mode: 'EXACT',
+        frame_thickness_mm: 35,
+        min_thickness_mm: null,
+        max_thickness_mm: null,
+        display_label: '35 mm Standard Clamp',
+        frame_thickness: '35mm',
+        pack_size: 1,
+        is_active: true,
+        is_archived: false,
+        version: 1,
+        available_stock: 500,
+        unit_price: 20,
+        tax_mode: 'INCLUSIVE',
+        created_at: '2026-09-05T12:00:00Z',
+      },
+      {
+        id: 'v-40mm',
+        product_id: 'b5a0f671-55fa-4f96-857e-e5adfa7f1396',
+        sku: 'APE-SC-40.00MM',
+        fit_mode: 'EXACT',
+        frame_thickness_mm: 40,
+        min_thickness_mm: null,
+        max_thickness_mm: null,
+        display_label: '40 mm Standard Clamp',
+        frame_thickness: '40mm',
+        pack_size: 1,
+        is_active: true,
+        is_archived: false,
+        version: 1,
+        available_stock: 500,
+        unit_price: 20,
+        tax_mode: 'INCLUSIVE',
+        created_at: '2026-09-05T12:00:00Z',
+      },
+    ],
+  },
+  {
+    id: 'a1c0e822-44ed-4e85-946d-d4adfa7f2485',
+    sku_prefix: 'APE-SS304-SPK',
+    name: 'Apollo SS304 Solar Panel Cleaning Sprinkler',
+    description: 'High-efficiency 180° water curtain solar cleaning sprinkler engineered in AISI SS304.',
+    hsn_code: '84248990',
+    is_active: true,
+    is_archived: false,
+    version: 1,
+    created_at: '2026-09-05T12:00:00Z',
+    updated_at: '2026-09-05T12:00:00Z',
+    variants: [
+      {
+        id: 'v-spk-01',
+        product_id: 'a1c0e822-44ed-4e85-946d-d4adfa7f2485',
+        sku: 'APE-SS304-SPK-01',
+        fit_mode: 'UNIVERSAL',
+        frame_thickness_mm: null,
+        min_thickness_mm: null,
+        max_thickness_mm: null,
+        display_label: '180° Water Curtain Sprinkler',
+        frame_thickness: 'UNIVERSAL',
+        pack_size: 1,
+        is_active: true,
+        is_archived: false,
+        version: 1,
+        available_stock: 250,
+        unit_price: 220,
+        tax_mode: 'INCLUSIVE',
+        created_at: '2026-09-05T12:00:00Z',
+      },
+    ],
+  },
+];
+
+export const useStore = create<AppStore>((set, get) => ({
+  appMode: 'B2C',
+  setAppMode: (mode) => {
+    set({ appMode: mode });
+    get().showToast(`Switched storefront mode to ${mode === 'B2B' ? '🏢 B2B Wholesale' : '🛒 B2C Retail'}`, 'info');
+  },
+  activeTab: 'store',
+  setActiveTab: (tab) => set({ activeTab: tab }),
+
+  // ── Session & Auth State (Gate 2C - Backend Authoritative) ──
+  authStatus: 'GUEST' as AuthStatus,
+  authDestination: 'HEADER' as const,
+  setAuthDestination: (dest) => set({ authDestination: dest }),
+  checkAuthSession: async () => {
+    set({ authStatus: 'AUTH_CHECKING' });
+    try {
+      const res = await fetch('/api/v1/auth/me', {
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.id) {
+          const role = data.role === 'ADMIN' ? 'SUPER_ADMIN' : 'B2C_CUSTOMER';
+          const userPhone = data.phone || '';
+          const mappedUser: UserProfile = {
+            id: data.id,
+            name: data.full_name || (userPhone ? `Customer (${userPhone.slice(-4)})` : 'Valued Customer'),
+            email: data.email || '',
+            phone: userPhone,
+            role,
+            isPrime: false,
+            createdAt: data.created_at || new Date().toISOString()
+          };
+          set({ 
+            authStatus: 'AUTHENTICATED', 
+            currentUser: mappedUser,
+            appMode: role === 'SUPER_ADMIN' ? 'ADMIN' : get().appMode
+          });
+          return;
+        }
+      }
+    } catch {
+      // Backend unreachable or network error
+    }
+    // Default to clean guest state
+    set({ 
+      authStatus: 'GUEST', 
+      currentUser: GUEST_USER, 
+      addresses: [], 
+      activeAddress: null, 
+      billingAddress: null, 
+      shippingAddress: null 
+    });
+  },
+  currentUser: GUEST_USER,
+  setCurrentUser: (user) => {
+    const existingUsers = get().allUsers;
+    const index = existingUsers.findIndex(u => u.id === user.id || (u.phone && user.phone && u.phone === user.phone));
+    let updatedUsers: UserProfile[];
+    if (index >= 0) {
+      updatedUsers = existingUsers.map((u, i) => i === index ? user : u);
+    } else {
+      updatedUsers = [user, ...existingUsers];
+    }
+    const newMode: AppMode = (user.role && user.role.includes('B2B')) ? 'B2B' : user.role === 'SUPER_ADMIN' ? 'ADMIN' : 'B2C';
+    set({ 
+      currentUser: user, 
+      allUsers: updatedUsers, 
+      appMode: newMode,
+      authStatus: user.id && user.id !== 'usr_guest' ? 'AUTHENTICATED' : 'GUEST'
+    });
+  },
+  updateUserProfile: (updates) => {
+    const user = { ...get().currentUser, ...updates };
+    set({ currentUser: user });
+    get().showToast('Profile details updated successfully', 'success');
+  },
+  currentOrg: MOCK_B2B_ORGANIZATIONS[0],
+  updateOrgDetails: (orgUpdates) => set((state) => ({
+    currentOrg: { ...state.currentOrg, ...orgUpdates }
+  })),
+  allUsers: initialUsers,
+  logout: async () => {
+    try {
+      await fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch {}
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem('apollo_session_24h');
+      localStorage.removeItem('apollo_addresses');
+      localStorage.removeItem('apollo_shipping_address');
+      localStorage.removeItem('apollo_billing_address');
+      localStorage.removeItem('apollo_users');
+    }
+    set({ 
+      authStatus: 'GUEST',
+      currentUser: GUEST_USER, 
+      addresses: [],
+      activeAddress: null,
+      billingAddress: null,
+      shippingAddress: null,
+      orders: [],
+      appMode: 'B2C', 
+      isAccountModalOpen: false, 
+      isAuthModalOpen: false,
+      isCheckoutOpen: false,
+      activeTab: 'store'
+    });
+    get().showToast('Logged out successfully. Session terminated.', 'info');
+  },
+
+  addresses: [],
+  activeAddress: null,
+  billingAddress: null,
+  shippingAddress: null,
+  isShippingSameAsBilling: true,
+  setIsShippingSameAsBilling: (same) => {
+    saveStored('apollo_same_as_billing', same);
+    if (same) {
+      const billing = get().billingAddress;
+      if (billing) {
+        const syncedShipping: DeliveryAddress = {
+          ...billing,
+          id: get().shippingAddress?.id || `addr_shipping_${Date.now()}`,
+          addressType: get().currentUser.role.includes('B2B') ? 'WAREHOUSE' : 'HOME'
+        };
+        saveStored('apollo_shipping_address', syncedShipping);
+        saveStored('apollo_addresses', [syncedShipping, ...get().addresses.filter(a => a.id !== syncedShipping.id)]);
+        set({ isShippingSameAsBilling: true, shippingAddress: syncedShipping, activeAddress: syncedShipping });
+        get().showToast('Shipping address synced with Billing address', 'success');
+        return;
+      }
+    }
+    set({ isShippingSameAsBilling: same });
+  },
+  setBillingAddress: (addr) => {
+    saveStored('apollo_billing_address', addr);
+    if (get().isShippingSameAsBilling) {
+      const syncedShipping: DeliveryAddress = {
+        ...addr,
+        id: get().shippingAddress?.id || `addr_shipping_${Date.now()}`,
+        addressType: get().currentUser.role.includes('B2B') ? 'WAREHOUSE' : 'HOME'
+      };
+      saveStored('apollo_shipping_address', syncedShipping);
+      saveStored('apollo_addresses', [syncedShipping, ...get().addresses.filter(a => a.id !== syncedShipping.id)]);
+      set({ billingAddress: addr, shippingAddress: syncedShipping, activeAddress: syncedShipping });
+    } else {
+      set({ billingAddress: addr });
+    }
+    get().showToast(`Billing address updated: ${addr.postOffice.name} (${addr.pincode})`, 'success');
+  },
+  setShippingAddress: (addr) => {
+    saveStored('apollo_shipping_address', addr);
+    saveStored('apollo_addresses', [addr, ...get().addresses.filter(a => a.id !== addr.id)]);
+    set({ shippingAddress: addr, activeAddress: addr });
+    get().showToast(`Shipping address updated: ${addr.postOffice.name} (${addr.pincode})`, 'success');
+  },
+  isAccountModalOpen: false,
+  setIsAccountModalOpen: (open) => set({ isAccountModalOpen: open }),
+  addAddress: (addrData) => {
+    const newAddr: DeliveryAddress = {
+      ...addrData,
+      id: ('id' in addrData && typeof (addrData as { id?: string }).id === 'string' && (addrData as { id?: string }).id) 
+        ? (addrData as { id: string }).id 
+        : `addr_${Date.now()}`
+    };
+    const updated = [newAddr, ...get().addresses.filter(a => a.id !== newAddr.id)];
+    saveStored('apollo_addresses', updated);
+    saveStored('apollo_shipping_address', newAddr);
+    set({
+      addresses: updated,
+      activeAddress: newAddr,
+      shippingAddress: newAddr
+    });
+    get().showToast(`Address in ${newAddr.postOffice.name} saved successfully`, 'success');
+  },
+  updateAddress: (addrId, updates) => {
+    const currentList = get().addresses;
+    const updated = currentList.map(a => a.id === addrId ? { ...a, ...updates } : a);
+    saveStored('apollo_addresses', updated);
+
+    const updatedAddr = updated.find(a => a.id === addrId);
+    let nextActive = get().activeAddress?.id === addrId && updatedAddr ? updatedAddr : get().activeAddress;
+    let nextShipping = get().shippingAddress?.id === addrId && updatedAddr ? updatedAddr : get().shippingAddress;
+    let nextBilling = get().billingAddress?.id === addrId && updatedAddr ? updatedAddr : get().billingAddress;
+
+    if (get().activeAddress?.id === addrId && updatedAddr) {
+      saveStored('apollo_shipping_address', updatedAddr);
+    }
+    if (get().billingAddress?.id === addrId && updatedAddr) {
+      saveStored('apollo_billing_address', updatedAddr);
+    }
+
+    set({
+      addresses: updated,
+      activeAddress: nextActive,
+      shippingAddress: nextShipping,
+      billingAddress: nextBilling
+    });
+    get().showToast('Address details updated successfully', 'success');
+  },
+  deleteAddress: (addrId) => {
+    const currentList = get().addresses;
+    if (currentList.length <= 1) {
+      get().showToast('Cannot remove the only remaining address. Please add a new address first.', 'warning');
+      return;
+    }
+    const updated = currentList.filter(a => a.id !== addrId);
+    saveStored('apollo_addresses', updated);
+    
+    let nextActive = get().activeAddress;
+    let nextShipping = get().shippingAddress;
+    let nextBilling = get().billingAddress;
+
+    if (nextActive?.id === addrId) {
+      nextActive = updated[0];
+      saveStored('apollo_shipping_address', nextActive);
+    }
+    if (nextShipping?.id === addrId) {
+      nextShipping = updated[0];
+      saveStored('apollo_shipping_address', nextShipping);
+    }
+    if (nextBilling?.id === addrId) {
+      nextBilling = updated[0];
+      saveStored('apollo_billing_address', nextBilling);
+    }
+
+    set({
+      addresses: updated,
+      activeAddress: nextActive,
+      shippingAddress: nextShipping,
+      billingAddress: nextBilling
+    });
+    get().showToast('Address removed successfully', 'info');
+  },
+  setActiveAddress: (addrId) => {
+    const found = get().addresses.find((a) => a.id === addrId);
+    if (found) {
+      saveStored('apollo_shipping_address', found);
+      set({ activeAddress: found, shippingAddress: found });
+      get().showToast(`Delivery location set to ${found.postOffice.name} (${found.pincode})`, 'info');
+    }
+  },
+
+  products: initialProducts,
+  selectedProduct: null,
+  setSelectedProduct: (p) => set({ selectedProduct: p }),
+selectProductVariant: (asin, sku) => {
+    set((state) => ({
+      products: state.products.map((p) => {
+        if (p.asin === asin) {
+          return { ...p, selectedVariantSku: sku };
+        }
+        return p;
+      }),
+      selectedProduct: state.selectedProduct && state.selectedProduct.asin === asin
+        ? { ...state.selectedProduct, selectedVariantSku: sku }
+        : state.selectedProduct
+    }));
+  },
+  searchQuery: '',
+  setSearchQuery: (q) => set({ searchQuery: q }),
+  selectedCategory: 'ALL',
+  setSelectedCategory: (cat) => set({ selectedCategory: cat }),
+  updateProductStock: (asin, sku, deltaQty) => {
+    const updated = get().products.map((p) => {
+      if (p.asin === asin) {
+        return {
+          ...p,
+          variants: p.variants.map((v) => {
+            if (v.sku === sku) {
+              return { ...v, inventory: Math.max(0, v.inventory + deltaQty) };
+            }
+            return v;
+          })
+        };
+      }
+      return p;
+    });
+    saveStored('apollo_products', updated);
+    set({ products: updated });
+  },
+  addNewProduct: (newProd) => {
+    const updated = [newProd, ...get().products];
+    saveStored('apollo_products', updated);
+    set({ products: updated });
+    get().showToast(`Product ASIN ${newProd.asin} published live to Apollo catalog`, 'success');
+  },
+  updateProduct: (asin, updates) => {
+    const updated = get().products.map((p) => p.asin === asin ? { ...p, ...updates } : p);
+    saveStored('apollo_products', updated);
+    const currSelected = get().selectedProduct;
+    const updatedSelected = (currSelected && currSelected.asin === asin)
+      ? updated.find(p => p.asin === asin) || null
+      : currSelected;
+    set({ products: updated, selectedProduct: updatedSelected });
+    get().showToast(`Product ${asin} updated successfully`, 'success');
+  },
+  deleteProduct: (asin) => {
+    const updated = get().products.filter((p) => p.asin !== asin);
+    saveStored('apollo_products', updated);
+    const currSelected = get().selectedProduct;
+    const updatedSelected = (currSelected && currSelected.asin === asin) ? null : currSelected;
+    set({ products: updated, selectedProduct: updatedSelected });
+    get().showToast(`Product ASIN ${asin} deleted from catalog`, 'info');
+  },
+  updateVariantDetails: (asin, sku, updates) => {
+    const validUpdateKeys = new Set([
+      'title', 'attributes', 'b2cPrice', 'mrp', 'b2bTierPricing',
+      'inventory', 'barcode', 'images', 'videoUrl', 'weightGrams',
+      'dimensionsCm', 'hsnCode', 'gstRatePercent', 'b2bMoq'
+    ]);
+    const filteredUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([key]) => validUpdateKeys.has(key))
+    );
+    const updated = get().products.map((p) => {
+      if (p.asin === asin) {
+        return {
+          ...p,
+          variants: p.variants.map((v) => (v.sku === sku ? { ...v, ...filteredUpdates } : v))
+        };
+      }
+      return p;
+    });
+    saveStored('apollo_products', updated);
+    const currSelected = get().selectedProduct;
+    const updatedSelected = (currSelected && currSelected.asin === asin)
+      ? updated.find(p => p.asin === asin) || null
+      : currSelected;
+    set({ products: updated, selectedProduct: updatedSelected });
+    get().showToast(`Variant ${sku} updated successfully`, 'success');
+  },
+  addNewVariantToProduct: (asin, newVariant) => {
+    const updated = get().products.map((p) => {
+      if (p.asin === asin) {
+        return {
+          ...p,
+          variants: [...p.variants, newVariant]
+        };
+      }
+      return p;
+    });
+    saveStored('apollo_products', updated);
+    set({ products: updated });
+    get().showToast(`New variant SKU ${newVariant.sku} added to ASIN ${asin}`, 'success');
+  },
+  deleteVariantFromProduct: (asin, sku) => {
+    const updated = get().products.map((p) => {
+      if (p.asin === asin) {
+        const remainingVariants = p.variants.filter((v) => v.sku !== sku);
+        const newSelectedSku = p.selectedVariantSku === sku 
+          ? (remainingVariants[0]?.sku || '') 
+          : p.selectedVariantSku;
+        return {
+          ...p,
+          variants: remainingVariants,
+          selectedVariantSku: newSelectedSku
+        };
+      }
+      return p;
+    });
+    saveStored('apollo_products', updated);
+    set({ products: updated });
+    get().showToast(`Variant ${sku} removed from product`, 'info');
+  },
+  combineProductsIntoParentListing: (asins, parentTitle) => {
+    const currentProducts = get().products;
+    const matched = asins.map((id) => currentProducts.find((p) => p.asin === id)).filter(Boolean) as Product[];
+    if (matched.length === 0) return null;
+
+    const combinedVariants: ProductVariant[] = [];
+    matched.forEach((p, pIdx) => {
+      p.variants.forEach((v, vIdx) => {
+        const sizeOrName = v.attributes?.size || v.title || `Option ${combinedVariants.length + 1}`;
+        combinedVariants.push({
+          ...v,
+          sku: v.sku || `APE-VAR-${pIdx + 1}-${vIdx + 1}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`,
+          title: v.title || `${p.title} - ${sizeOrName}`,
+          attributes: {
+            ...v.attributes,
+            size: v.attributes?.size || sizeOrName
+          }
+        });
+      });
+    });
+
+    const baseProduct = matched[0];
+    const newAsin = `AP-PAR-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const title = parentTitle || `Apollo Combined Variation Family - ${baseProduct.title.replace(/\s*\(.*?\)\s*/g, '')}`;
+
+    const sellerListings: Record<string, SellerListing[]> = {};
+    combinedVariants.forEach((v) => {
+      sellerListings[v.sku] = [
+        {
+          sellerId: 'seller_apollo_mfg',
+          sellerName: 'Apollo Engineering Direct Hub (382430)',
+          rating: 5.0,
+          ratingCount: 25,
+          fulfillmentType: 'FBF',
+          price: v.b2cPrice || 20,
+          shippingFee: 0,
+          deliveryDays: 1,
+          stock: v.inventory || 500,
+          isWinningBuyBox: true,
+          buyBoxScore: 100
+        }
+      ];
+    });
+
+    const combinedProduct: Product = {
+      ...baseProduct,
+      asin: newAsin,
+      title,
+      variants: combinedVariants,
+      selectedVariantSku: combinedVariants[0]?.sku || 'SKU-01',
+      sellerListings,
+      createdAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString()
+    };
+
+    const updated = [combinedProduct, ...currentProducts];
+    saveStored('apollo_products', updated);
+    set({ products: updated });
+    get().showToast(`Combined ${matched.length} items into 1 parent listing (${combinedVariants.length} variations)!`, 'success');
+    return combinedProduct;
+  },
+
+  // ── Product Listing & Marketplace ──────────────────────────────
+  listingMode: 'B2C' as const,
+  setListingMode: (mode) => set({ listingMode: mode }),
+  
+  publishProduct: (product) => {
+    const asin = `AP-${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const newProduct: Product = {
+      ...product,
+      asin,
+      createdAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString()
+    };
+    const updated = [newProduct, ...get().products];
+    saveStored('apollo_products', updated);
+    set({ products: updated });
+    get().showToast(`Product published with ASIN ${asin}`, 'success');
+    return asin;
+  },
+  
+  updateProductListing: (asin, updates) => {
+    const updated = get().products.map((p) => {
+      if (p.asin === asin) {
+        return { ...p, ...updates, lastUpdated: new Date().toISOString() };
+      }
+      return p;
+    });
+    saveStored('apollo_products', updated);
+    set({ products: updated });
+    get().showToast(`Product ${asin} updated successfully`, 'success');
+  },
+  
+  deleteProductListing: (asin) => {
+    const updated = get().products.filter((p) => p.asin !== asin);
+    saveStored('apollo_products', updated);
+    set({ products: updated });
+    get().showToast(`Product ASIN ${asin} deleted from catalog`, 'info');
+  },
+  
+  updateVariantPricing: (asin, sku, price, quantity) => {
+    const qty = quantity || 1;
+    set((state) => ({
+      products: state.products.map((p) => {
+        if (p.asin === asin) {
+          return {
+            ...p,
+            variants: p.variants.map((v) =>
+              v.sku === sku
+                ? { ...v, b2cPrice: price, mrp: Math.round(price * 1.5 * 100) / 100 }
+                : v
+            ),
+            lastUpdated: new Date().toISOString()
+          };
+        }
+        return p;
+      }),
+      listingMode: 'B2B'
+    }));
+    get().showToast(`Variant ${sku} pricing updated to ₹${price} (qty: ${qty})`, 'success');
+  },
+  
+  getWinningSellerForASIN: (asin) => {
+    const product = get().products.find((p) => p.asin === asin);
+    if (!product?.sellerListings) return null;
+    
+    let bestScore = -1;
+    let bestListing: SellerListing | null = null;
+    
+    for (const [sku, listings] of Object.entries(product.sellerListings)) {
+      for (const listing of listings) {
+        if (listing.buyBoxScore > bestScore) {
+          bestScore = listing.buyBoxScore;
+          bestListing = listing;
+        }
+      }
+    }
+    
+    return bestListing || null;
+  },
+  
+updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays: number, rating: number, fulfillment: 'FBF' | 'FBM') => {
+    set((state) => {
+      const product = state.products.find((p) => p.asin === asin);
+      if (!product?.sellerListings) return state;
+      
+      const shippingScoreMap: Record<string, number> = {
+        'FAST': 1.0,
+        'MODERATE': 0.8, 
+        'SLOW': 0.5
+      };
+      
+      const shippingSpeed = state.activeAddress?.pincode 
+        ? (deliveryDays <= 1 ? 'FAST' : deliveryDays <= 3 ? 'MODERATE' : 'SLOW')
+        : 'MODERATE';
+      
+      const priceScore = Math.max(0, 1 - (price - 100) / 5000);
+      const ratingScore = rating / 5.0;
+      const fulfillmentScore = fulfillment === 'FBF' ? 1.0 : 0.9;
+      const shippingScore = shippingScoreMap[shippingSpeed] || 0.8;
+      
+      const weights = { price: 0.40, shipping: 0.25, rating: 0.20, fulfillment: 0.15 };
+      const buyBoxScore = Math.round(
+        (weights.price * priceScore) + 
+        (weights.shipping * shippingScore) + 
+        (weights.rating * ratingScore) + 
+        (weights.fulfillment * fulfillmentScore)
+      * 100) / 100;
+      
+      const updatedListings: Record<string, SellerListing[]> = {};
+      
+      for (const [sku, listings] of Object.entries(product.sellerListings)) {
+        const updated = listings.map((listing) => {
+          if (listing.sellerId === sellerId) {
+            return { ...listing, buyBoxScore };
+          }
+          return listing;
+        });
+        updatedListings[sku] = updated;
+      }
+      
+      return {
+        products: state.products.map((p) =>
+          p.asin === asin 
+            ? { ...p, sellerListings: updatedListings, lastUpdated: new Date().toISOString() }
+            : p
+        )
+      };
+    });
+    get().showToast(`Buy Box score calculated for seller ${sellerId}`, 'info');
+  },
+
+  // Cart logic with B2B wholesale pricing rules
+  cart: [],
+  addToCart: (itemData, qty = 1) => {
+    const { cart, appMode } = get();
+    const existingIndex = cart.findIndex((i) => 
+      (itemData.variantId && i.variantId && i.variantId === itemData.variantId) ||
+      i.sku === itemData.sku
+    );
+    let updatedCart = [...cart];
+    
+    let finalUnitPrice = itemData.unitPrice;
+    let isB2B = appMode === 'B2B';
+    
+    let effectiveAddQty = qty;
+    const existingQty = existingIndex > -1 ? cart[existingIndex].quantity : 0;
+
+    if (isB2B) {
+      const product = get().products.find((p) => p.asin === itemData.asin);
+      if (product?.variants) {
+        const variant = product.variants.find((v) => v.sku === itemData.sku);
+        if (variant) {
+          const moq = variant.b2bMoq || variant.b2bTierPricing?.[0]?.minQty || product.b2bMoq || 50;
+          if (existingIndex === -1 && effectiveAddQty < moq) {
+            effectiveAddQty = moq;
+            get().showToast(`Applied B2B Wholesale Minimum Order Quantity (MOQ: ${moq} units)`, 'info');
+          }
+          const checkTotalQty = existingQty + effectiveAddQty;
+          // Check inventory before allowing add to cart
+          if (variant.inventory < checkTotalQty) {
+            get().showToast(`Only ${variant.inventory} units available for SKU ${variant.sku}`, 'error');
+            return; // Block add to cart if insufficient inventory
+          }
+          if (variant?.b2bTierPricing) {
+            const tier = variant.b2bTierPricing.find((t) => checkTotalQty >= t.minQty && (!t.maxQty || checkTotalQty <= t.maxQty));
+            if (tier) {
+              finalUnitPrice = tier.pricePerUnit;
+            }
+          }
+        } else {
+          get().showToast(`Variant SKU ${itemData.sku} not found for product ASIN ${itemData.asin}`, 'error');
+          return;
+        }
+      } else {
+        get().showToast(`Product ASIN ${itemData.asin} has no variants`, 'error');
+        return;
+      }
+    }
+
+    const newTotalQty = existingQty + effectiveAddQty;
+
+    if (existingIndex > -1) {
+      updatedCart[existingIndex] = {
+        ...updatedCart[existingIndex],
+        ...itemData,
+        quantity: newTotalQty,
+        unitPrice: finalUnitPrice,
+        isB2BPricingApplied: isB2B
+      };
+    } else {
+      updatedCart.push({
+        ...itemData,
+        quantity: effectiveAddQty,
+        unitPrice: finalUnitPrice,
+        isB2BPricingApplied: isB2B
+      });
+    }
+
+    set({ 
+      cart: updatedCart, 
+      isCartDrawerOpen: true, 
+      quoteStatus: 'QUOTE_REQUIRED',
+      currentQuote: null,
+      quoteError: null
+    });
+    get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle} to cart`, 'success');
+  },
+  updateCartQuantity: (sku, qty) => {
+    if (qty <= 0) {
+      get().removeFromCart(sku);
+      return;
+    }
+    const { appMode, products, cart } = get();
+    if (appMode === 'B2B') {
+      const item = cart.find((i) => i.sku === sku);
+      if (item) {
+        const product = products.find((p) => p.asin === item.asin);
+        const variant = product?.variants.find((v) => v.sku === sku);
+        const moq = variant?.b2bMoq || variant?.b2bTierPricing?.[0]?.minQty || product?.b2bMoq || 50;
+        if (qty < moq) {
+          get().showToast(`B2B Wholesale Minimum Order Quantity (MOQ) is ${moq} units`, 'warning');
+          return;
+        }
+      }
+    }
+    set((state) => ({
+      cart: state.cart.map((item) => item.sku === sku ? { ...item, quantity: qty } : item),
+      quoteStatus: 'QUOTE_REQUIRED',
+      currentQuote: null,
+      quoteError: null
+    }));
+  },
+  removeFromCart: (sku) => {
+    const remaining = get().cart.filter((item) => item.sku !== sku);
+    set({
+      cart: remaining,
+      quoteStatus: remaining.length === 0 ? 'EMPTY_CART' : 'QUOTE_REQUIRED',
+      currentQuote: null,
+      quoteError: null
+    });
+    get().showToast('Item removed from cart', 'info');
+  },
+  clearCart: () => set({ cart: [], currentQuote: null, quoteStatus: 'EMPTY_CART', quoteError: null }),
+  isCartDrawerOpen: false,
+  setIsCartDrawerOpen: (open) => {
+    set({ isCartDrawerOpen: open });
+    // If cart is opened and not empty, ensure quote required if no valid quote
+    const { cart, currentQuote } = get();
+    if (open) {
+      if (cart.length === 0) {
+        set({ quoteStatus: 'EMPTY_CART', currentQuote: null });
+      } else if (!currentQuote) {
+        set({ quoteStatus: 'QUOTE_REQUIRED' });
+      }
+    }
+  },
+
+  // ── Authoritative Quote Engine (Gate 2C) ─────────────────────
+  currentQuote: null,
+  quoteStatus: 'EMPTY_CART' as QuoteStatus,
+  quoteError: null,
+  quotePaymentMethod: 'PREPAID',
+  setQuotePaymentMethod: (method) => set((state) => ({
+    quotePaymentMethod: method,
+    quoteStatus: state.cart.length > 0 ? 'QUOTE_REQUIRED' : 'EMPTY_CART',
+    currentQuote: null,
+    quoteError: null
+  })),
+  destinationPincode: '382430',
+  setDestinationPincode: (pincode) => set((state) => ({
+    destinationPincode: pincode,
+    quoteStatus: state.cart.length > 0 ? 'QUOTE_REQUIRED' : 'EMPTY_CART',
+    currentQuote: null,
+    quoteError: null
+  })),
+  fetchAuthoritativeQuote: async () => {
+    const { cart, destinationPincode, quotePaymentMethod } = get();
+    if (cart.length === 0) {
+      set({ currentQuote: null, quoteStatus: 'EMPTY_CART', quoteError: null });
+      return null;
+    }
+    const cleanPin = destinationPincode.trim();
+    if (!/^[1-9][0-9]{5}$/.test(cleanPin)) {
+      set({ quoteStatus: 'QUOTE_ERROR', quoteError: 'Valid 6-digit Indian PIN code required.' });
+      return null;
+    }
+
+    set({ quoteStatus: 'QUOTE_LOADING', quoteError: null });
+    try {
+      const items = cart.map((i) => ({
+        ...(i.variantId ? { variant_id: i.variantId } : {}),
+        ...(i.sku ? { sku: i.sku } : {}),
+        quantity: i.quantity,
+      }));
+
+      const quote = await QuoteService.requestQuote({
+        items,
+        destination_pincode: cleanPin,
+        payment_method: quotePaymentMethod,
+      });
+
+      set({ currentQuote: quote, quoteStatus: 'QUOTE_VALID', quoteError: null });
+      return quote;
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to calculate total quote.';
+      set({ quoteStatus: 'QUOTE_ERROR', quoteError: errorMsg });
+      return null;
+    }
+  },
+
+  // ── Database-Driven Catalog API (Gate 2C) ─────────────────────
+  apiCatalogProducts: DEFAULT_API_CATALOG_PRODUCTS,
+  apiCatalogLoading: false,
+  apiCatalogError: null,
+  fetchApiCatalog: async () => {
+    set({ apiCatalogLoading: true, apiCatalogError: null });
+    try {
+      const prods = await CatalogService.getCatalog();
+      if (prods && prods.length > 0) {
+        set({ apiCatalogProducts: prods, apiCatalogLoading: false, apiCatalogError: null });
+      } else {
+        set({ apiCatalogProducts: DEFAULT_API_CATALOG_PRODUCTS, apiCatalogLoading: false, apiCatalogError: null });
+      }
+    } catch {
+      // Graceful fallback ensuring catalog products and pricing remain active
+      set({ apiCatalogProducts: DEFAULT_API_CATALOG_PRODUCTS, apiCatalogLoading: false, apiCatalogError: null });
+    }
+  },
+
+  // ── Multi-Lingual Architecture ───────────────────────────────
+  selectedLanguage: loadStored<SupportedLanguage>('apollo_lang', 'en'),
+  setSelectedLanguage: (lang) => {
+    saveStored('apollo_lang', lang);
+    set({ selectedLanguage: lang });
+  },
+
+  getSplitShipments: () => {
+    const { cart, activeAddress, appMode, destinationPincode } = get();
+    if (cart.length === 0) return [];
+
+    const groupedBySeller: Record<string, CartItem[]> = {};
+    cart.forEach((item) => {
+      if (!groupedBySeller[item.sellerId]) {
+        groupedBySeller[item.sellerId] = [];
+      }
+      groupedBySeller[item.sellerId].push(item);
+    });
+
+    const isB2B = appMode === 'B2B';
+    const deliveryDays = isB2B ? 3 : 2;
+    const effectivePin = activeAddress?.pincode || destinationPincode || '382430';
+
+    return Object.entries(groupedBySeller).map(([sellerId, items], idx) => {
+      const seller = MOCK_SELLERS[sellerId] || { name: items[0].sellerName, fulfillment: items[0].fulfillmentType };
+      const subtotal = items.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
+      const isIntraState = effectivePin.startsWith(ORIGIN_STATE_CODE);
+      const taxAmount = calculateInclusiveGst(subtotal, DEFAULT_GST_RATE_PERCENT, isIntraState).totalTax;
+      const totalWeightGrams = items.reduce((sum, i) => sum + (i.weightGrams * i.quantity), 0);
+      const tariff = calculateSpeedPostTariff(effectivePin, totalWeightGrams);
+
+      const estDate = new Date();
+      estDate.setDate(estDate.getDate() + (isB2B ? 3 : tariff.deliveryDaysEstimate));
+      const formattedDate = estDate.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' });
+      const dateString = isB2B
+        ? `3 to 4 Working Days Industrial Freight (${formattedDate})`
+        : `APE Express Delivery (${formattedDate})`;
+
+      return {
+        packageId: `pkg_${idx + 1}_${Date.now()}`,
+        sellerId,
+        sellerName: seller.name,
+        fulfillmentType: seller.fulfillment,
+        items,
+        subtotal,
+        taxAmount,
+        shippingFee: tariff.totalPostage,
+        estimatedDeliveryDate: dateString,
+        speedPostService: isB2B
+          ? 'SPEED_POST_NATIONAL'
+          : tariff.distanceZone === 'LOCAL'
+          ? 'SPEED_POST_LOCAL'
+          : tariff.distanceZone === 'METRO'
+          ? 'SPEED_POST_METRO'
+          : 'SPEED_POST_NATIONAL'
+      };
+    });
+  },
+
+  orders: initialOrders,
+  createOrder: (paymentMethod, gstinClaim, paymentMeta) => {
+    const { cart, activeAddress, currentUser, appMode, currentOrg, getSplitShipments, destinationPincode } = get();
+    const splitShipments = getSplitShipments();
+    const orderNum = `ORD-AE-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+    const invNum = `INV-AE-2026-08-${Math.floor(10000 + Math.random() * 90000)}`;
+
+    const itemsTotal = cart.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
+    const taxableValue = Math.round((itemsTotal / 1.18) * 100) / 100;
+    const totalTax = Math.round((itemsTotal - taxableValue) * 100) / 100;
+    
+    const isIntrastate = (activeAddress?.stateCode || '24') === '24';
+    const cgstAmount = isIntrastate ? Math.round((totalTax / 2) * 100) / 100 : 0;
+    const sgstAmount = isIntrastate ? Math.round((totalTax / 2) * 100) / 100 : 0;
+    const igstAmount = !isIntrastate ? totalTax : 0;
+
+    const shippingTotal = splitShipments.reduce((sum, p) => sum + p.shippingFee, 0);
+    const codFee = paymentMethod === 'COD' ? Math.round(itemsTotal * 0.025) : 0;
+    const grandTotal = itemsTotal + shippingTotal + codFee;
+
+    const effectiveAddress: DeliveryAddress = activeAddress || {
+      id: 'addr_checkout_active',
+      userId: currentUser.id,
+      fullName: currentUser.name || 'Valued Customer',
+      phone: currentUser.phone || '',
+      addressType: 'HOME',
+      flatBuilding: '',
+      streetArea: '',
+      pincode: destinationPincode || '382430',
+      postOffice: {
+        name: 'Kathwada GIDC S.O.',
+        branchType: 'Sub Post Office',
+        deliveryStatus: 'Delivery',
+        circle: 'Gujarat',
+        district: 'Ahmedabad',
+        state: 'Gujarat',
+        facilityId: 'PO382430'
+      },
+      city: 'Ahmedabad',
+      state: 'Gujarat',
+      stateCode: '24',
+      isDefault: true
+    };
+
+    const processedShipments = splitShipments.map((pkg) => {
+      const booking = generateIndiaPostBooking(effectiveAddress, pkg.items);
+      return {
+        packageId: pkg.packageId,
+        sellerId: pkg.sellerId,
+        sellerName: pkg.sellerName,
+        items: pkg.items,
+        shippingDetail: booking,
+        status: 'CONFIRMED' as const,
+        milestones: [
+          { status: 'Order Confirmed', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), location: 'Apollo Platform Engine', description: 'Order verified & APE Priority Dispatch initiated', isCompleted: true },
+          { status: 'Warehouse Allocated', timestamp: 'Pending', location: `Kathwada Factory Hub (${ORIGIN_HUB_PINCODE})`, description: 'Item queued for barcode scan & thermal label affix', isCompleted: false },
+          { status: 'APE Dispatch Booked', timestamp: 'Pending', location: 'Kathwada APE Logistics Hub', description: `Article ${booking.articleNumber} registered in manifest`, isCompleted: false },
+          { status: 'In Transit', timestamp: 'Pending', location: 'Ahmedabad Nodal Sorting Hub', description: 'En route to destination delivery hub', isCompleted: false },
+          { status: 'Out for Delivery', timestamp: 'Pending', location: `${effectiveAddress.postOffice.name} (${effectiveAddress.pincode})`, description: 'Assigned to delivery executive for doorstep delivery', isCompleted: false },
+          { status: 'Delivered', timestamp: 'Pending', location: effectiveAddress.city, description: 'Doorstep verification completed', isCompleted: false }
+        ]
+      };
+    });
+
+    const newOrder: Order = {
+      id: `ord_${Date.now()}`,
+      orderNumber: orderNum,
+      invoiceNumber: invNum,
+      userId: currentUser.id,
+      customerName: currentUser.name,
+      customerEmail: currentUser.email,
+      customerPhone: currentUser.phone,
+      orderType: appMode === 'B2B' ? 'B2B' : 'B2C',
+      b2bOrgId: appMode === 'B2B' ? currentOrg.id : undefined,
+      gstin: gstinClaim ? (activeAddress?.gstin || currentOrg.gstin) : undefined,
+      isInputTaxCreditClaimed: gstinClaim,
+      deliveryAddress: effectiveAddress,
+      shipments: processedShipments,
+      pricingSummary: {
+        itemsTotal,
+        discountTotal: 0,
+        taxableValue,
+        cgstAmount,
+        sgstAmount,
+        igstAmount,
+        totalTax,
+        shippingTotal,
+        codFee,
+        grandTotal
+      },
+      paymentDetail: {
+        method: paymentMethod,
+        transactionId: paymentMeta?.razorpayPaymentId || paymentMeta?.transactionId || `TXN-AE-${Math.floor(100000000 + Math.random() * 900000000)}`,
+        paymentStatus: paymentMethod === 'NET_30_PO' ? 'PENDING_PO_APPROVAL' : paymentMethod === 'COD' ? 'COD_VERIFIED' : 'PAID',
+        paidAt: paymentMethod !== 'NET_30_PO' && paymentMethod !== 'COD' ? new Date().toISOString() : undefined,
+        idempotencyKey: `IDEMP-${orderNum}`,
+        razorpayPaymentId: paymentMeta?.razorpayPaymentId,
+        razorpayOrderId: paymentMeta?.razorpayOrderId,
+        razorpaySignature: paymentMeta?.razorpaySignature,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (appMode === 'B2B' && paymentMethod === 'NET_30_PO') {
+      set((state) => ({
+        currentOrg: {
+          ...state.currentOrg,
+          creditUsed: state.currentOrg.creditUsed + grandTotal
+        }
+      }));
+    }
+
+    const updatedOrders = [newOrder, ...get().orders];
+    saveStored('apollo_orders', updatedOrders);
+
+    // Authoritative inventory reduction for placed order
+    get().decrementInventory(cart);
+    
+    set({
+      orders: updatedOrders,
+      cart: [],
+      selectedOrderForDetail: newOrder
+    });
+
+    get().showToast(`Order #${orderNum} placed! APE Tracking AWB generated successfully.`, 'success');
+    return newOrder;
+  },
+
+  decrementInventory: (items) => {
+    if (!items || items.length === 0) return;
+    const itemMap = new Map<string, number>();
+    items.forEach((item) => {
+      itemMap.set(item.sku, (itemMap.get(item.sku) || 0) + item.quantity);
+    });
+
+    const updatedProducts = get().products.map((p) => {
+      let productChanged = false;
+      const updatedVariants = p.variants.map((v) => {
+        const qtyToDeduct = itemMap.get(v.sku);
+        if (qtyToDeduct && qtyToDeduct > 0) {
+          productChanged = true;
+          return {
+            ...v,
+            inventory: Math.max(0, (v.inventory || 0) - qtyToDeduct)
+          };
+        }
+        return v;
+      });
+
+      return productChanged ? { ...p, variants: updatedVariants } : p;
+    });
+
+    saveStored('apollo_products', updatedProducts);
+    const currSelected = get().selectedProduct;
+    const updatedSelected = currSelected
+      ? updatedProducts.find((p) => p.asin === currSelected.asin) || null
+      : currSelected;
+
+    set({ products: updatedProducts, selectedProduct: updatedSelected });
+  },
+
+  updateOrderStatus: (orderId, packageId, status, milestoneDesc, location) => {
+    const updatedOrders = get().orders.map((ord) => {
+      if (ord.id === orderId) {
+        return {
+          ...ord,
+          shipments: ord.shipments.map((shp) => {
+            if (shp.packageId === packageId) {
+              const updatedMilestones = [...shp.milestones];
+              const milestoneIndex = updatedMilestones.findIndex((m) => m.status.toLowerCase().includes(status.toLowerCase().replace(/_/g, ' ')));
+              if (milestoneIndex > -1) {
+                updatedMilestones[milestoneIndex].isCompleted = true;
+                updatedMilestones[milestoneIndex].timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                updatedMilestones[milestoneIndex].description = milestoneDesc;
+                updatedMilestones[milestoneIndex].location = location;
+              }
+              return { ...shp, status, milestones: updatedMilestones };
+            }
+            return shp;
+          })
+        };
+      }
+      return ord;
+    });
+
+    saveStored('apollo_orders', updatedOrders);
+    set({ orders: updatedOrders });
+    apiService.updateBackendOrderStatus(orderId, status).catch(() => {});
+    get().showToast(`Shipment status updated to ${status}`, 'info');
+  },
+  redispatchOrder: (orderId) => {
+    const target = get().orders.find((o) => o.id === orderId);
+    if (!target) return;
+
+    const newBooking = generateIndiaPostBooking(target.deliveryAddress, target.shipments[0]?.items || []);
+    const updatedOrders = get().orders.map((ord) => {
+      if (ord.id === orderId) {
+        return {
+          ...ord,
+          shipments: ord.shipments.map((shp) => ({
+            ...shp,
+            shippingDetail: newBooking,
+            status: 'PROCESSING_PICK_PACK' as OrderStatus,
+            milestones: [
+              { status: 'Order Confirmed', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), location: 'Apollo Platform Engine', description: 'Re-dispatch authorized & new APE Priority booking initiated', isCompleted: true },
+              { status: 'Warehouse Allocated', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), location: `Kathwada Factory Hub (${ORIGIN_HUB_PINCODE})`, description: 'New package queued for barcode scan & thermal label affix', isCompleted: true },
+              { status: 'APE Dispatch Booked', timestamp: 'Pending', location: 'Kathwada Logistics Hub', description: `New Article ${newBooking.articleNumber} registered in manifest`, isCompleted: false },
+              { status: 'In Transit', timestamp: 'Pending', location: 'Ahmedabad Nodal Sorting Hub', description: 'En route to destination delivery postal hub', isCompleted: false },
+              { status: 'Out for Delivery', timestamp: 'Pending', location: `${ord.deliveryAddress.postOffice.name} (${ord.deliveryAddress.pincode})`, description: 'Assigned to delivery agent for doorstep delivery', isCompleted: false },
+              { status: 'Delivered', timestamp: 'Pending', location: ord.deliveryAddress.city, description: 'Doorstep OTP verification pending', isCompleted: false }
+            ]
+          })),
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return ord;
+    });
+
+    saveStored('apollo_orders', updatedOrders);
+    set({ orders: updatedOrders });
+    get().showToast(`Order #${target.orderNumber} re-dispatched with new AWB (${newBooking.articleNumber})!`, 'success');
+  },
+
+  schedulePickupForOrder: (orderId, packageId, slot, courier, date) => {
+    const updatedOrders = get().orders.map((ord) => {
+      if (ord.id === orderId || ord.orderNumber === orderId) {
+        return {
+          ...ord,
+          shipments: ord.shipments.map((shp) => {
+            if (shp.packageId === packageId || ord.shipments.length === 1) {
+              return {
+                ...shp,
+                status: 'PROCESSING_PICK_PACK' as OrderStatus,
+                pickupDetail: {
+                  slot,
+                  date,
+                  courier,
+                  scheduledAt: new Date().toISOString()
+                },
+                milestones: [
+                  ...shp.milestones,
+                  {
+                    status: 'PICKUP_SCHEDULED',
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    location: 'Kathwada GIDC Hub (382430)',
+                    description: `Pickup scheduled for ${date} (${slot}) with ${courier}`,
+                    isCompleted: true
+                  }
+                ]
+              };
+            }
+            return shp;
+          })
+        };
+      }
+      return ord;
+    });
+    saveStored('apollo_orders', updatedOrders);
+    set({ orders: updatedOrders });
+    get().showToast(`Pickup scheduled for ${orderId} on ${date} (${slot}) with ${courier}!`, 'success');
+  },
+
+  confirmPackedAndReady: (orderId, packageId) => {
+    const updatedOrders = get().orders.map((ord) => {
+      if (ord.id === orderId || ord.orderNumber === orderId) {
+        return {
+          ...ord,
+          shipments: ord.shipments.map((shp) => {
+            if (shp.packageId === packageId || ord.shipments.length === 1) {
+              const manifestId = `MNF-KATH-${Date.now().toString().slice(-6)}`;
+              return {
+                ...shp,
+                status: 'AWB_GENERATED' as OrderStatus,
+                shippingDetail: {
+                  ...shp.shippingDetail,
+                  manifestId: shp.shippingDetail?.manifestId || manifestId
+                },
+                pickupDetail: shp.pickupDetail ? {
+                  ...shp.pickupDetail,
+                  manifestId
+                } : undefined,
+                milestones: [
+                  ...shp.milestones,
+                  {
+                    status: 'PACKED_READY_FOR_PICKUP',
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    location: 'Kathwada GIDC Dispatch Bay',
+                    description: `Item packed, label verified, added to Handover Manifest ${manifestId}`,
+                    isCompleted: true
+                  }
+                ]
+              };
+            }
+            return shp;
+          })
+        };
+      }
+      return ord;
+    });
+    saveStored('apollo_orders', updatedOrders);
+    set({ orders: updatedOrders });
+    get().showToast(`Order #${orderId} marked Packed & Ready for Handover!`, 'success');
+  },
+
+  confirmHandoverToCourier: (orderId, packageId) => {
+    const updatedOrders = get().orders.map((ord) => {
+      if (ord.id === orderId || ord.orderNumber === orderId) {
+        return {
+          ...ord,
+          shipments: ord.shipments.map((shp) => {
+            if (shp.packageId === packageId || ord.shipments.length === 1) {
+              return {
+                ...shp,
+                status: 'IN_TRANSIT' as OrderStatus,
+                milestones: [
+                  ...shp.milestones,
+                  {
+                    status: 'DISPATCHED',
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    location: 'Kathwada GIDC Hub',
+                    description: 'Package handed over to courier executive. In transit.',
+                    isCompleted: true
+                  }
+                ]
+              };
+            }
+            return shp;
+          })
+        };
+      }
+      return ord;
+    });
+    saveStored('apollo_orders', updatedOrders);
+    set({ orders: updatedOrders });
+    get().showToast(`Order #${orderId} handed over to courier! Status: In-Transit.`, 'success');
+  },
+
+  batchSchedulePickup: (orderIds, slot, courier, date) => {
+    const idSet = new Set(orderIds);
+    const updatedOrders = get().orders.map((ord) => {
+      if (idSet.has(ord.id) || idSet.has(ord.orderNumber)) {
+        return {
+          ...ord,
+          shipments: ord.shipments.map((shp) => ({
+            ...shp,
+            status: 'PROCESSING_PICK_PACK' as OrderStatus,
+            pickupDetail: {
+              slot,
+              date,
+              courier,
+              scheduledAt: new Date().toISOString()
+            },
+            milestones: [
+              ...shp.milestones,
+              {
+                status: 'PICKUP_SCHEDULED',
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                location: 'Kathwada GIDC Hub (382430)',
+                description: `Batch pickup scheduled for ${date} (${slot}) with ${courier}`,
+                isCompleted: true
+              }
+            ]
+          }))
+        };
+      }
+      return ord;
+    });
+    saveStored('apollo_orders', updatedOrders);
+    set({ orders: updatedOrders });
+    get().showToast(`Batch pickup scheduled for ${orderIds.length} orders on ${date} (${slot}) with ${courier}!`, 'success');
+  },
+
+  selectedOrderForDetail: null,
+  setSelectedOrderForDetail: (o) => set({ selectedOrderForDetail: o }),
+  orderFilterStatus: 'ALL',
+  setOrderFilterStatus: (filter) => set({ orderFilterStatus: filter }),
+
+  isAuthModalOpen: false,
+  setIsAuthModalOpen: (open) => set({ isAuthModalOpen: open }),
+  isAddressModalOpen: false,
+  setIsAddressModalOpen: (open) => set({ isAddressModalOpen: open }),
+  isCheckoutOpen: false,
+  setIsCheckoutOpen: (open) => set({ isCheckoutOpen: open }),
+
+  // ── Wishlist ──────────────────────────────────────────────────
+  wishlist: initialWishlist,
+  addToWishlist: (item) => {
+    const existing = get().wishlist.find(w => w.asin === item.asin && w.sku === item.sku);
+    if (existing) {
+      get().showToast('Item already in your Wishlist', 'info');
+      return;
+    }
+    const newItem: WishlistItem = {
+      ...item,
+      id: `wish_${Date.now()}`,
+      addedAt: new Date().toISOString()
+    };
+    const updated = [newItem, ...get().wishlist];
+    saveStored('apollo_wishlist', updated);
+    set({ wishlist: updated });
+    get().showToast(`"${item.productTitle}" added to Wishlist ♥`, 'success');
+  },
+  removeFromWishlist: (id) => {
+    const updated = get().wishlist.filter(w => w.id !== id);
+    saveStored('apollo_wishlist', updated);
+    set({ wishlist: updated });
+    get().showToast('Removed from Wishlist', 'info');
+  },
+  moveWishlistToCart: (id) => {
+    const item = get().wishlist.find(w => w.id === id);
+    if (!item) return;
+    const product = get().products.find(p => p.asin === item.asin);
+    const variant = product?.variants.find(v => v.sku === item.sku);
+    if (product && variant) {
+      const seller = product.sellerListings[variant.sku]?.[0];
+      get().addToCart({
+        sku: variant.sku,
+        asin: product.asin,
+        title: variant.title,
+        parentAsin: product.asin,
+        productTitle: product.title,
+        variantTitle: variant.title,
+        attributes: variant.attributes as Record<string, string>,
+        imageUrl: variant.images[0] || '/solar_sprinkler.webp',
+        unitPrice: variant.b2cPrice,
+        mrp: variant.mrp,
+        gstRate: variant.gstRatePercent,
+        hsnCode: variant.hsnCode,
+        sellerId: seller?.sellerId || 'seller_apollo_mfg',
+        sellerName: seller?.sellerName || 'Apollo Engineering (Direct Factory)',
+        fulfillmentType: seller?.fulfillmentType || 'FBF',
+        weightGrams: variant.weightGrams,
+        isB2BPricingApplied: false
+      }, 1);
+      get().removeFromWishlist(id);
+      get().showToast(`"${item.productTitle}" moved to cart!`, 'success');
+    }
+  },
+  isInWishlist: (asin, sku) => {
+    return get().wishlist.some(w => w.asin === asin && w.sku === sku);
+  },
+
+  // ── Product Reviews ──────────────────────────────────────────
+  reviews: initialReviews,
+  addReview: (review) => {
+    const newReview: ProductReview = {
+      ...review,
+      id: `rev_${Date.now()}`,
+      helpfulCount: 0,
+      createdAt: new Date().toISOString()
+    };
+    const updated = [newReview, ...get().reviews];
+    saveStored('apollo_reviews', updated);
+    set({ reviews: updated });
+    get().showToast('Review submitted successfully! Thank you for your feedback.', 'success');
+  },
+  deleteReview: (reviewId) => {
+    const updated = get().reviews.filter(r => r.id !== reviewId);
+    saveStored('apollo_reviews', updated);
+    set({ reviews: updated });
+    get().showToast('Review deleted', 'info');
+  },
+  markReviewHelpful: (reviewId) => {
+    const updated = get().reviews.map(r => 
+      r.id === reviewId ? { ...r, helpfulCount: r.helpfulCount + 1 } : r
+    );
+    saveStored('apollo_reviews', updated);
+    set({ reviews: updated });
+  },
+  getProductReviews: (asin) => {
+    return get().reviews.filter(r => r.asin === asin).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  },
+  getAverageRating: (asin) => {
+    const productReviews = get().reviews.filter(r => r.asin === asin);
+    if (productReviews.length === 0) return { avg: 0, count: 0 };
+    const sum = productReviews.reduce((s, r) => s + r.rating, 0);
+    return { avg: Math.round((sum / productReviews.length) * 10) / 10, count: productReviews.length };
+  },
+
+  // ── Coupons & Discounts ──────────────────────────────────────
+  coupons: initialCoupons,
+  appliedCoupon: null,
+  couponDiscount: 0,
+  addCoupon: (coupon) => {
+    const newCoupon: Coupon = {
+      ...coupon,
+      id: `coup_${Date.now()}`,
+      usedCount: 0
+    };
+    const updated = [newCoupon, ...get().coupons];
+    saveStored('apollo_coupons', updated);
+    set({ coupons: updated });
+    get().showToast(`Coupon "${coupon.code}" created successfully!`, 'success');
+  },
+  updateCoupon: (couponId, updates) => {
+    const updated = get().coupons.map(c => c.id === couponId ? { ...c, ...updates } : c);
+    saveStored('apollo_coupons', updated);
+    set({ coupons: updated });
+    get().showToast('Coupon updated', 'success');
+  },
+  deleteCoupon: (couponId) => {
+    const updated = get().coupons.filter(c => c.id !== couponId);
+    saveStored('apollo_coupons', updated);
+    set({ coupons: updated });
+    get().showToast('Coupon deleted', 'info');
+  },
+  applyCoupon: (code) => {
+    const coupon = get().coupons.find(c => c.code.toUpperCase() === code.toUpperCase() && c.isActive);
+    if (!coupon) {
+      get().showToast('Invalid coupon code. Please check and try again.', 'error');
+      return false;
+    }
+    const now = new Date();
+    if (now < new Date(coupon.validFrom) || now > new Date(coupon.validUntil)) {
+      get().showToast('This coupon has expired or is not yet active.', 'error');
+      return false;
+    }
+    if (coupon.usedCount >= coupon.usageLimit) {
+      get().showToast('This coupon has reached its usage limit.', 'error');
+      return false;
+    }
+    const cartTotal = get().cart.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
+    if (cartTotal < coupon.minOrderAmount) {
+      get().showToast(`Minimum order of ₹${coupon.minOrderAmount} required for this coupon.`, 'warning');
+      return false;
+    }
+    let discount = 0;
+    if (coupon.type === 'PERCENTAGE') {
+      discount = Math.round(cartTotal * coupon.value / 100);
+      if (coupon.maxDiscount) discount = Math.min(discount, coupon.maxDiscount);
+    } else if (coupon.type === 'FLAT_AMOUNT') {
+      discount = coupon.value;
+    } else if (coupon.type === 'FREE_SHIPPING') {
+      discount = 0; // Shipping fee waived separately
+    }
+    set({ appliedCoupon: coupon, couponDiscount: discount });
+    // Increment usage
+    const updatedCoupons = get().coupons.map(c => c.id === coupon.id ? { ...c, usedCount: c.usedCount + 1 } : c);
+    saveStored('apollo_coupons', updatedCoupons);
+    set({ coupons: updatedCoupons });
+    get().showToast(`Coupon "${coupon.code}" applied! You save ₹${discount}${coupon.type === 'FREE_SHIPPING' ? ' + Free Shipping' : ''}`, 'success');
+    return true;
+  },
+  removeCoupon: () => {
+    const coupon = get().appliedCoupon;
+    if (coupon) {
+      // Decrement usage back
+      const updatedCoupons = get().coupons.map(c => c.id === coupon.id ? { ...c, usedCount: Math.max(0, c.usedCount - 1) } : c);
+      saveStored('apollo_coupons', updatedCoupons);
+      set({ coupons: updatedCoupons });
+    }
+    set({ appliedCoupon: null, couponDiscount: 0 });
+    get().showToast('Coupon removed', 'info');
+  },
+
+  // ── Return / Refund Management ──────────────────────────────
+  returnRequests: initialReturns,
+  createReturnRequest: (orderId, items, reason, reasonDetails) => {
+    const order = get().orders.find(o => o.id === orderId);
+    if (!order) {
+      get().showToast('Order not found for return request', 'error');
+      return null;
+    }
+    const refundAmount = items.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
+    const returnReq: ReturnRequest = {
+      id: `ret_${Date.now()}`,
+      orderId,
+      orderNumber: order.orderNumber,
+      userId: get().currentUser.id,
+      items,
+      reason,
+      reasonDetails,
+      status: 'REQUESTED',
+      refundAmount,
+      refundMethod: 'ORIGINAL_PAYMENT',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    const updated = [returnReq, ...get().returnRequests];
+    saveStored('apollo_returns', updated);
+    set({ returnRequests: updated });
+    get().showToast(`Return request #${returnReq.id.slice(-6)} submitted for Order ${order.orderNumber}`, 'success');
+    return returnReq;
+  },
+  updateReturnStatus: (returnId, status, adminNotes) => {
+    const updated = get().returnRequests.map(r => 
+      r.id === returnId 
+        ? { ...r, status, adminNotes: adminNotes || r.adminNotes, updatedAt: new Date().toISOString() } 
+        : r
+    );
+    saveStored('apollo_returns', updated);
+    set({ returnRequests: updated });
+    get().showToast(`Return #${returnId.slice(-6)} status updated to ${status.replace(/_/g, ' ')}`, 'info');
+  },
+  getOrderReturns: (orderId) => {
+    return get().returnRequests.filter(r => r.orderId === orderId);
+  },
+
+  toastMessage: null,
+  showToast: (text, type = 'info') => {
+    set({ toastMessage: { text, type } });
+    setTimeout(() => {
+      set({ toastMessage: null });
+    }, 4000);
+  }
+}));

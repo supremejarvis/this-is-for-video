@@ -1096,9 +1096,102 @@ const initialContractorInquiries = loadStored<SolarContractorInquiry[]>('apollo_
 ]);
 
 export function syncCatalogProducts(products: Product[], existingApi: ApiProduct[] = []): ApiProduct[] {
-  const apiMap = new Map<string, ApiProduct>();
+  // When backend products exist, backend PostgreSQL is the single source of truth!
+  if (existingApi && existingApi.length > 0) {
+    const validBackendProducts: ApiProduct[] = [];
 
-  // 1. Strictly populate map from authentic products, respecting admin edits and skipping deleted products
+    for (const ap of existingApi) {
+      if (!ap || !ap.is_active || deletedProductAsinsSet.has(ap.id) || deletedProductAsinsSet.has(ap.sku_prefix)) {
+        continue;
+      }
+
+      // Match UI presentation metadata (images, badges, reviews)
+      const pMatch = products.find(p => 
+        p.asin === ap.id || 
+        p.asin === ap.sku_prefix || 
+        (p.variants && p.variants.some(v => v.sku === ap.sku_prefix || v.sku.startsWith(ap.sku_prefix))) ||
+        (ap.sku_prefix === 'APE-SC' && p.asin === 'AP-DRAINCLIPS-02') ||
+        (ap.sku_prefix === 'AE-SPRINKLER' && p.asin === 'AP-SPRINKLER-01') ||
+        (ap.sku_prefix === 'AE-CLAMP-GI' && p.asin === 'AP-GICLAMP-03') ||
+        (ap.sku_prefix === 'AE-PIPE-FITTING' && p.asin === 'AP-FITTINGTEE-04') ||
+        (ap.sku_prefix === 'AE-PUMP-DC' && p.asin === 'AP-PUMP-06') ||
+        (ap.sku_prefix === 'AE-TIMER-AUTO' && p.asin === 'AP-TIMER-07') ||
+        (ap.sku_prefix === 'AE-KIT-FULL' && p.asin === 'AP-FULLKIT-05')
+      );
+
+      // Resolve high-resolution official WebP image
+      let defaultImg = '/solar_sprinkler.webp';
+      const cleanPrefix = (ap.sku_prefix || '').toUpperCase();
+      const cleanName = (ap.name || '').toLowerCase();
+      if (cleanPrefix.includes('SC') || cleanName.includes('drain')) defaultImg = '/Drain_clips.webp';
+      else if (cleanPrefix.includes('SPRINKLER') || cleanName.includes('sprinkler')) defaultImg = '/solar_sprinkler.webp';
+      else if (cleanPrefix.includes('CLAMP') || cleanPrefix.includes('GI') || cleanName.includes('gi ')) defaultImg = '/gi_pipe_clamp.webp';
+      else if (cleanPrefix.includes('FITTING') || cleanPrefix.includes('PIPE') || cleanName.includes('fitting') || cleanName.includes('tee')) defaultImg = '/cpvc_upvc.webp';
+      else if (cleanPrefix.includes('PUMP') || cleanName.includes('pump')) defaultImg = '/pump.webp';
+      else if (cleanPrefix.includes('TIMER') || cleanName.includes('timer')) defaultImg = '/auto_timer.webp';
+      else if (cleanPrefix.includes('KIT') || cleanName.includes('kit') || cleanName.includes('full set')) defaultImg = '/solar_cleaning_fullset.webp';
+
+      const primaryImg = pMatch?.variants?.[0]?.images?.[0] || pMatch?.aPlusContent?.[0]?.imageUrl || defaultImg;
+      const allImgs = pMatch?.variants?.flatMap(v => v.images || [])?.length ? pMatch.variants.flatMap(v => v.images || []) : [primaryImg];
+
+      const category = (cleanPrefix.includes('SC') || cleanName.includes('drain') || cleanPrefix.includes('SPRINKLER') || cleanName.includes('sprinkler')) ? 'SS304 GRADE' :
+                       (cleanPrefix.includes('CLAMP') || cleanPrefix.includes('GI') || cleanName.includes('gi ')) ? 'GI SERIES' :
+                       (cleanPrefix.includes('FITTING') || cleanPrefix.includes('PIPE') || cleanName.includes('fitting')) ? 'FITTING SERIES' :
+                       (cleanPrefix.includes('PUMP') || cleanName.includes('pump')) ? 'POWER SERIES' :
+                       (cleanPrefix.includes('TIMER') || cleanName.includes('timer')) ? 'CONTROL SERIES' :
+                       (cleanPrefix.includes('KIT') || cleanName.includes('kit')) ? 'COMPLETE KIT' : 'SS304 GRADE';
+
+      const converted: ApiProduct = {
+        id: ap.id,
+        sku_prefix: ap.sku_prefix,
+        name: ap.name, // Authoritative from PostgreSQL
+        description: ap.description || pMatch?.description || '',
+        hsn_code: ap.hsn_code || '73269099',
+        is_active: ap.is_active,
+        is_archived: ap.is_archived || false,
+        version: ap.version || 1,
+        created_at: ap.created_at || new Date().toISOString(),
+        updated_at: ap.updated_at || new Date().toISOString(),
+        category,
+        image: primaryImg,
+        images: allImgs,
+        brand: pMatch?.brand || 'Apollo Engineering',
+        rating: pMatch?.rating || 4.9,
+        reviewCount: pMatch?.reviewCount || 340,
+        badges: pMatch?.badges || ['DIRECT_FACTORY', 'PRIME'],
+        highlights: pMatch?.highlights && pMatch.highlights.length > 0 ? pMatch.highlights : [
+          'Direct Factory Dispatch from Kathwada GIDC (382430)',
+          '100% Guaranteed Industrial Grade Quality',
+          'GST Statutory Invoice Included with 18% ITC Support'
+        ],
+        rawProduct: pMatch || undefined,
+        variants: (ap.variants || []).map(av => {
+          const matchingV = pMatch?.variants?.find(v => v.sku === av.sku || (av.frame_thickness_mm && v.attributes?.size && parseFloat(v.attributes.size) === Number(av.frame_thickness_mm)));
+          const rawPrice = av.unit_price !== undefined && av.unit_price !== null ? av.unit_price : matchingV?.b2cPrice;
+          const parsedPrice = typeof rawPrice === 'number' ? rawPrice : (parseFloat(String(rawPrice)) || 20);
+
+          return {
+            ...av,
+            display_label: av.display_label || matchingV?.title || av.sku || 'Standard',
+            images: matchingV?.images || allImgs,
+            available_stock: typeof av.available_stock === 'number' ? av.available_stock : (matchingV?.inventory ?? 100),
+            unit_price: parsedPrice, // Authoritative price from backend database
+            mrp: matchingV?.mrp || Math.round(parsedPrice * 1.5),
+            b2bTierPricing: matchingV?.b2bTierPricing || [],
+            weightGrams: matchingV?.weightGrams,
+            hsnCode: av.hsnCode || ap.hsn_code,
+            tax_mode: av.tax_mode || 'GST_INCLUSIVE'
+          };
+        })
+      };
+
+      validBackendProducts.push(converted);
+    }
+    return validBackendProducts;
+  }
+
+  // Fallback offline catalog from stored products
+  const apiMap = new Map<string, ApiProduct>();
   products.forEach(p => {
     if (!p || !p.asin || deletedProductAsinsSet.has(p.asin)) return;
     const primaryVariant = p.variants?.[0];
@@ -1137,8 +1230,8 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
         is_archived: false,
         version: 1,
         available_stock: v.inventory ?? 100,
-        unit_price: v.b2cPrice ?? 220,
-        mrp: v.mrp || Math.round((v.b2cPrice ?? 220) * 1.5),
+        unit_price: v.b2cPrice ?? 20,
+        mrp: v.mrp || Math.round((v.b2cPrice ?? 20) * 1.5),
         b2bTierPricing: v.b2bTierPricing || [],
         images: v.images || [],
         weightGrams: v.weightGrams,
@@ -1148,51 +1241,6 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
       }))
     };
     apiMap.set(p.asin, converted);
-  });
-
-  // 2. Merge backend API products or test mocks (e.g. from Playwright page.route)
-  existingApi.forEach(ap => {
-    let matchedAsin: string | undefined;
-
-    for (const [asin, ep] of apiMap.entries()) {
-      if (
-        ep.id === ap.id ||
-        asin === ap.id ||
-        ep.sku_prefix === ap.sku_prefix ||
-        (asin === 'AP-DRAINCLIPS-02' && (ap.sku_prefix === 'APE-SC' || (ap.name && (ap.name.toLowerCase().includes('clamp') || ap.name.toLowerCase().includes('drain'))))) ||
-        (asin === 'AP-SPRINKLER-01' && (ap.sku_prefix === 'AE-SPRINKLER' || ap.sku_prefix === 'APE-SS304-SPK' || (ap.name && ap.name.toLowerCase().includes('sprinkler')))) ||
-        (asin === 'AP-GICLAMP-03' && (ap.sku_prefix === 'AE-CLAMP-GI' || (ap.name && ap.name.toLowerCase().includes('gi ')))) ||
-        (asin === 'AP-FITTINGTEE-04' && (ap.sku_prefix === 'AE-PIPE-FITTING' || (ap.name && (ap.name.toLowerCase().includes('fitting') || ap.name.toLowerCase().includes('tee'))))) ||
-        (asin === 'AP-FULLKIT-05' && (ap.sku_prefix === 'AE-KIT-FULL' || (ap.name && (ap.name.toLowerCase().includes('kit') || ap.name.toLowerCase().includes('full set'))))) ||
-        (asin === 'AP-PUMP-06' && (ap.sku_prefix === 'AE-PUMP-DC' || (ap.name && ap.name.toLowerCase().includes('pump')))) ||
-        (asin === 'AP-TIMER-07' && (ap.sku_prefix === 'AE-TIMER-AUTO' || (ap.name && ap.name.toLowerCase().includes('timer'))))
-      ) {
-        matchedAsin = asin;
-        break;
-      }
-    }
-
-    if (matchedAsin && !deletedProductAsinsSet.has(matchedAsin)) {
-      const existingEntry = apiMap.get(matchedAsin)!;
-      // Do NOT overwrite existingEntry.name with stale ap.name — existingEntry.name comes from admin-edited p.title
-      if (ap.id) existingEntry.id = ap.id;
-      if (ap.description && !existingEntry.description) existingEntry.description = ap.description;
-      if (ap.variants && ap.variants.length > 0) {
-        existingEntry.variants = ap.variants.map(av => {
-          const matchingV = existingEntry.variants.find(ev => ev.sku === av.sku || (av.frame_thickness_mm && ev.frame_thickness_mm === av.frame_thickness_mm));
-          return {
-            ...av,
-            display_label: av.display_label || matchingV?.display_label,
-            images: matchingV?.images || existingEntry.images,
-            available_stock: matchingV?.available_stock ?? av.available_stock,
-            unit_price: matchingV?.unit_price ?? (typeof av.unit_price === 'number' ? av.unit_price : 20),
-            mrp: matchingV?.mrp || (av.unit_price ? Math.round(Number(av.unit_price) * 1.5) : 350),
-            b2bTierPricing: matchingV?.b2bTierPricing || [],
-          };
-        });
-      }
-      apiMap.set(matchedAsin, existingEntry);
-    }
   });
 
   return Array.from(apiMap.values());

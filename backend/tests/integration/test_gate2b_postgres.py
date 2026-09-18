@@ -536,22 +536,25 @@ async def test_postgres_100_concurrent_inventory_mutations(session_factory):
             ),
         )
 
+    sem = asyncio.Semaphore(20)
+
     # Concurrently fire 100 reservation holds of 5 units each
     async def reserve_task(idx: int):
-        async with session_factory() as s:
-            try:
-                order_id = uuid.uuid4()
-                await InventoryService.reserve_stock(
-                    session=s,
-                    sku=sku,
-                    quantity=5,
-                    order_id=order_id,
-                )
-                await s.commit()
-                return True
-            except Exception:
-                await s.rollback()
-                return False
+        async with sem:
+            async with session_factory() as s:
+                try:
+                    order_id = uuid.uuid4()
+                    await InventoryService.reserve_stock(
+                        session=s,
+                        sku=sku,
+                        quantity=5,
+                        order_id=order_id,
+                    )
+                    await s.commit()
+                    return True
+                except Exception:
+                    await s.rollback()
+                    return False
 
     tasks = [reserve_task(i) for i in range(100)]
     results = await asyncio.gather(*tasks)

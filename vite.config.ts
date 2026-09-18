@@ -40,7 +40,7 @@ export default defineConfig(({ mode }) => {
           target: 'http://127.0.0.1:8000',
           changeOrigin: true,
           secure: false,
-          rewrite: (path) => path.replace(/^\/api/, '/api/v1'),
+          rewrite: (path) => path.startsWith('/api/v1') ? path : path.replace(/^\/api/, '/api/v1'),
           configure: (proxy) => {
             proxy.on('error', (_err, _req, res) => {
               if (res && 'writeHead' in res && !res.headersSent) {

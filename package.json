@@ -16,13 +16,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:a11y": "playwright test tests/e2e/a11y.spec.ts",
-    "backend": "cd backend && .venv\\Scripts\\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
-    "tree": "node ../scripts/tree-generator.mjs .",
-    "tree:depth2": "node ../scripts/tree-generator.mjs . --depth 2",
-    "tree:md": "node ../scripts/tree-generator.mjs . -o PROJECT_STRUCTURE.md -f md --stats",
-    "tree:stats": "node ../scripts/tree-generator.mjs . --stats",
-    "boilerplate": "node ../scripts/boilerplate-generator.mjs",
-    "boilerplate:list": "node ../scripts/boilerplate-generator.mjs --list"
+    "backend": "cd backend && .venv\\Scripts\\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",

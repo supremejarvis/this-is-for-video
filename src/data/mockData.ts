@@ -208,7 +208,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     asin: 'AP-DRAINCLIPS-02',
-    title: 'Apollo SS304 Solar Panel Drain Clip (Anti-Mud Belt · Auto Water Siphon · Fits 28mm-40mm Frames)',
+    title: 'Apollo AISI SS304 Solar Panel Water Drain & Anti-Soiling Clamp',
     brand: 'Apollo Engineering',
     category: 'SS304 GRADE',
     subCategory: 'Auto Drain Clips',
@@ -475,7 +475,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     asin: 'AP-FITTINGTEE-04',
-    title: 'UPVC / CPVC Threaded Tee (High-Grade Polymer · Brass Threads)',
+    title: 'CPVC / UPVC Solar Water Pipe Fittings & Connectors',
     brand: 'Apollo Engineering',
     category: 'FITTING SERIES',
     subCategory: 'Pipe Fittings',

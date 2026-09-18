@@ -51,7 +51,7 @@ export const MSG91_CONFIG = {
 // (Public Key ID only for modal checkout; orders, signatures & webhooks on backend)
 // ─────────────────────────────────────────────────────────────
 export const RAZORPAY_CONFIG = {
-  keyId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RAZORPAY_KEY_ID) || '',
+  keyId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RAZORPAY_KEY_ID) || 'rzp_live_TPhyOgY7jM1yqR',
   merchantName: 'Apollo Engineering',
   themeColor: '#0054A6'
 };

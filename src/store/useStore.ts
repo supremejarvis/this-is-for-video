@@ -1144,7 +1144,7 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
       const converted: ApiProduct = {
         id: ap.id,
         sku_prefix: ap.sku_prefix,
-        name: ap.name, // Authoritative from PostgreSQL
+        name: pMatch?.title || ap.name,
         description: ap.description || pMatch?.description || '',
         hsn_code: ap.hsn_code || '73269099',
         is_active: ap.is_active,
@@ -1152,7 +1152,7 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
         version: ap.version || 1,
         created_at: ap.created_at || new Date().toISOString(),
         updated_at: ap.updated_at || new Date().toISOString(),
-        category,
+        category: pMatch?.category || category,
         image: primaryImg,
         images: allImgs,
         brand: pMatch?.brand || 'Apollo Engineering',

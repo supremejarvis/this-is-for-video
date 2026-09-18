@@ -1032,7 +1032,7 @@ export const MOCK_PRODUCTS: Product[] = [
   },
   {
     asin: 'AP-TIMER-07',
-    title: 'Digital Auto Timer (Digital Control System)',
+    title: 'Automatic Digital Solar Cleaning Water Timer & Solenoid Valve',
     brand: 'Apollo Engineering',
     category: 'CONTROL SERIES',
     subCategory: 'Automation Controls',

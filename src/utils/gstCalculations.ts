@@ -28,6 +28,22 @@ export interface GstBreakdown {
 }
 
 /**
+ * Authoritative splitter for GST components (CGST+SGST vs IGST)
+ */
+export function splitGstComponents(totalGst: number, isIntraState: boolean): {
+  cgst: number;
+  sgst: number;
+  igst: number;
+} {
+  if (!isIntraState) {
+    return { cgst: 0, sgst: 0, igst: totalGst };
+  }
+  const cgst = Math.round((totalGst / 2) * 100) / 100;
+  const sgst = Math.round((totalGst - cgst) * 100) / 100;
+  return { cgst, sgst, igst: 0 };
+}
+
+/**
  * Calculate pure 18% GST breakdown from an inclusive MRP/Selling price
  */
 export function calculateInclusiveGst(
@@ -62,17 +78,7 @@ export function calculateInclusiveGst(
   const taxableAmount = safeGross > 0 ? Math.round((safeGross / (1 + rate / 100)) * 100) / 100 : 0;
   const totalGst = Math.round((safeGross - taxableAmount) * 100) / 100;
 
-  let cgst = 0;
-  let sgst = 0;
-  let igst = 0;
-
-  if (!isIntraState) {
-    igst = totalGst;
-  } else {
-    cgst = Math.round((totalGst / 2) * 100) / 100;
-    sgst = Math.round((totalGst - cgst) * 100) / 100;
-  }
-
+  const { cgst, sgst, igst } = splitGstComponents(totalGst, isIntraState);
   const itcSavings = totalGst;
 
   return {
@@ -118,16 +124,7 @@ export function calculateExclusiveGst(
   const totalGst = Math.round((safeTaxable * (rate / 100)) * 100) / 100;
   const totalWithTax = Math.round((safeTaxable + totalGst) * 100) / 100;
 
-  let cgst = 0;
-  let sgst = 0;
-  let igst = 0;
-
-  if (!isIntraState) {
-    igst = totalGst;
-  } else {
-    cgst = Math.round((totalGst / 2) * 100) / 100;
-    sgst = Math.round((totalGst - cgst) * 100) / 100;
-  }
+  const { cgst, sgst, igst } = splitGstComponents(totalGst, isIntraState);
 
   return {
     taxableAmount: safeTaxable,

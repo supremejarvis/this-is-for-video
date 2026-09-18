@@ -29,7 +29,8 @@ export const CheckoutModal: React.FC = () => {
     currentQuote, quoteStatus, setIsCartDrawerOpen,
     destinationPincode, setDestinationPincode,
     quotePaymentMethod, setQuotePaymentMethod,
-    fetchAuthoritativeQuote, createOrder
+    fetchAuthoritativeQuote, createOrder,
+    b2cCodLimit
   } = useStore();
 
   const [activeStep, setActiveStep] = useState<number>(1);
@@ -46,23 +47,25 @@ export const CheckoutModal: React.FC = () => {
   const [codDevOtp, setCodDevOtp] = useState<string | null>(null);
 
   // Auth gate: If guest tries to access checkout, redirect to login
+  const isUserLoggedIn = authStatus === 'AUTHENTICATED' || Boolean(currentUser && currentUser.id && currentUser.id !== 'usr_guest');
+
   useEffect(() => {
-    if (isCheckoutOpen && authStatus !== 'AUTHENTICATED') {
+    if (isCheckoutOpen && !isUserLoggedIn) {
       setIsCheckoutOpen(false);
       setAuthDestination('CHECKOUT');
       setIsAuthModalOpen(true);
       showToast('Please sign in to complete your checkout.', 'info');
     }
-  }, [isCheckoutOpen, authStatus, setIsCheckoutOpen, setAuthDestination, setIsAuthModalOpen, showToast]);
+  }, [isCheckoutOpen, isUserLoggedIn, setIsCheckoutOpen, setAuthDestination, setIsAuthModalOpen, showToast]);
 
   // Cart empty gate: If cart is empty, redirect to cart drawer
   useEffect(() => {
-    if (isCheckoutOpen && authStatus === 'AUTHENTICATED' && cart.length === 0) {
+    if (isCheckoutOpen && isUserLoggedIn && cart.length === 0) {
       setIsCheckoutOpen(false);
       setIsCartDrawerOpen(true);
       showToast('Your cart is empty. Please add items to checkout.', 'warning');
     }
-  }, [isCheckoutOpen, authStatus, cart.length, setIsCheckoutOpen, setIsCartDrawerOpen, showToast]);
+  }, [isCheckoutOpen, isUserLoggedIn, cart.length, setIsCheckoutOpen, setIsCartDrawerOpen, showToast]);
 
   // Keep store's destinationPincode and quote payment method in sync with active checkout state
   useEffect(() => {
@@ -80,7 +83,7 @@ export const CheckoutModal: React.FC = () => {
     }
   }, [isCheckoutOpen, activeAddress?.pincode, paymentMethod, destinationPincode, quotePaymentMethod, currentQuote, setDestinationPincode, setQuotePaymentMethod, fetchAuthoritativeQuote]);
 
-  if (!isCheckoutOpen || authStatus !== 'AUTHENTICATED' || cart.length === 0) {
+  if (!isCheckoutOpen || !isUserLoggedIn || cart.length === 0) {
     return null;
   }
 
@@ -114,6 +117,20 @@ export const CheckoutModal: React.FC = () => {
     ? Number(currentQuote?.cod_payable_total || currentQuote?.cod_total || 0) 
     : Number(currentQuote?.prepaid_total || 0);
 
+  const estimatedPrepaid = Number(currentQuote?.prepaid_total || itemsGross);
+  const isCodLimitExceeded = appMode === 'B2C' && estimatedPrepaid > b2cCodLimit;
+
+  // Auto-switch COD to PREPAID if B2B mode or if B2C order exceeds COD limit
+  useEffect(() => {
+    if (appMode === 'B2B' && paymentMethod === 'COD') {
+      setPaymentMethod('RAZORPAY');
+      setQuotePaymentMethod('PREPAID');
+    } else if (appMode === 'B2C' && paymentMethod === 'COD' && isCodLimitExceeded) {
+      setPaymentMethod('RAZORPAY');
+      setQuotePaymentMethod('PREPAID');
+    }
+  }, [appMode, paymentMethod, isCodLimitExceeded, setQuotePaymentMethod]);
+
   const handleSelectAddress = (addr: DeliveryAddress) => {
     useStore.setState({
       activeAddress: addr,
@@ -127,6 +144,16 @@ export const CheckoutModal: React.FC = () => {
   };
 
   const handleSelectPaymentMethod = (method: Order['paymentDetail']['method']) => {
+    if (appMode === 'B2B' && method === 'COD') {
+      showToast('Cash on Delivery is not available for B2B orders.', 'warning');
+      setPaymentMethod('RAZORPAY');
+      setQuotePaymentMethod('PREPAID');
+      return;
+    }
+    if (appMode === 'B2C' && method === 'COD' && isCodLimitExceeded) {
+      showToast(`Cash on Delivery is limited to orders up to ₹${b2cCodLimit.toLocaleString('en-IN')}. Please pay online.`, 'warning');
+      return;
+    }
     setPaymentMethod(method);
     const quoteMethod = method === 'COD' ? 'COD' : 'PREPAID';
     setQuotePaymentMethod(quoteMethod);
@@ -239,11 +266,11 @@ export const CheckoutModal: React.FC = () => {
       return;
     }
 
-    // Enforce B2B MOQ validation at checkout
+    // Enforce B2B mixed-batch MOQ validation at checkout (pooled wholesale batch minimum)
     if (appMode === 'B2B') {
-      const belowMoqItem = cart.find((item) => item.quantity < 10);
-      if (belowMoqItem) {
-        showToast(`B2B Wholesale requires a Minimum Order Quantity of 10 items for "${belowMoqItem.title}". Please increase quantity in cart.`, 'warning');
+      const totalUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
+      if (totalUnits < 20) {
+        showToast(`B2B Wholesale requires a minimum pooled batch of 20 units across your items (current: ${totalUnits}). Please add more units to cart.`, 'warning');
         return;
       }
     }
@@ -710,46 +737,73 @@ export const CheckoutModal: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Option 2: Cash on Delivery (COD) */}
-                  <div
-                    onClick={() => handleSelectPaymentMethod('COD')}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
-                      paymentMethod === 'COD'
-                        ? 'bg-amber-50/90 border-amber-500 text-slate-900 shadow-md ring-2 ring-amber-500/30'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 shadow-sm'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-sm shadow-sm">
-                          <Banknote className="w-5 h-5 text-slate-950" />
-                        </div>
-                        <div>
-                          <strong className="text-xs font-black text-slate-900 block flex items-center gap-1.5">
-                            Cash on Delivery (COD)
-                            <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[9px] font-mono font-bold border border-amber-300">
-                              +2.5% Fee
+                  {/* Option 2: Cash on Delivery (COD) - strictly B2C only with admin limit check */}
+                  {appMode === 'B2C' ? (
+                    <div
+                      onClick={() => !isCodLimitExceeded && handleSelectPaymentMethod('COD')}
+                      className={`p-4 rounded-2xl border transition-all flex flex-col justify-between space-y-3 ${
+                        isCodLimitExceeded
+                          ? 'bg-slate-100/70 border-slate-200 text-slate-400 cursor-not-allowed opacity-60'
+                          : paymentMethod === 'COD'
+                          ? 'bg-amber-50/90 border-amber-500 text-slate-900 shadow-md ring-2 ring-amber-500/30 cursor-pointer'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 shadow-sm cursor-pointer'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shadow-sm ${
+                            isCodLimitExceeded ? 'bg-slate-300 text-slate-600' : 'bg-amber-500 text-slate-950'
+                          }`}>
+                            <Banknote className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <strong className="text-xs font-black text-slate-900 block flex items-center gap-1.5">
+                              Cash on Delivery (COD)
+                              {!isCodLimitExceeded ? (
+                                <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[9px] font-mono font-bold border border-amber-300">
+                                  +2.5% Fee
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 text-[9px] font-mono font-bold border border-rose-300">
+                                  Limit Exceeded
+                                </span>
+                              )}
+                            </strong>
+                            <span className="text-[11px] text-slate-500">
+                              {isCodLimitExceeded 
+                                ? `Order exceeds max COD limit of ₹${b2cCodLimit.toLocaleString('en-IN')}` 
+                                : 'Pay cash upon factory doorstep delivery'}
                             </span>
-                          </strong>
-                          <span className="text-[11px] text-slate-500">Pay cash upon factory doorstep delivery</span>
+                          </div>
+                        </div>
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center mt-1 ${
+                          paymentMethod === 'COD' && !isCodLimitExceeded ? 'border-amber-600 bg-amber-600' : 'border-slate-300'
+                        }`}>
+                          {paymentMethod === 'COD' && !isCodLimitExceeded && (
+                            <Check className="w-2.5 h-2.5 text-white" />
+                          )}
                         </div>
                       </div>
-                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center mt-1 ${
-                        paymentMethod === 'COD' ? 'border-amber-600 bg-amber-600' : 'border-slate-300'
-                      }`}>
-                        {paymentMethod === 'COD' && (
-                          <Check className="w-2.5 h-2.5 text-white" />
-                        )}
-                      </div>
-                    </div>
 
-                    <div className="space-y-1 pt-2 border-t border-slate-200/60 text-[10px] text-slate-600">
-                      <div className="flex items-center gap-1 text-amber-800 font-bold">
-                        <Lock className="w-3 h-3 text-amber-700" />
-                        <span>Requires Mobile OTP Verification</span>
+                      <div className="space-y-1 pt-2 border-t border-slate-200/60 text-[10px] text-slate-600">
+                        <div className="flex items-center gap-1 text-amber-800 font-bold">
+                          <Lock className="w-3 h-3 text-amber-700" />
+                          <span>{isCodLimitExceeded ? `Maximum COD order value is ₹${b2cCodLimit.toLocaleString('en-IN')}` : 'Requires Mobile OTP Verification'}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    /* B2B Statutory Information Notice in place of COD */
+                    <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50/60 flex flex-col justify-between space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#0054A6]">
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>B2B Statutory Invoicing Notice</span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
+                        Cash on Delivery (COD) is strictly removed for B2B wholesale transactions. Please use Online Payment (UPI, NetBanking, Cards) or approved Corporate Credit (Net 30 PO) for official GSTR-1 and ITC compliance.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Option 3: B2B Net 30 Credit Line (Only in B2B Mode) */}
                   {appMode === 'B2B' && (

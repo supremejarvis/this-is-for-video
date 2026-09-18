@@ -49,6 +49,12 @@ async def send_otp(request: Request, payload: SendOtpRequest) -> SendOtpResponse
     )
 
 
+@router.post("/retry", response_model=SendOtpResponse)
+async def retry_otp(request: Request, payload: SendOtpRequest) -> SendOtpResponse:
+    """Retry alias for send_otp dispatch."""
+    return await send_otp(request, payload)
+
+
 @router.post("/verify", response_model=VerifyOtpResponse)
 async def verify_otp(
     request: Request,

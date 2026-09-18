@@ -65,6 +65,28 @@ class InventoryService:
         )
 
     @classmethod
+    async def _get_locked_inventory_item(cls, session: AsyncSession, sku: str) -> InventoryItem:
+        stmt = select(InventoryItem).where(InventoryItem.sku == sku.strip().upper()).with_for_update()
+        item = (await session.execute(stmt)).scalar_one_or_none()
+        if item is None:
+            raise ValueError(f"SKU '{sku}' not found in inventory.")
+        return item
+
+    @classmethod
+    async def _flush_with_idempotency_check(
+        cls, session: AsyncSession, clean_idempotency_key: str
+    ) -> None:
+        try:
+            await session.flush()
+        except IntegrityError as err:
+            err_str = str(err).lower()
+            if "uq_inventory_movements_idempotency_key" in err_str or "idempotency_key" in err_str:
+                raise DuplicateIdempotencyKeyError(
+                    f"Duplicate inventory movement idempotency key '{clean_idempotency_key}'."
+                ) from err
+            raise
+
+    @classmethod
     async def receive_stock(
         cls,
         session: AsyncSession,
@@ -83,10 +105,7 @@ class InventoryService:
         clean_idempotency_key = idempotency_key or f"rcv-{sku.strip().upper()}-{uuid.uuid4()}"
         await cls._check_idempotency(session, clean_idempotency_key)
 
-        stmt = select(InventoryItem).where(InventoryItem.sku == sku.strip().upper()).with_for_update()
-        item = (await session.execute(stmt)).scalar_one_or_none()
-        if item is None:
-            raise ValueError(f"SKU '{sku}' not found in inventory.")
+        item = await cls._get_locked_inventory_item(session, sku)
 
         item.quantity_on_hand += quantity
         item.updated_at = datetime.now(UTC)
@@ -116,15 +135,7 @@ class InventoryService:
         session.add(movement)
         cls._emit_balance_changed(session, item)
 
-        try:
-            await session.flush()
-        except IntegrityError as err:
-            err_str = str(err).lower()
-            if "uq_inventory_movements_idempotency_key" in err_str or "idempotency_key" in err_str:
-                raise DuplicateIdempotencyKeyError(
-                    f"Duplicate inventory movement idempotency key '{clean_idempotency_key}'."
-                ) from err
-            raise
+        await cls._flush_with_idempotency_check(session, clean_idempotency_key)
 
         return item, movement
 
@@ -149,10 +160,7 @@ class InventoryService:
         clean_idempotency_key = idempotency_key or f"adj-{sku.strip().upper()}-{uuid.uuid4()}"
         await cls._check_idempotency(session, clean_idempotency_key)
 
-        stmt = select(InventoryItem).where(InventoryItem.sku == sku.strip().upper()).with_for_update()
-        item = (await session.execute(stmt)).scalar_one_or_none()
-        if item is None:
-            raise ValueError(f"SKU '{sku}' not found in inventory.")
+        item = await cls._get_locked_inventory_item(session, sku)
 
         new_on_hand = item.quantity_on_hand + quantity_delta
         if new_on_hand < 0:
@@ -191,15 +199,7 @@ class InventoryService:
         session.add(movement)
         cls._emit_balance_changed(session, item)
 
-        try:
-            await session.flush()
-        except IntegrityError as err:
-            err_str = str(err).lower()
-            if "uq_inventory_movements_idempotency_key" in err_str or "idempotency_key" in err_str:
-                raise DuplicateIdempotencyKeyError(
-                    f"Duplicate inventory movement idempotency key '{clean_idempotency_key}'."
-                ) from err
-            raise
+        await cls._flush_with_idempotency_check(session, clean_idempotency_key)
 
         return item, movement
 

@@ -126,6 +126,10 @@ export interface AppStore {
   setDestinationPincode: (pincode: string) => void;
   fetchAuthoritativeQuote: () => Promise<AuthoritativeQuote | null>;
 
+  // Statutory E-Commerce Policies & COD Limits
+  b2cCodLimit: number;
+  setB2cCodLimit: (limit: number) => void;
+
   // Database-driven Catalog API (Gate 2C)
   apiCatalogProducts: ApiProduct[];
   apiCatalogLoading: boolean;
@@ -1095,16 +1099,96 @@ const initialContractorInquiries = loadStored<SolarContractorInquiry[]>('apollo_
   }
 ]);
 
+/**
+ * Authoritative converter from local Product to API Catalog ApiProduct
+ */
+export function mapProductToApiProduct(
+  p: Product,
+  defaultReviewCount = 1,
+  defaultBadges: string[] = ['NEW_LAUNCH']
+): ApiProduct {
+  const primaryVariant = p.variants?.[0];
+  return {
+    id: p.asin,
+    sku_prefix: primaryVariant?.sku?.split('-').slice(0, 2).join('-') || p.asin,
+    name: p.title,
+    description: p.description || '',
+    hsn_code: primaryVariant?.hsnCode || '73269099',
+    is_active: p.isLive !== false,
+    is_archived: false,
+    version: 1,
+    created_at: p.createdAt || new Date().toISOString(),
+    updated_at: p.lastUpdated || new Date().toISOString(),
+    category: p.category || 'SS304 GRADE',
+    image: primaryVariant?.images?.[0] || p.aPlusContent?.[0]?.imageUrl || '/solar_sprinkler.webp',
+    images: primaryVariant?.images || (p.variants || []).flatMap(v => v.images || []),
+    brand: p.brand || 'Apollo Engineering',
+    rating: p.rating || 4.9,
+    reviewCount: p.reviewCount || defaultReviewCount,
+    badges: p.badges || defaultBadges,
+    highlights: p.highlights || [],
+    rawProduct: p,
+    variants: (p.variants || []).map(v => ({
+      id: `${p.asin}-${v.sku}`,
+      product_id: p.asin,
+      sku: v.sku,
+      fit_mode: (v.attributes?.size && v.attributes.size.includes('mm')) ? 'EXACT' : 'NOT_APPLICABLE',
+      frame_thickness_mm: v.attributes?.size ? parseFloat(v.attributes.size) || null : null,
+      min_thickness_mm: null,
+      max_thickness_mm: null,
+      display_label: v.title || `${p.title} (${v.sku})`,
+      frame_thickness: v.attributes?.size || 'Standard',
+      pack_size: v.attributes?.packSize ? parseInt(v.attributes.packSize.replace(/\D/g, '')) || 1 : 1,
+      is_active: true,
+      is_archived: false,
+      version: 1,
+      available_stock: v.inventory ?? 100,
+      unit_price: v.b2cPrice ?? 20,
+      mrp: v.mrp || Math.round((v.b2cPrice ?? 20) * 1.5),
+      b2bTierPricing: v.b2bTierPricing || [],
+      images: v.images || [],
+      weightGrams: v.weightGrams,
+      hsnCode: v.hsnCode || '73269099',
+      tax_mode: 'GST_INCLUSIVE',
+      created_at: p.createdAt || new Date().toISOString(),
+    }))
+  };
+}
+
+/**
+ * Helper to immutably update shipments across matching order IDs
+ */
+type OrderShipment = Order['shipments'][number];
+
+function updateOrderShipmentHelper(
+  orders: Order[],
+  orderId: string,
+  packageId: string,
+  updater: (shp: OrderShipment, ord: Order) => OrderShipment
+): Order[] {
+  return orders.map((ord) => {
+    if (ord.id === orderId || ord.orderNumber === orderId) {
+      return {
+        ...ord,
+        shipments: ord.shipments.map((shp) => {
+          if (shp.packageId === packageId || ord.shipments.length === 1) {
+            return updater(shp, ord);
+          }
+          return shp;
+        })
+      };
+    }
+    return ord;
+  });
+}
+
 export function syncCatalogProducts(products: Product[], existingApi: ApiProduct[] = []): ApiProduct[] {
-  // When backend products exist, backend PostgreSQL is the single source of truth!
+  // When backend products exist, sync them with local products
   if (existingApi && existingApi.length > 0) {
     const validBackendProducts: ApiProduct[] = [];
+    const matchedProductAsins = new Set<string>();
 
     for (const ap of existingApi) {
-      if (!ap || !ap.is_active || deletedProductAsinsSet.has(ap.id) || deletedProductAsinsSet.has(ap.sku_prefix)) {
-        continue;
-      }
-
       // Match UI presentation metadata (images, badges, reviews)
       const pMatch = products.find(p => 
         p.asin === ap.id || 
@@ -1119,6 +1203,20 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
         (ap.sku_prefix === 'AE-KIT-FULL' && p.asin === 'AP-FULLKIT-05')
       );
 
+      // Check if deleted by ID, SKU prefix, or mapped frontend ASIN
+      const isDeleted = !ap || !ap.is_active ||
+        deletedProductAsinsSet.has(ap.id) ||
+        deletedProductAsinsSet.has(ap.sku_prefix) ||
+        (pMatch && (deletedProductAsinsSet.has(pMatch.asin) || pMatch.isLive === false));
+
+      if (isDeleted) {
+        continue;
+      }
+
+      if (pMatch) {
+        matchedProductAsins.add(pMatch.asin);
+      }
+
       // Resolve high-resolution official WebP image
       let defaultImg = '/solar_sprinkler.webp';
       const cleanPrefix = (ap.sku_prefix || '').toUpperCase();
@@ -1131,7 +1229,7 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
       else if (cleanPrefix.includes('TIMER') || cleanName.includes('timer')) defaultImg = '/auto_timer.webp';
       else if (cleanPrefix.includes('KIT') || cleanName.includes('kit') || cleanName.includes('full set')) defaultImg = '/solar_cleaning_fullset.webp';
 
-      const primaryImg = pMatch?.variants?.[0]?.images?.[0] || pMatch?.aPlusContent?.[0]?.imageUrl || defaultImg;
+      const primaryImg = (pMatch as any)?.image || pMatch?.variants?.[0]?.images?.[0] || pMatch?.aPlusContent?.[0]?.imageUrl || defaultImg;
       const allImgs = pMatch?.variants?.flatMap(v => v.images || [])?.length ? pMatch.variants.flatMap(v => v.images || []) : [primaryImg];
 
       const category = (cleanPrefix.includes('SC') || cleanName.includes('drain') || cleanPrefix.includes('SPRINKLER') || cleanName.includes('sprinkler')) ? 'SS304 GRADE' :
@@ -1141,13 +1239,75 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
                        (cleanPrefix.includes('TIMER') || cleanName.includes('timer')) ? 'CONTROL SERIES' :
                        (cleanPrefix.includes('KIT') || cleanName.includes('kit')) ? 'COMPLETE KIT' : 'SS304 GRADE';
 
+      const syncedVariants = (ap.variants || []).map(av => {
+        const matchingV = pMatch?.variants?.find(v => v.sku === av.sku || (av.frame_thickness_mm && v.attributes?.size && parseFloat(v.attributes.size) === Number(av.frame_thickness_mm)));
+        
+        // Respect admin-edited price and stock if set locally
+        const rawPrice = (matchingV?.b2cPrice !== undefined && matchingV?.b2cPrice !== null)
+          ? matchingV.b2cPrice
+          : av.unit_price;
+        const parsedPrice = typeof rawPrice === 'number' ? rawPrice : (parseFloat(String(rawPrice)) || 20);
+
+        const stock = (matchingV?.inventory !== undefined && matchingV?.inventory !== null)
+          ? matchingV.inventory
+          : (typeof av.available_stock === 'number' ? av.available_stock : 100);
+
+        return {
+          ...av,
+          display_label: matchingV?.title || av.display_label || av.sku || 'Standard',
+          images: matchingV?.images || allImgs,
+          available_stock: stock,
+          unit_price: parsedPrice, // Authoritative price
+          mrp: matchingV?.mrp || Math.round(parsedPrice * 1.5),
+          b2bTierPricing: matchingV?.b2bTierPricing || [],
+          weightGrams: matchingV?.weightGrams,
+          hsnCode: av.hsnCode || ap.hsn_code,
+          tax_mode: av.tax_mode || 'GST_INCLUSIVE',
+          b2bMoq: pMatch?.b2bMoq || matchingV?.b2bMoq || 50,
+          b2cPrice: parsedPrice,
+          b2bPrice: matchingV?.b2bTierPricing?.[0]?.pricePerUnit || Math.round(parsedPrice * 0.72),
+        } as any;
+      });
+
+      // Merge extra variants added by admin in pMatch that aren't yet in backend
+      const matchedSkus = new Set((ap.variants || []).map(av => av.sku));
+      const extraVariants = (pMatch?.variants || [])
+        .filter(mv => !matchedSkus.has(mv.sku))
+        .map(mv => ({
+          id: `${ap.id}-${mv.sku}`,
+          product_id: ap.id,
+          sku: mv.sku,
+          fit_mode: (mv.attributes?.size && mv.attributes.size.includes('mm')) ? 'EXACT' : 'NOT_APPLICABLE',
+          frame_thickness_mm: mv.attributes?.size ? parseFloat(mv.attributes.size) || null : null,
+          min_thickness_mm: null,
+          max_thickness_mm: null,
+          display_label: mv.title || `${pMatch?.title} (${mv.sku})`,
+          frame_thickness: mv.attributes?.size || 'Standard',
+          pack_size: mv.attributes?.packSize ? parseInt(mv.attributes.packSize.replace(/\D/g, '')) || 1 : 1,
+          is_active: true,
+          is_archived: false,
+          version: 1,
+          available_stock: mv.inventory ?? 100,
+          unit_price: mv.b2cPrice ?? 20,
+          mrp: mv.mrp || Math.round((mv.b2cPrice ?? 20) * 1.5),
+          b2bTierPricing: mv.b2bTierPricing || [],
+          images: mv.images || allImgs,
+          weightGrams: mv.weightGrams,
+          hsnCode: mv.hsnCode || ap.hsn_code,
+          tax_mode: 'GST_INCLUSIVE',
+          created_at: new Date().toISOString(),
+          b2bMoq: pMatch?.b2bMoq || mv.b2bMoq || 50,
+          b2cPrice: mv.b2cPrice ?? 20,
+          b2bPrice: mv.b2bTierPricing?.[0]?.pricePerUnit || Math.round((mv.b2cPrice ?? 20) * 0.72),
+        })) as any[];
+
       const converted: ApiProduct = {
         id: ap.id,
         sku_prefix: ap.sku_prefix,
         name: pMatch?.title || ap.name,
-        description: ap.description || pMatch?.description || '',
+        description: pMatch?.description !== undefined ? pMatch.description : (ap.description || ''),
         hsn_code: ap.hsn_code || '73269099',
-        is_active: ap.is_active,
+        is_active: (pMatch ? (pMatch.isLive !== false) : ap.is_active) && ap.is_active,
         is_archived: ap.is_archived || false,
         version: ap.version || 1,
         created_at: ap.created_at || new Date().toISOString(),
@@ -1165,28 +1325,20 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
           'GST Statutory Invoice Included with 18% ITC Support'
         ],
         rawProduct: pMatch || undefined,
-        variants: (ap.variants || []).map(av => {
-          const matchingV = pMatch?.variants?.find(v => v.sku === av.sku || (av.frame_thickness_mm && v.attributes?.size && parseFloat(v.attributes.size) === Number(av.frame_thickness_mm)));
-          const rawPrice = av.unit_price !== undefined && av.unit_price !== null ? av.unit_price : matchingV?.b2cPrice;
-          const parsedPrice = typeof rawPrice === 'number' ? rawPrice : (parseFloat(String(rawPrice)) || 20);
-
-          return {
-            ...av,
-            display_label: av.display_label || matchingV?.title || av.sku || 'Standard',
-            images: matchingV?.images || allImgs,
-            available_stock: typeof av.available_stock === 'number' ? av.available_stock : (matchingV?.inventory ?? 100),
-            unit_price: parsedPrice, // Authoritative price from backend database
-            mrp: matchingV?.mrp || Math.round(parsedPrice * 1.5),
-            b2bTierPricing: matchingV?.b2bTierPricing || [],
-            weightGrams: matchingV?.weightGrams,
-            hsnCode: av.hsnCode || ap.hsn_code,
-            tax_mode: av.tax_mode || 'GST_INCLUSIVE'
-          };
-        })
+        variants: [...syncedVariants, ...extraVariants]
       };
 
       validBackendProducts.push(converted);
     }
+
+    // Merge any products added by Admin that do not exist in backend yet
+    for (const p of products) {
+      if (!p || !p.asin || matchedProductAsins.has(p.asin) || deletedProductAsinsSet.has(p.asin)) {
+        continue;
+      }
+      validBackendProducts.push(mapProductToApiProduct(p, 1, ['NEW_LAUNCH']));
+    }
+
     return validBackendProducts;
   }
 
@@ -1194,53 +1346,7 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
   const apiMap = new Map<string, ApiProduct>();
   products.forEach(p => {
     if (!p || !p.asin || deletedProductAsinsSet.has(p.asin)) return;
-    const primaryVariant = p.variants?.[0];
-    const converted: ApiProduct = {
-      id: p.asin,
-      sku_prefix: primaryVariant?.sku?.split('-').slice(0, 2).join('-') || p.asin,
-      name: p.title,
-      description: p.description || '',
-      hsn_code: primaryVariant?.hsnCode || '73269099',
-      is_active: p.isLive !== false,
-      is_archived: false,
-      version: 1,
-      created_at: p.createdAt || new Date().toISOString(),
-      updated_at: p.lastUpdated || new Date().toISOString(),
-      category: p.category,
-      image: primaryVariant?.images?.[0] || p.aPlusContent?.[0]?.imageUrl || '/solar_sprinkler.webp',
-      images: primaryVariant?.images || (p.variants || []).flatMap(v => v.images || []),
-      brand: p.brand || 'Apollo Engineering',
-      rating: p.rating || 4.9,
-      reviewCount: p.reviewCount || 340,
-      badges: p.badges || [],
-      highlights: p.highlights || [],
-      rawProduct: p,
-      variants: (p.variants || []).map(v => ({
-        id: `${p.asin}-${v.sku}`,
-        product_id: p.asin,
-        sku: v.sku,
-        fit_mode: (v.attributes?.size && v.attributes.size.includes('mm')) ? 'EXACT' : 'NOT_APPLICABLE',
-        frame_thickness_mm: v.attributes?.size ? parseFloat(v.attributes.size) || null : null,
-        min_thickness_mm: null,
-        max_thickness_mm: null,
-        display_label: v.title || `${p.title} (${v.sku})`,
-        frame_thickness: v.attributes?.size || 'Standard',
-        pack_size: v.attributes?.packSize ? parseInt(v.attributes.packSize.replace(/\D/g, '')) || 1 : 1,
-        is_active: true,
-        is_archived: false,
-        version: 1,
-        available_stock: v.inventory ?? 100,
-        unit_price: v.b2cPrice ?? 20,
-        mrp: v.mrp || Math.round((v.b2cPrice ?? 20) * 1.5),
-        b2bTierPricing: v.b2bTierPricing || [],
-        images: v.images || [],
-        weightGrams: v.weightGrams,
-        hsnCode: v.hsnCode,
-        tax_mode: 'GST_INCLUSIVE',
-        created_at: p.createdAt || new Date().toISOString(),
-      }))
-    };
-    apiMap.set(p.asin, converted);
+    apiMap.set(p.asin, mapProductToApiProduct(p, 340, []));
   });
 
   return Array.from(apiMap.values());
@@ -1252,14 +1358,27 @@ export const useStore = create<AppStore>((set, get) => ({
   appMode: loadStored<AppMode>('apollo_app_mode', 'B2C'),
   setAppMode: (mode) => {
     saveStored('apollo_app_mode', mode);
-    set({ appMode: mode });
+    const updates: Partial<AppStore> = { appMode: mode };
+    if (mode === 'B2B' && get().quotePaymentMethod === 'COD') {
+      updates.quotePaymentMethod = 'PREPAID';
+      updates.quoteStatus = 'QUOTE_REQUIRED';
+      updates.currentQuote = null;
+    }
+    set(updates);
     get().showToast(`Switched storefront mode to ${mode === 'B2B' ? '🏢 B2B Wholesale' : '🛒 B2C Retail'}`, 'info');
+  },
+  b2cCodLimit: loadStored<number>('apollo_b2c_cod_limit', 10000),
+  setB2cCodLimit: (limit: number) => {
+    const valid = Math.max(0, Number(limit) || 0);
+    saveStored('apollo_b2c_cod_limit', valid);
+    set({ b2cCodLimit: valid });
+    get().showToast(`B2C Cash on Delivery limit updated to ₹${valid.toLocaleString('en-IN')}`, 'success');
   },
   activeTab: 'store',
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   // ── Session & Auth State (Gate 2C - Backend Authoritative) ──
-  authStatus: 'GUEST' as AuthStatus,
+  authStatus: (initialCurrentUser && initialCurrentUser.id && initialCurrentUser.id !== 'usr_guest' ? 'AUTHENTICATED' : 'GUEST') as AuthStatus,
   authDestination: null as AuthDestination,
   setAuthDestination: (dest) => set({ authDestination: dest }),
   checkAuthSession: async () => {
@@ -1684,6 +1803,25 @@ selectProductVariant: (asin, sku) => {
     const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
     set({ products: updated, apiCatalogProducts: updatedApi });
     get().showToast(`Product ASIN ${newProd.asin} published live to Apollo catalog`, 'success');
+
+    // Attempt background persistence with FastAPI backend
+    const primaryV = newProd.variants?.[0];
+    catalogApi.createProduct({
+      sku_prefix: primaryV?.sku?.split('-').slice(0, 2).join('-') || newProd.asin,
+      name: newProd.title,
+      description: newProd.description || '',
+      hsn_code: primaryV?.hsnCode || '73269099',
+      is_active: true,
+      variants: (newProd.variants || []).map(v => ({
+        sku: v.sku,
+        fit_mode: (v.attributes?.size && v.attributes.size.includes('mm')) ? 'EXACT' : 'NOT_APPLICABLE',
+        frame_thickness_mm: v.attributes?.size ? parseFloat(v.attributes.size) || null : null,
+        display_label: v.title || `${newProd.title} (${v.sku})`,
+        pack_size: 1,
+        available_stock: v.inventory ?? 100,
+        unit_price: v.b2cPrice ?? 20,
+      } as any))
+    }).catch(() => {});
   },
   updateProduct: (asin, updates) => {
     const updated = get().products.map((p) => p.asin === asin ? { ...p, ...updates } : p);
@@ -1695,15 +1833,54 @@ selectProductVariant: (asin, sku) => {
     const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
     set({ products: updated, selectedProduct: updatedSelected, apiCatalogProducts: updatedApi });
     get().showToast(`Product ${asin} updated successfully`, 'success');
+
+    // Background sync to backend if backend product exists
+    const matchingBackend = get().apiCatalogProducts.find(p => p.id === asin || p.sku_prefix === asin || p.rawProduct?.asin === asin);
+    if (matchingBackend && matchingBackend.id) {
+      catalogApi.updateProduct(matchingBackend.id, {
+        name: updates.title || matchingBackend.name,
+        description: updates.description || matchingBackend.description,
+        version: matchingBackend.version || 1,
+      }).catch(() => {});
+    }
   },
   deleteProduct: (asin) => {
     // 1. Record deleted ASIN to persistent set & storage
     deletedProductAsinsSet.add(asin);
-    const deletedList = loadStored<string[]>('apollo_deleted_products', []);
-    if (!deletedList.includes(asin)) {
-      deletedList.push(asin);
-      saveStored('apollo_deleted_products', deletedList);
+
+    // Cross-map known ASINs to backend sku_prefix
+    const asinToBackendPrefix: Record<string, string> = {
+      'AP-SPRINKLER-01': 'AE-SPRINKLER',
+      'AP-DRAINCLIPS-02': 'APE-SC',
+      'AP-GICLAMP-03': 'AE-CLAMP-GI',
+      'AP-FITTINGTEE-04': 'AE-PIPE-FITTING',
+      'AP-PUMP-06': 'AE-PUMP-DC',
+      'AP-TIMER-07': 'AE-TIMER-AUTO',
+      'AP-FULLKIT-05': 'AE-KIT-FULL',
+    };
+    const mappedPrefix = asinToBackendPrefix[asin];
+    if (mappedPrefix) {
+      deletedProductAsinsSet.add(mappedPrefix);
     }
+
+    // Find any backend product in apiCatalogProducts that matches this asin or prefix
+    const matchingBackendProds = get().apiCatalogProducts.filter(p =>
+      p.id === asin ||
+      p.sku_prefix === asin ||
+      p.rawProduct?.asin === asin ||
+      (mappedPrefix && (p.sku_prefix === mappedPrefix || p.id === mappedPrefix))
+    );
+    matchingBackendProds.forEach(p => {
+      deletedProductAsinsSet.add(p.id);
+      deletedProductAsinsSet.add(p.sku_prefix);
+      catalogApi.archiveProduct(p.id).catch(() => {});
+    });
+
+    const deletedList = loadStored<string[]>('apollo_deleted_products', []);
+    Array.from(deletedProductAsinsSet).forEach(item => {
+      if (!deletedList.includes(item)) deletedList.push(item);
+    });
+    saveStored('apollo_deleted_products', deletedList);
 
     // 2. Remove from products
     const updated = get().products.filter((p) => p.asin !== asin);
@@ -1713,13 +1890,16 @@ selectProductVariant: (asin, sku) => {
     const currSelected = get().selectedProduct;
     const updatedSelected = (currSelected && (currSelected.asin === asin || (currSelected as any).id === asin)) ? null : currSelected;
 
-    // 4. Remove comprehensively from apiCatalogProducts
-    const updatedApi = get().apiCatalogProducts.filter(p => 
-      p.id !== asin && 
-      p.rawProduct?.asin !== asin && 
+    // 4. Remove comprehensively from apiCatalogProducts via syncCatalogProducts
+    const remainingApi = get().apiCatalogProducts.filter(p =>
+      p.id !== asin &&
       p.sku_prefix !== asin &&
-      !p.variants?.some(v => v.product_id === asin || v.sku?.startsWith(asin))
+      p.rawProduct?.asin !== asin &&
+      (!mappedPrefix || (p.sku_prefix !== mappedPrefix && p.id !== mappedPrefix)) &&
+      !deletedProductAsinsSet.has(p.id) &&
+      !deletedProductAsinsSet.has(p.sku_prefix)
     );
+    const updatedApi = syncCatalogProducts(updated, remainingApi);
 
     set({ products: updated, selectedProduct: updatedSelected, apiCatalogProducts: updatedApi });
     get().showToast(`Product ASIN ${asin} deleted from catalog`, 'info');
@@ -1994,38 +2174,73 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
     const existingQty = existingIndex > -1 ? cart[existingIndex].quantity : 0;
 
     if (isB2B) {
-      const product = get().products.find((p) => p.asin === itemData.asin);
-      if (product?.variants) {
-        const variant = product.variants.find((v) => v.sku === itemData.sku);
-        if (variant) {
-          const moq = variant.b2bMoq || variant.b2bTierPricing?.[0]?.minQty || product.b2bMoq || 50;
-          if (existingIndex === -1 && effectiveAddQty < moq) {
-            effectiveAddQty = moq;
-            get().showToast(`Applied B2B Wholesale Minimum Order Quantity (MOQ: ${moq} units)`, 'info');
-          }
-          const checkTotalQty = existingQty + effectiveAddQty;
-          // Check inventory before allowing add to cart
-          if (variant.inventory < checkTotalQty) {
-            get().showToast(`Only ${variant.inventory} units available for SKU ${variant.sku}`, 'error');
-            return; // Block add to cart if insufficient inventory
-          }
-          if (variant?.b2bTierPricing) {
-            const tier = variant.b2bTierPricing.find((t) => checkTotalQty >= t.minQty && (!t.maxQty || checkTotalQty <= t.maxQty));
-            if (tier) {
-              finalUnitPrice = tier.pricePerUnit;
-            }
-          }
-        } else {
-          get().showToast(`Variant SKU ${itemData.sku} not found for product ASIN ${itemData.asin}`, 'error');
-          return;
-        }
-      } else {
-        get().showToast(`Product ASIN ${itemData.asin} has no variants`, 'error');
+      // Find matching product in local products OR in apiCatalogProducts
+      const product = get().products.find(
+        (p) => p.asin === itemData.asin || 
+               p.asin === itemData.parentAsin || 
+               (p as any).id === itemData.productId ||
+               p.variants?.some((v) => v.sku === itemData.sku)
+      );
+
+      const apiProduct = get().apiCatalogProducts.find(
+        (ap) => ap.id === itemData.asin || 
+                ap.id === itemData.productId || 
+                ap.id === itemData.parentAsin ||
+                ap.sku_prefix === itemData.sku ||
+                ap.variants?.some((v) => v.sku === itemData.sku)
+      );
+
+      const productVariant = product?.variants?.find((v) => v.sku === itemData.sku);
+      const apiVariant = apiProduct?.variants?.find((v) => v.sku === itemData.sku);
+
+      // Resolve available inventory (support both inventory and available_stock fields)
+      const availableStock = productVariant?.inventory ?? (apiVariant as any)?.available_stock ?? 1000;
+
+      const checkTotalQty = existingQty + effectiveAddQty;
+      if (availableStock < checkTotalQty) {
+        get().showToast(`Only ${availableStock} units available for SKU ${itemData.sku}`, 'error');
         return;
+      }
+
+      // Check B2B tier pricing
+      const tierPricing = productVariant?.b2bTierPricing || (apiVariant as any)?.b2bTierPricing;
+      if (tierPricing && Array.isArray(tierPricing) && tierPricing.length > 0) {
+        const tier = tierPricing.find((t: any) => checkTotalQty >= t.minQty && (!t.maxQty || checkTotalQty <= t.maxQty)) ||
+                     tierPricing.find((t: any) => checkTotalQty >= t.minQty);
+        if (tier && typeof tier.pricePerUnit === 'number') {
+          finalUnitPrice = tier.pricePerUnit;
+        } else if (tierPricing[0]?.pricePerUnit) {
+          finalUnitPrice = tierPricing[0].pricePerUnit;
+        }
       }
     }
 
     const newTotalQty = existingQty + effectiveAddQty;
+
+    const isDrainClipCartItem = (i: { sku?: string; parentAsin?: string; productTitle?: string }) => {
+      const s = (i.sku || '').toUpperCase();
+      const p = (i.parentAsin || '').toUpperCase();
+      const t = (i.productTitle || '').toLowerCase();
+      return s.startsWith('APE-SC') || s.includes('CLIP') || s.includes('DRAIN') || p.includes('CLIP') || p === 'AP-DRAIN-02' || t.includes('drain clip');
+    };
+
+    const recalculateCartVolumeTiers = (cartItems: any[]) => {
+      const totalDrainClipQty = cartItems
+        .filter(isDrainClipCartItem)
+        .reduce((sum, i) => sum + (i.quantity || 0), 0);
+
+      const drainTierPrice = totalDrainClipQty >= 1000 ? 12.75 : 20.00;
+
+      return cartItems.map((item) => {
+        if (isDrainClipCartItem(item)) {
+          return {
+            ...item,
+            unitPrice: drainTierPrice,
+          };
+        }
+        return item;
+      });
+    };
 
     if (existingIndex > -1) {
       updatedCart[existingIndex] = {
@@ -2044,6 +2259,8 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       });
     }
 
+    updatedCart = recalculateCartVolumeTiers(updatedCart);
+
     saveSessionCart(updatedCart);
     set({ 
       cart: updatedCart, 
@@ -2051,28 +2268,43 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       currentQuote: null,
       quoteError: null
     });
-    get().setIsCartDrawerOpen(true);
-    get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle} to cart`, 'success');
+    // Note: Do not auto-open cart drawer on add to cart, keep customer in shop flow
+
+    const totalDrainClipsNow = updatedCart.filter(isDrainClipCartItem).reduce((acc, i) => acc + i.quantity, 0);
+    if (isDrainClipCartItem(itemData)) {
+      if (totalDrainClipsNow >= 1000) {
+        get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle}. Bulk Rate ₹12.75/pc active! (${totalDrainClipsNow} total pcs)`, 'success');
+      } else {
+        get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle} to cart (${totalDrainClipsNow}/1,000 pcs for ₹12.75 bulk tier)`, 'info');
+      }
+    } else if (isB2B) {
+      const currentCartTotalUnits = cart.reduce((acc, i) => acc + (i.sku === itemData.sku ? 0 : i.quantity), 0);
+      const totalOrderB2bUnits = currentCartTotalUnits + newTotalQty;
+      if (totalOrderB2bUnits >= 50) {
+        get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle} to cart (Wholesale Total: ${totalOrderB2bUnits} units)`, 'success');
+      } else {
+        get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle} (${totalOrderB2bUnits}/50 wholesale units in cart)`, 'info');
+      }
+    } else {
+      get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle} to cart`, 'success');
+    }
   },
   updateCartQuantity: (sku, qty) => {
     if (qty <= 0) {
       get().removeFromCart(sku);
       return;
     }
-    const { appMode, products, cart } = get();
-    if (appMode === 'B2B') {
-      const item = cart.find((i) => i.sku === sku);
-      if (item) {
-        const product = products.find((p) => p.asin === item.asin);
-        const variant = product?.variants.find((v) => v.sku === sku);
-        const moq = variant?.b2bMoq || variant?.b2bTierPricing?.[0]?.minQty || product?.b2bMoq || 50;
-        if (qty < moq) {
-          get().showToast(`B2B Wholesale Minimum Order Quantity (MOQ) is ${moq} units`, 'warning');
-          return;
-        }
-      }
-    }
-    const updatedCart = get().cart.map((item) => item.sku === sku ? { ...item, quantity: qty } : item);
+    const isDrainClipCartItem = (i: { sku?: string; parentAsin?: string; productTitle?: string }) => {
+      const s = (i.sku || '').toUpperCase();
+      const p = (i.parentAsin || '').toUpperCase();
+      const t = (i.productTitle || '').toLowerCase();
+      return s.startsWith('APE-SC') || s.includes('CLIP') || s.includes('DRAIN') || p.includes('CLIP') || p === 'AP-DRAIN-02' || t.includes('drain clip');
+    };
+    let updatedCart = get().cart.map((item) => item.sku === sku ? { ...item, quantity: qty } : item);
+    const totalDrainClips = updatedCart.filter(isDrainClipCartItem).reduce((sum, i) => sum + (i.quantity || 0), 0);
+    const drainTierPrice = totalDrainClips >= 1000 ? 12.75 : 20.00;
+    updatedCart = updatedCart.map((item) => isDrainClipCartItem(item) ? { ...item, unitPrice: drainTierPrice } : item);
+
     saveSessionCart(updatedCart);
     set({
       cart: updatedCart,
@@ -2080,9 +2312,20 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       currentQuote: null,
       quoteError: null
     });
+    get().fetchAuthoritativeQuote();
   },
   removeFromCart: (sku) => {
-    const remaining = get().cart.filter((item) => item.sku !== sku);
+    const isDrainClipCartItem = (i: { sku?: string; parentAsin?: string; productTitle?: string }) => {
+      const s = (i.sku || '').toUpperCase();
+      const p = (i.parentAsin || '').toUpperCase();
+      const t = (i.productTitle || '').toLowerCase();
+      return s.startsWith('APE-SC') || s.includes('CLIP') || s.includes('DRAIN') || p.includes('CLIP') || p === 'AP-DRAIN-02' || t.includes('drain clip');
+    };
+    let remaining = get().cart.filter((item) => item.sku !== sku);
+    const totalDrainClips = remaining.filter(isDrainClipCartItem).reduce((sum, i) => sum + (i.quantity || 0), 0);
+    const drainTierPrice = totalDrainClips >= 1000 ? 12.75 : 20.00;
+    remaining = remaining.map((item) => isDrainClipCartItem(item) ? { ...item, unitPrice: drainTierPrice } : item);
+
     saveSessionCart(remaining);
     set({
       cart: remaining,
@@ -2091,6 +2334,9 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       quoteError: null
     });
     get().showToast('Item removed from cart', 'info');
+    if (remaining.length > 0) {
+      get().fetchAuthoritativeQuote();
+    }
   },
   clearCart: () => {
     saveSessionCart([]);
@@ -2113,14 +2359,16 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
   quoteError: null,
   quotePaymentMethod: 'PREPAID',
   setQuotePaymentMethod: (method) => {
-    set({ quotePaymentMethod: method, quoteStatus: 'QUOTE_REQUIRED', currentQuote: null });
+    const effectiveMethod = (get().appMode === 'B2B' && method === 'COD') ? 'PREPAID' : method;
+    set({ quotePaymentMethod: effectiveMethod, quoteStatus: 'QUOTE_REQUIRED', currentQuote: null });
   },
   destinationPincode: '382430',
   setDestinationPincode: (pincode) => {
     set({ destinationPincode: pincode, quoteStatus: 'QUOTE_REQUIRED', currentQuote: null });
   },
   fetchAuthoritativeQuote: async () => {
-    const { cart, destinationPincode, quotePaymentMethod } = get();
+    const { cart, destinationPincode, quotePaymentMethod, appMode } = get();
+    const effectivePaymentMethod = (appMode === 'B2B' && quotePaymentMethod === 'COD') ? 'PREPAID' : quotePaymentMethod;
     saveSessionCart(cart);
     if (cart.length === 0) {
       set({ currentQuote: null, quoteStatus: 'EMPTY_CART', quoteError: null });
@@ -2146,7 +2394,7 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       const quote = await quoteApi.requestQuote({
         items,
         destination_pincode: cleanPin,
-        payment_method: quotePaymentMethod,
+        payment_method: effectivePaymentMethod,
       });
 
       set({ currentQuote: quote, quoteStatus: 'QUOTE_VALID', quoteError: null });
@@ -2510,114 +2758,75 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
   },
 
   schedulePickupForOrder: (orderId, packageId, slot, courier, date) => {
-    const updatedOrders = get().orders.map((ord) => {
-      if (ord.id === orderId || ord.orderNumber === orderId) {
-        return {
-          ...ord,
-          shipments: ord.shipments.map((shp) => {
-            if (shp.packageId === packageId || ord.shipments.length === 1) {
-              return {
-                ...shp,
-                status: 'PROCESSING_PICK_PACK' as OrderStatus,
-                pickupDetail: {
-                  slot,
-                  date,
-                  courier,
-                  scheduledAt: new Date().toISOString()
-                },
-                milestones: [
-                  ...shp.milestones,
-                  {
-                    status: 'PICKUP_SCHEDULED',
-                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    location: 'Kathwada GIDC Hub (382430)',
-                    description: `Pickup scheduled for ${date} (${slot}) with ${courier}`,
-                    isCompleted: true
-                  }
-                ]
-              };
-            }
-            return shp;
-          })
-        };
-      }
-      return ord;
-    });
+    const updatedOrders = updateOrderShipmentHelper(get().orders, orderId, packageId, (shp) => ({
+      ...shp,
+      status: 'PROCESSING_PICK_PACK' as OrderStatus,
+      pickupDetail: {
+        slot,
+        date,
+        courier,
+        scheduledAt: new Date().toISOString()
+      },
+      milestones: [
+        ...shp.milestones,
+        {
+          status: 'PICKUP_SCHEDULED',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          location: 'Kathwada GIDC Hub (382430)',
+          description: `Pickup scheduled for ${date} (${slot}) with ${courier}`,
+          isCompleted: true
+        }
+      ]
+    }));
     saveStored('apollo_orders', updatedOrders);
     set({ orders: updatedOrders });
     get().showToast(`Pickup scheduled for ${orderId} on ${date} (${slot}) with ${courier}!`, 'success');
   },
 
   confirmPackedAndReady: (orderId, packageId) => {
-    const updatedOrders = get().orders.map((ord) => {
-      if (ord.id === orderId || ord.orderNumber === orderId) {
-        return {
-          ...ord,
-          shipments: ord.shipments.map((shp) => {
-            if (shp.packageId === packageId || ord.shipments.length === 1) {
-              const manifestId = `MNF-KATH-${Date.now().toString().slice(-6)}`;
-              return {
-                ...shp,
-                status: 'AWB_GENERATED' as OrderStatus,
-                shippingDetail: {
-                  ...shp.shippingDetail,
-                  manifestId: shp.shippingDetail?.manifestId || manifestId
-                },
-                pickupDetail: shp.pickupDetail ? {
-                  ...shp.pickupDetail,
-                  manifestId
-                } : undefined,
-                milestones: [
-                  ...shp.milestones,
-                  {
-                    status: 'PACKED_READY_FOR_PICKUP',
-                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    location: 'Kathwada GIDC Dispatch Bay',
-                    description: `Item packed, label verified, added to Handover Manifest ${manifestId}`,
-                    isCompleted: true
-                  }
-                ]
-              };
-            }
-            return shp;
-          })
-        };
-      }
-      return ord;
-    });
+    const manifestId = `MNF-KATH-${Date.now().toString().slice(-6)}`;
+    const updatedOrders = updateOrderShipmentHelper(get().orders, orderId, packageId, (shp) => ({
+      ...shp,
+      status: 'AWB_GENERATED' as OrderStatus,
+      shippingDetail: {
+        ...shp.shippingDetail,
+        manifestId: shp.shippingDetail?.manifestId || manifestId
+      },
+      pickupDetail: shp.pickupDetail ? {
+        ...shp.pickupDetail,
+        manifestId
+      } : undefined,
+      milestones: [
+        ...shp.milestones,
+        {
+          status: 'PACKED_READY_FOR_PICKUP',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          location: 'Kathwada GIDC Dispatch Bay',
+          description: `Item packed, label verified, added to Handover Manifest ${manifestId}`,
+          isCompleted: true
+        }
+      ]
+    }));
     saveStored('apollo_orders', updatedOrders);
     set({ orders: updatedOrders });
     get().showToast(`Order #${orderId} marked Packed & Ready for Handover!`, 'success');
   },
 
   confirmHandoverToCourier: (orderId, packageId) => {
-    const updatedOrders = get().orders.map((ord) => {
-      if (ord.id === orderId || ord.orderNumber === orderId) {
-        return {
-          ...ord,
-          shipments: ord.shipments.map((shp) => {
-            if (shp.packageId === packageId || ord.shipments.length === 1) {
-              return {
-                ...shp,
-                status: 'IN_TRANSIT' as OrderStatus,
-                milestones: [
-                  ...shp.milestones,
-                  {
-                    status: 'DISPATCHED',
-                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    location: 'Kathwada GIDC Hub',
-                    description: 'Package handed over to courier executive. In transit.',
-                    isCompleted: true
-                  }
-                ]
-              };
-            }
-            return shp;
-          })
-        };
-      }
-      return ord;
-    });
+    const updatedOrders = updateOrderShipmentHelper(get().orders, orderId, packageId, (shp) => ({
+      ...shp,
+      status: 'IN_TRANSIT' as OrderStatus,
+      milestones: [
+        ...shp.milestones,
+        {
+          status: 'DISPATCHED',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          location: 'Kathwada GIDC Hub',
+          description: 'Package handed over to courier executive. In transit.',
+          isCompleted: true
+        }
+      ]
+    }));
     saveStored('apollo_orders', updatedOrders);
     set({ orders: updatedOrders });
     get().showToast(`Order #${orderId} handed over to courier! Status: In-Transit.`, 'success');

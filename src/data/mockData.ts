@@ -230,16 +230,15 @@ export const MOCK_PRODUCTS: Product[] = [
     variants: [
       {
         sku: 'APE-SC-28.00MM',
-        title: 'Apollo SS304 Solar Drain Clip - 28mm Frame Size (Pack of 50 pcs)',
-        attributes: { material: 'AISI SS304', size: '28mm', packSize: 'Pack of 50' },
-        mrp: 1250,
-        b2cPrice: 750,
+        title: 'Apollo SS304 Solar Drain Clip - 28mm Frame Size',
+        attributes: { material: 'AISI SS304', size: '28mm' },
+        mrp: 35,
+        b2cPrice: 20,
         b2bTierPricing: [
-          { minQty: 1, maxQty: 4, pricePerUnit: 750, discountPercent: 0 },
-          { minQty: 5, maxQty: 19, pricePerUnit: 650, discountPercent: 13.3 },
-          { minQty: 20, pricePerUnit: 520, discountPercent: 30.6 }
+          { minQty: 1, maxQty: 999, pricePerUnit: 20, discountPercent: 0 },
+          { minQty: 1000, pricePerUnit: 12.75, discountPercent: 36.25 }
         ],
-        inventory: 2500,
+        inventory: 50000,
         barcode: 'B0GSSF4SBB',
         flipkartFsn: 'FSN-APE-DC28',
         images: ['/Drain_clips.webp'],
@@ -251,16 +250,15 @@ export const MOCK_PRODUCTS: Product[] = [
       },
       {
         sku: 'APE-SC-30.00MM',
-        title: 'Apollo SS304 Solar Drain Clip - 30mm Frame Size (Pack of 50 pcs)',
-        attributes: { material: 'AISI SS304', size: '30mm', packSize: 'Pack of 50' },
-        mrp: 1250,
-        b2cPrice: 750,
+        title: 'Apollo SS304 Solar Drain Clip - 30mm Frame Size',
+        attributes: { material: 'AISI SS304', size: '30mm' },
+        mrp: 35,
+        b2cPrice: 20,
         b2bTierPricing: [
-          { minQty: 1, maxQty: 4, pricePerUnit: 750, discountPercent: 0 },
-          { minQty: 5, maxQty: 19, pricePerUnit: 650, discountPercent: 13.3 },
-          { minQty: 20, pricePerUnit: 520, discountPercent: 30.6 }
+          { minQty: 1, maxQty: 999, pricePerUnit: 20, discountPercent: 0 },
+          { minQty: 1000, pricePerUnit: 12.75, discountPercent: 36.25 }
         ],
-        inventory: 3500,
+        inventory: 50000,
         barcode: 'B0GSRXJFD9',
         flipkartFsn: 'FSN-APE-DC30',
         images: ['/Drain_clips.webp'],
@@ -272,16 +270,15 @@ export const MOCK_PRODUCTS: Product[] = [
       },
       {
         sku: 'APE-SC-33.00MM',
-        title: 'Apollo SS304 Solar Drain Clip - 33mm Frame Size (Pack of 50 pcs)',
-        attributes: { material: 'AISI SS304', size: '33mm', packSize: 'Pack of 50' },
-        mrp: 1250,
-        b2cPrice: 750,
+        title: 'Apollo SS304 Solar Drain Clip - 33mm Frame Size',
+        attributes: { material: 'AISI SS304', size: '33mm' },
+        mrp: 35,
+        b2cPrice: 20,
         b2bTierPricing: [
-          { minQty: 1, maxQty: 4, pricePerUnit: 750, discountPercent: 0 },
-          { minQty: 5, maxQty: 19, pricePerUnit: 650, discountPercent: 13.3 },
-          { minQty: 20, pricePerUnit: 520, discountPercent: 30.6 }
+          { minQty: 1, maxQty: 999, pricePerUnit: 20, discountPercent: 0 },
+          { minQty: 1000, pricePerUnit: 12.75, discountPercent: 36.25 }
         ],
-        inventory: 2000,
+        inventory: 50000,
         barcode: 'B0GSS295GM',
         flipkartFsn: 'FSN-APE-DC33',
         images: ['/Drain_clips.webp'],
@@ -293,16 +290,15 @@ export const MOCK_PRODUCTS: Product[] = [
       },
       {
         sku: 'APE-SC-35.00MM',
-        title: 'Apollo SS304 Solar Drain Clip - 35mm Frame Size (Pack of 50 pcs)',
-        attributes: { material: 'AISI SS304', size: '35mm', packSize: 'Pack of 50' },
-        mrp: 1250,
-        b2cPrice: 750,
+        title: 'Apollo SS304 Solar Drain Clip - 35mm Frame Size',
+        attributes: { material: 'AISI SS304', size: '35mm' },
+        mrp: 35,
+        b2cPrice: 20,
         b2bTierPricing: [
-          { minQty: 1, maxQty: 4, pricePerUnit: 750, discountPercent: 0 },
-          { minQty: 5, maxQty: 19, pricePerUnit: 650, discountPercent: 13.3 },
-          { minQty: 20, pricePerUnit: 520, discountPercent: 30.6 }
+          { minQty: 1, maxQty: 999, pricePerUnit: 20, discountPercent: 0 },
+          { minQty: 1000, pricePerUnit: 12.75, discountPercent: 36.25 }
         ],
-        inventory: 4500,
+        inventory: 50000,
         barcode: 'B0H3ZJ1J5L',
         flipkartFsn: 'FSN-APE-DC35',
         images: ['/Drain_clips.webp'],
@@ -314,16 +310,15 @@ export const MOCK_PRODUCTS: Product[] = [
       },
       {
         sku: 'APE-SC-40.00MM',
-        title: 'Apollo SS304 Solar Drain Clip - 40mm Frame Size (Pack of 50 pcs)',
-        attributes: { material: 'AISI SS304', size: '40mm', packSize: 'Pack of 50' },
-        mrp: 1350,
-        b2cPrice: 800,
+        title: 'Apollo SS304 Solar Drain Clip - 40mm Frame Size',
+        attributes: { material: 'AISI SS304', size: '40mm' },
+        mrp: 35,
+        b2cPrice: 20,
         b2bTierPricing: [
-          { minQty: 1, maxQty: 4, pricePerUnit: 800, discountPercent: 0 },
-          { minQty: 5, maxQty: 19, pricePerUnit: 690, discountPercent: 13.7 },
-          { minQty: 20, pricePerUnit: 560, discountPercent: 30.0 }
+          { minQty: 1, maxQty: 999, pricePerUnit: 20, discountPercent: 0 },
+          { minQty: 1000, pricePerUnit: 12.75, discountPercent: 36.25 }
         ],
-        inventory: 2800,
+        inventory: 50000,
         barcode: 'B0GSRSG56R',
         flipkartFsn: 'FSN-APE-DC40',
         images: ['/Drain_clips.webp'],

@@ -1,0 +1,221 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "High-Availability E-Commerce Infrastructure",
+    "output": "high-availability-infrastructure.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "full-flow",
+        "label": "Primary Request Flow",
+        "focus": ["user", "cdn", "lb", "gateway", "fastapi", "pgbouncer", "postgres"],
+        "note": "Complete transactional lifecycle from client browser to durable PostgreSQL storage."
+      },
+      {
+        "id": "cache-flow",
+        "label": "In-Memory Caching",
+        "focus": ["fastapi", "redis"],
+        "note": "Sub-millisecond TTL and LRU caching for product catalog, pincodes, and session states."
+      },
+      {
+        "id": "async-bus",
+        "label": "Asynchronous Event Bus",
+        "focus": ["fastapi", "queue"],
+        "note": "Transactional outbox events and background worker task queues."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "User / Browser",
+      "sublabel": "React 19 / Mobile",
+      "pos": [40, 90],
+      "size": [130, 56]
+    },
+    {
+      "id": "cdn",
+      "type": "cloud",
+      "label": "CDN + WAF",
+      "sublabel": "Cloudflare Edge",
+      "tag": "DDoS & WAF",
+      "brand": "cloudflare",
+      "pos": [260, 90],
+      "size": [130, 56]
+    },
+    {
+      "id": "lb",
+      "type": "cloud",
+      "label": "Load Balancer",
+      "sublabel": "HTTPS :443",
+      "tag": "SSL Offload",
+      "pos": [480, 90],
+      "size": [130, 56]
+    },
+    {
+      "id": "gateway",
+      "type": "security",
+      "label": "API Gateway",
+      "sublabel": "Reverse Proxy",
+      "tag": "Rate Limit",
+      "pos": [700, 90],
+      "size": [130, 56]
+    },
+    {
+      "id": "queue",
+      "type": "messagebus",
+      "label": "RabbitMQ",
+      "sublabel": "Kafka / Queue :5672",
+      "tag": "Outbox Queue",
+      "brand": "rabbitmq",
+      "pos": [480, 220],
+      "size": [130, 56]
+    },
+    {
+      "id": "fastapi",
+      "type": "backend",
+      "label": "FastAPI",
+      "sublabel": "Core Backend :8000",
+      "tag": "Decimal Engine",
+      "brand": "fastapi",
+      "pos": [700, 220],
+      "size": [130, 56]
+    },
+    {
+      "id": "redis",
+      "type": "database",
+      "label": "Redis Cache",
+      "sublabel": "TTL/LRU :6379",
+      "tag": "In-Memory",
+      "brand": "redis",
+      "pos": [920, 220],
+      "size": [130, 56]
+    },
+    {
+      "id": "pgbouncer",
+      "type": "backend",
+      "label": "PgBouncer",
+      "sublabel": "Pooler :6432",
+      "tag": "Tx Pool",
+      "pos": [700, 350],
+      "size": [130, 56]
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "Primary DB :5432",
+      "tag": "Single Source",
+      "brand": "postgresql",
+      "pos": [920, 350],
+      "size": [130, 56]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Edge & Ingress Tier",
+      "wraps": ["cdn", "lb", "gateway"]
+    },
+    {
+      "kind": "security-group",
+      "label": "Internal Application VPC",
+      "wraps": ["queue", "fastapi", "redis", "pgbouncer", "postgres"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "u-to-c",
+      "from": "user",
+      "to": "cdn",
+      "label": "HTTPS",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "c-to-l",
+      "from": "cdn",
+      "to": "lb",
+      "label": "TLS",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "l-to-g",
+      "from": "lb",
+      "to": "gateway",
+      "label": "Proxy",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "g-to-a",
+      "from": "gateway",
+      "to": "fastapi",
+      "label": "HTTP",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 18
+    },
+    {
+      "id": "a-to-r",
+      "from": "fastapi",
+      "to": "redis",
+      "label": "Cache",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "a-to-q",
+      "from": "fastapi",
+      "to": "queue",
+      "label": "Events",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "right"
+    },
+    {
+      "id": "a-to-p",
+      "from": "fastapi",
+      "to": "pgbouncer",
+      "label": "Pool",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 18
+    },
+    {
+      "id": "p-to-d",
+      "from": "pgbouncer",
+      "to": "postgres",
+      "label": "SQL",
+      "fromSide": "right",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Edge & Ingress",
+      "items": [
+        "Cloudflare CDN/WAF blocks threats and Load Balancer distributes HTTPS traffic"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Core Application & Cache",
+      "items": [
+        "FastAPI executes Decimal billing and Redis accelerates catalog and sessions"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Data & Event Bus",
+      "items": [
+        "PgBouncer pools PostgreSQL connections and RabbitMQ processes outbox queues"
+      ]
+    }
+  ]
+}

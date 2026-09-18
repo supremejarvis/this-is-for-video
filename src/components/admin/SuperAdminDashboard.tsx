@@ -205,7 +205,8 @@ export const SuperAdminDashboard: React.FC = () => {
     returnRequests, updateReturnStatus,
     activeAdminRole, setActiveAdminRole,
     contractorInquiries,
-    setAppMode, setActiveTab
+    setAppMode, setActiveTab,
+    b2cCodLimit, setB2cCodLimit
   } = useStore();
 
   const navigate = useNavigate();
@@ -223,6 +224,23 @@ export const SuperAdminDashboard: React.FC = () => {
     return 'GSTR1';
   };
   const [reportsSubTab, setReportsSubTab] = useState<'GSTR1' | 'RECONCILIATION' | 'CICD_AUDIT'>(getInitialReportsSubTab);
+
+  // B2C COD Limit Configuration
+  const [codLimitInput, setCodLimitInput] = useState(String(b2cCodLimit || 10000));
+
+  useEffect(() => {
+    setCodLimitInput(String(b2cCodLimit || 10000));
+  }, [b2cCodLimit]);
+
+  const handleSaveCodLimit = () => {
+    const parsed = parseInt(codLimitInput, 10);
+    if (isNaN(parsed) || parsed < 0) {
+      showToast('Please enter a valid positive amount for B2C COD limit', 'warning');
+      return;
+    }
+    setB2cCodLimit(parsed);
+    showToast(`B2C Cash on Delivery (COD) limit updated to ₹${parsed.toLocaleString('en-IN')}`, 'success');
+  };
 
   // APE Product Listing Multi-Tab Wizard State
   const [productForWizard, setProductForWizard] = useState<Product | null | 'NEW'>(null);
@@ -1632,6 +1650,58 @@ export const SuperAdminDashboard: React.FC = () => {
               </button>
             );
           })}
+      </div>
+
+      {/* Operations Policy Bar: B2C COD Limit & Invoicing Rules */}
+      <div className="bg-white/95 border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
+            <Sliders className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <strong className="text-xs font-black text-slate-900 uppercase tracking-wide font-mono">
+                B2C Cash on Delivery (COD) Threshold Limit:
+              </strong>
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                Active Cap: ₹{b2cCodLimit.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Orders exceeding this threshold cannot select COD in buyer checkout and must pay online via UPI, Cards, or NetBanking.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 shadow-inner">
+            <span className="text-xs font-mono font-bold text-slate-500">₹</span>
+            <input
+              type="number"
+              min="0"
+              step="500"
+              value={codLimitInput}
+              onChange={(e) => setCodLimitInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSaveCodLimit();
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              placeholder="10000"
+              className="w-24 text-xs font-mono font-bold text-slate-900 bg-transparent focus:outline-none"
+              title="Set Maximum Order Value eligible for B2C Cash on Delivery"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveCodLimit}
+            className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+          >
+            <Save className="w-3.5 h-3.5" />
+            <span>Save COD Limit</span>
+          </button>
+        </div>
       </div>
 
       {/* ───────────────────────────────────────────────────────────────────────────── */}

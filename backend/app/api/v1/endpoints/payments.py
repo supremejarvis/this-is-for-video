@@ -16,13 +16,13 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models import Order, OrderItem, OrderStatus, Payment, PaymentStatus, WebhookEvent
 from app.models.auth import User
-from app.services.inventory import InventoryService
 from app.schemas.order import (
     RazorpayCreateOrderRequest,
     RazorpayCreateOrderResponse,
     RazorpayVerifyPaymentRequest,
     RazorpayVerifyPaymentResponse,
 )
+from app.services.inventory import InventoryService
 
 logger = logging.getLogger("apollo.payments")
 

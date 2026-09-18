@@ -126,3 +126,14 @@
   - Never give an MCP server unrestricted write access to the production database.
   - Use provider sandboxes for payment, shipping, messaging and load tests.
 
+---
+
+## 9. Autonomous System Health, Audits & Extensibility Directive
+- **Automated Health Telemetry**:
+  - The AI Agent reads health status directly from [`.audit/latest-health-report.json`](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/.audit/latest-health-report.json), [`.audit/latest-health-report.md`](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/.audit/latest-health-report.md), and Playwright `test-results/**/trace.zip`.
+- **Auto-Remediation & Score Guardian**:
+  - Quality thresholds: Performance ≥ 85, Accessibility ≥ 90, Best Practices ≥ 90, SEO ≥ 90, and 100% E2E test pass rate.
+  - When audit scores drop or Playwright traces reveal UI/API failures, the AI Agent is authorized to autonomously diagnose, apply code fixes, and verify remediation using `npm run test:full-audit`.
+- **Post-Production Extensibility**:
+  - The audit engine supports live production domains: `npm run audit:lighthouse -- --url=<PRODUCTION_URL>`.
+  - Engineers and AI agents can add new E2E tests, audit rules, and monitoring endpoints post-production without architecture rework.

@@ -1,9 +1,9 @@
 """Integration tests for Razorpay Webhook Idempotency against real PostgreSQL database."""
 
+import hashlib
+import hmac
 import json
 import uuid
-import hmac
-import hashlib
 from decimal import Decimal
 
 import pytest
@@ -18,10 +18,7 @@ from app.core.database import get_db
 from app.main import app
 from app.models import (
     FulfilmentStatus,
-    InventoryItem,
-    InventoryReservation,
     Order,
-    OrderItem,
     OrderStatus,
     Payment,
     PaymentStatus,
@@ -298,7 +295,7 @@ async def test_get_payment_status_endpoint(session_factory, client: AsyncClient)
 @pytest.mark.asyncio
 async def test_get_quote_endpoint(session_factory, client: AsyncClient):
     """GET /api/v1/quotes/{quote_id} returns authoritative quote snapshot."""
-    from datetime import datetime, UTC, timedelta
+    from datetime import UTC, datetime, timedelta
     quote_id = uuid.uuid4()
     quote_number = f"APE-Q-2026-{uuid.uuid4().hex[:8].upper()}"
 

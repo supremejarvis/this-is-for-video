@@ -82,7 +82,19 @@ export class PricingApi {
    * Run stateless authoritative statutory order calculation
    */
   public async calculateOrder(payload: OrderCalculationRequest): Promise<OrderCalculationResult> {
-    return apiClient.post<OrderCalculationResult>('/pricing/calculate', payload);
+    const cleanPayload = {
+      items: payload.items.map(item => ({
+        sku: item.sku,
+        unit_price: String(item.unit_price),
+        quantity: Number(item.quantity),
+        gst_rate: String(item.gst_rate ?? 0.18),
+        hsn_code: item.hsn_code || '73269099',
+        tax_mode: item.tax_mode || 'GST_INCLUSIVE'
+      })),
+      base_shipping: String(payload.base_shipping ?? '0.00'),
+      rounding_multiple: Number(payload.rounding_multiple ?? 5)
+    };
+    return apiClient.post<OrderCalculationResult>('/pricing/calculate', cleanPayload);
   }
 
   /**

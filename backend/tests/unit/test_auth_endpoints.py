@@ -371,7 +371,6 @@ async def test_p0_003_b_unknown_email_with_valid_password_creates_no_owner(clien
 async def test_p0_003_c_existing_customer_denied_admin_login_and_role_unchanged(client, db_session, monkeypatch):
     """TEST P0-003-C: Existing CUSTOMER attempts admin login -> denied (401), role remains CUSTOMER."""
     from app.core.config import settings
-    from app.core.security import hash_password
 
     admin_secret = "JBSWY3DPEHPK3PXP"
     monkeypatch.setattr(settings, "ADMIN_TOTP_SECRET", admin_secret)

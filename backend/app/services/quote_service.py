@@ -73,6 +73,25 @@ def default_clock() -> datetime:
 
 
 class QuoteService:
+    @staticmethod
+    def _build_price_version_stmt(filter_clause, min_quantity: int):
+        return (
+            select(ProductVariant, PriceVersion, Product)
+            .join(Product, ProductVariant.product_id == Product.id)
+            .join(
+                PriceVersion,
+                (PriceVersion.variant_id == ProductVariant.id)
+                | ((PriceVersion.product_id == Product.id) & (PriceVersion.variant_id.is_(None))),
+            )
+            .where(
+                filter_clause,
+                ProductVariant.is_active.is_(True),
+                Product.is_active.is_(True),
+                PriceVersion.valid_to.is_(None),  # current price version
+                PriceVersion.min_quantity <= min_quantity,
+            )
+            .order_by(PriceVersion.min_quantity.desc(), PriceVersion.valid_from.desc())
+        )
     """Service to create, store, validate, and convert quotes to orders."""
 
     @staticmethod
@@ -96,61 +115,52 @@ class QuoteService:
         # 2. Client-supplied unit_price is ignored; pricing is strictly authoritative from PostgreSQL
         pass
 
-        # 3. Load authoritative pricing from PostgreSQL
+        # 3. Load authoritative pricing from PostgreSQL with family volume tiering
         calc_items: list[PricingItemInput] = []
         variant_snapshots: dict[str, tuple[Decimal, Decimal, TaxMode]] = {}
 
+        def is_drain_clip_sku(sku_val: str | None) -> bool:
+            if not sku_val:
+                return False
+            s = sku_val.upper()
+            return s.startswith("APE-SC") or "CLIP" in s or "DRAIN" in s
+
+        # Pre-pass: Resolve variants and compute aggregate family quantities (e.g. Drain Clips across all sizes)
+        resolved_items_info: list[tuple[Any, ProductVariant | None, Product | None, bool]] = []
+        total_drain_clip_qty = 0
         for item in request.items:
-            # Query variant with its active product and current price version
             filter_clause = (ProductVariant.id == item.variant_id) if item.variant_id is not None else (ProductVariant.sku == item.sku)
-            stmt = (
-                select(ProductVariant, PriceVersion, Product)
-                .join(Product, ProductVariant.product_id == Product.id)
-                .join(
-                    PriceVersion,
-                    (PriceVersion.variant_id == ProductVariant.id)
-                    | ((PriceVersion.product_id == Product.id) & (PriceVersion.variant_id.is_(None))),
-                )
-                .where(
-                    filter_clause,
-                    ProductVariant.is_active.is_(True),
-                    Product.is_active.is_(True),
-                    PriceVersion.valid_to.is_(None),  # current price version
-                    PriceVersion.min_quantity <= item.quantity,
-                )
-                .order_by(PriceVersion.min_quantity.desc(), PriceVersion.valid_from.desc())
-            )
-            result = (await session.execute(stmt)).first()
-            if result is None and item.sku:
-                # Try fallback matching normalized SKU (e.g. with/without .00 or standard formats)
+            stmt_v = select(ProductVariant, Product).join(Product, ProductVariant.product_id == Product.id).where(filter_clause)
+            res_v = (await session.execute(stmt_v)).first()
+            if res_v is None and item.sku:
                 alt_skus: list[str] = []
                 if ".00MM" in item.sku:
                     alt_skus.append(item.sku.replace(".00MM", "MM"))
                 elif "MM" in item.sku and ".00" not in item.sku:
                     alt_skus.append(item.sku.replace("MM", ".00MM"))
-                
                 for alt_sku in alt_skus:
-                    stmt_alt = (
-                        select(ProductVariant, PriceVersion, Product)
-                        .join(Product, ProductVariant.product_id == Product.id)
-                        .join(
-                            PriceVersion,
-                            (PriceVersion.variant_id == ProductVariant.id)
-                            | ((PriceVersion.product_id == Product.id) & (PriceVersion.variant_id.is_(None))),
-                        )
-                        .where(
-                            ProductVariant.sku == alt_sku,
-                            ProductVariant.is_active.is_(True),
-                            Product.is_active.is_(True),
-                            PriceVersion.valid_to.is_(None),
-                            PriceVersion.min_quantity <= item.quantity,
-                        )
-                        .order_by(PriceVersion.min_quantity.desc(), PriceVersion.valid_from.desc())
-                    )
-                    alt_res = (await session.execute(stmt_alt)).first()
-                    if alt_res is not None:
-                        result = alt_res
+                    stmt_alt_v = select(ProductVariant, Product).join(Product, ProductVariant.product_id == Product.id).where(ProductVariant.sku == alt_sku)
+                    alt_v_res = (await session.execute(stmt_alt_v)).first()
+                    if alt_v_res is not None:
+                        res_v = alt_v_res
                         break
+            if res_v is not None:
+                v_obj, p_obj = res_v
+                is_drain = is_drain_clip_sku(v_obj.sku) or getattr(p_obj, "sku_prefix", "") == "APE-SC"
+                if is_drain:
+                    total_drain_clip_qty += item.quantity
+                resolved_items_info.append((item, v_obj, p_obj, is_drain))
+            else:
+                resolved_items_info.append((item, None, None, False))
+
+        for item, variant_obj, product_obj, is_drain in resolved_items_info:
+            if variant_obj is None or product_obj is None:
+                ident = str(item.variant_id) if item.variant_id else item.sku
+                raise InvalidSkuError(f"SKU/Variant '{ident}' is invalid, inactive, or has no active price version in catalog.")
+
+            effective_tier_qty = max(item.quantity, total_drain_clip_qty) if is_drain else item.quantity
+            stmt = QuoteService._build_price_version_stmt(ProductVariant.id == variant_obj.id, effective_tier_qty)
+            result = (await session.execute(stmt)).first()
 
             if result is None:
                 ident = str(item.variant_id) if item.variant_id else item.sku

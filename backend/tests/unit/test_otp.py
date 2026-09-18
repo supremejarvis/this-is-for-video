@@ -1,6 +1,7 @@
 """Unit Tests for 4-Digit Mobile OTP Authentication and Rate Limiting."""
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+
 from app.main import app
 from app.services.otp_service import otp_service
 
@@ -70,7 +71,7 @@ async def test_otp_max_failed_attempts_invalidation():
         assert res.status_code == 200
 
         # Try 3 incorrect attempts
-        for i in range(3):
+        for _ in range(3):
             res_fail = await ac.post("/api/v1/auth/otp/verify", json={"phone": phone, "otp": "9999"})
             assert res_fail.status_code == 400
 

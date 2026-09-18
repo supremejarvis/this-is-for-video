@@ -46,6 +46,20 @@ export class CatalogApi {
   public async updateProduct(id: string, payload: Partial<ApiProduct>): Promise<ApiProduct> {
     return apiClient.patch<ApiProduct>(`/products/${id}`, payload);
   }
+
+  /**
+   * Archive / Delete a product (Staff only)
+   */
+  public async archiveProduct(id: string): Promise<ApiProduct> {
+    return apiClient.delete<ApiProduct>(`/products/${id}`);
+  }
+
+  /**
+   * Delete product alias
+   */
+  public async deleteProduct(id: string): Promise<ApiProduct> {
+    return this.archiveProduct(id);
+  }
 }
 
 export const catalogApi = new CatalogApi();

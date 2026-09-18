@@ -28,7 +28,6 @@ from app.main import app
 from app.models import InventoryItem, InventoryReservation, User, UserRole, WebhookEvent
 from app.schemas.pricing import PriceVersionCreate, TaxMode
 from app.schemas.product import ProductCreate, ProductVariantCreate
-from app.services.auth_service import AuthService
 from app.services.catalog_service import CatalogService
 from app.services.pricing_service import PricingService
 
@@ -235,7 +234,7 @@ async def test_razorpay_create_order_and_signature_verification(client: AsyncCli
     assert "Invalid Razorpay payment signature" in bad_verify.json()["detail"]
 
     # 3. Accept valid HMAC-SHA256 signature
-    msg = f"{rzp_order_id}|{rzp_payment_id}".encode("utf-8")
+    msg = f"{rzp_order_id}|{rzp_payment_id}".encode()
     valid_sig = hmac.new(
         settings.RAZORPAY_KEY_SECRET.encode("utf-8"),
         msg,

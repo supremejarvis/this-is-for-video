@@ -1,0 +1,472 @@
+{
+  "generatedAt": "2026-09-18T15:36:00.125Z",
+  "targetUrl": "http://localhost:3000/",
+  "environment": "development",
+  "overallHealth": "HEALTHY",
+  "scores": {
+    "performance": 35,
+    "accessibility": 91,
+    "bestPractices": 96,
+    "seo": 100
+  },
+  "thresholds": {
+    "performance": 85,
+    "accessibility": 90,
+    "bestPractices": 90,
+    "seo": 90
+  },
+  "traceArtifacts": [
+    {
+      "path": "C:/Users/patel/OneDrive/Desktop/PRAVIN/web/test-results/a11y-Automated-Accessibili-473af--AA-accessibility-standards-chromium/trace.zip",
+      "filename": "trace.zip",
+      "mtime": 1789744791432.4055,
+      "sizeBytes": 4525617
+    },
+    {
+      "path": "C:/Users/patel/OneDrive/Desktop/PRAVIN/web/test-results/a11y-Automated-Accessibili-84274-landmark-roles-and-headings-chromium/trace.zip",
+      "filename": "trace.zip",
+      "mtime": 1789744787794.908,
+      "sizeBytes": 1932933
+    }
+  ],
+  "actionableIssuesCount": 21,
+  "issues": [
+    {
+      "id": "largest-contentful-paint",
+      "title": "Largest Contentful Paint",
+      "description": "Largest Contentful Paint marks the time at which the largest text or image is painted. [Learn more about the Largest Contentful Paint metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-largest-contentful-paint/)",
+      "score": 0,
+      "displayValue": "14.7 s",
+      "itemsCount": 0,
+      "sampleItems": []
+    },
+    {
+      "id": "speed-index",
+      "title": "Speed Index",
+      "description": "Speed Index shows how quickly the contents of a page are visibly populated. [Learn more about the Speed Index metric](https://developer.chrome.com/docs/lighthouse/performance/speed-index/).",
+      "score": 0.02,
+      "displayValue": "5.6 s",
+      "itemsCount": 0,
+      "sampleItems": []
+    },
+    {
+      "id": "total-blocking-time",
+      "title": "Total Blocking Time",
+      "description": "Sum of all time periods between FCP and Time to Interactive, when task length exceeded 50ms, expressed in milliseconds. [Learn more about the Total Blocking Time metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-total-blocking-time/).",
+      "score": 0,
+      "displayValue": "2,150 ms",
+      "itemsCount": 0,
+      "sampleItems": []
+    },
+    {
+      "id": "max-potential-fid",
+      "title": "Max Potential First Input Delay",
+      "description": "The maximum potential First Input Delay that your users could experience is the duration of the longest task. [Learn more about the Maximum Potential First Input Delay metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-max-potential-fid/).",
+      "score": 0.11,
+      "displayValue": "460 ms",
+      "itemsCount": 0,
+      "sampleItems": []
+    },
+    {
+      "id": "interactive",
+      "title": "Time to Interactive",
+      "description": "Time to Interactive is the amount of time it takes for the page to become fully interactive. [Learn more about the Time to Interactive metric](https://developer.chrome.com/docs/lighthouse/performance/interactive/).",
+      "score": 0,
+      "displayValue": "15.4 s",
+      "itemsCount": 0,
+      "sampleItems": []
+    },
+    {
+      "id": "mainthread-work-breakdown",
+      "title": "Minimize main-thread work",
+      "description": "Consider reducing the time spent parsing, compiling and executing JS. You may find delivering smaller JS payloads helps with this. [Learn how to minimize main-thread work](https://developer.chrome.com/docs/lighthouse/performance/mainthread-work-breakdown/)",
+      "score": 0,
+      "displayValue": "4.1 s",
+      "itemsCount": 7,
+      "sampleItems": [
+        {},
+        {},
+        {},
+        {},
+        {}
+      ]
+    },
+    {
+      "id": "bootup-time",
+      "title": "Reduce JavaScript execution time",
+      "description": "Consider reducing the time spent parsing, compiling, and executing JS. You may find delivering smaller JS payloads helps with this. [Learn how to reduce Javascript execution time](https://developer.chrome.com/docs/lighthouse/performance/bootup-time/).",
+      "score": 0,
+      "displayValue": "2.2 s",
+      "itemsCount": 4,
+      "sampleItems": [
+        {
+          "url": "http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c0f4a095"
+        },
+        {
+          "url": "http://localhost:3000/node_modules/.vite/deps/motion_react.js?v=d5affaf7"
+        },
+        {
+          "url": "http://localhost:3000/"
+        },
+        {
+          "url": "Unattributable"
+        }
+      ]
+    },
+    {
+      "id": "color-contrast",
+      "title": "Background and foreground colors do not have a sufficient contrast ratio.",
+      "description": "Low-contrast text is difficult or impossible for many users to read. [Learn how to provide sufficient color contrast](https://dequeuniversity.com/rules/axe/4.13/color-contrast).",
+      "score": 0,
+      "displayValue": null,
+      "itemsCount": 16,
+      "sampleItems": [
+        {
+          "node": {
+            "snippet": "<span class=\"text-[10px] text-slate-400 font-mono\">",
+            "selector": "div.p-6 > div.p-3 > div.flex > span.text-[10px]",
+            "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.51 (foreground color: #90a1b9, background color: #f9fafc, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+          }
+        },
+        {
+          "node": {
+            "snippet": "<span class=\"text-[10px] text-slate-400 font-mono\">",
+            "selector": "div.p-6 > div.p-3 > div.flex > span.text-[10px]",
+            "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.51 (foreground color: #90a1b9, background color: #f9fafc, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+          }
+        },
+        {
+          "node": {
+            "snippet": "<span class=\"text-[10px] text-slate-400 font-mono\">",
+            "selector": "div.p-6 > div.p-3 > div.flex > span.text-[10px]",
+            "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.51 (foreground color: #90a1b9, background color: #f9fafc, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+          }
+        },
+        {
+          "node": {
+            "snippet": "<span class=\"text-[10px] text-slate-400 font-mono\">",
+            "selector": "div.p-6 > div.p-3 > div.flex > span.text-[10px]",
+            "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.51 (foreground color: #90a1b9, background color: #f9fafc, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+          }
+        },
+        {
+          "node": {
+            "snippet": "<span class=\"text-[10px] text-slate-400 font-mono\">",
+            "selector": "div.p-6 > div.p-3 > div.flex > span.text-[10px]",
+            "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.51 (foreground color: #90a1b9, background color: #f9fafc, font size: 7.5pt (10px), font weight: normal). Expected contrast ratio of 4.5:1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "label-content-name-mismatch",
+      "title": "Elements with visible text labels do not have matching accessible names.",
+      "description": "Visible text labels that do not match the accessible name can result in a confusing experience for screen reader users. [Learn more about accessible names](https://dequeuniversity.com/rules/axe/4.13/label-content-name-mismatch).",
+      "score": 0,
+      "displayValue": null,
+      "itemsCount": 34,
+      "sampleItems": [
+        {
+          "node": {
+            "snippet": "<button type=\"button\" id=\"header-category-dropdown\" aria-label=\"Filter products by category\" aria-haspopup=\"listbox\" aria-expanded=\"false\" class=\"h-10 px-3 bg-slate-50 text-xs font-semibold text-slate-700 hover:bg-slate-…\">",
+            "selector": "div.hidden > div.relative > div.relative > button#header-category-dropdown",
+            "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
+          }
+        },
+        {
+          "node": {
+            "snippet": "<button aria-label=\"Sign In or Register for Apollo Engineering Account\" class=\"h-10 flex items-center gap-1.5 px-3 sm:px-3.5 rounded-xl bg-amber-500 hove…\">",
+            "selector": "header.sticky > div.max-w-7xl > div.flex > button.h-10",
+            "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
+          }
+        },
+        {
+          "node": {
+            "snippet": "<button aria-label=\"Navigate to About Apollo Engineering\" class=\"px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 …\">",
+            "selector": "div.bg-slate-100/90 > div.max-w-7xl > nav.flex > button.px-3",
+            "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
+          }
+        },
+        {
+          "node": {
+            "snippet": "<button aria-label=\"Navigate to Installation guide and why choose us\" class=\"px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 …\">",
+            "selector": "div.bg-slate-100/90 > div.max-w-7xl > nav.flex > button.px-3",
+            "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
+          }
+        },
+        {
+          "node": {
+            "snippet": "<button aria-label=\"Navigate to Contact and Kathwada GIDC Location\" class=\"px-3.5 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.…\">",
+            "selector": "div.bg-slate-100/90 > div.max-w-7xl > nav.flex > button.px-3.5",
+            "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
+          }
+        }
+      ]
+    },
+    {
+      "id": "label",
+      "title": "Form elements do not have associated labels",
+      "description": "Labels ensure that form controls are announced properly by assistive technologies, like screen readers. [Learn more about form element labels](https://dequeuniversity.com/rules/axe/4.13/label).",
+      "score": 0,
+      "displayValue": null,
+      "itemsCount": 6,
+      "sampleItems": [
+        {
+          "node": {
+            "snippet": "<input min=\"1\" class=\"w-12 text-center text-xs font-mono font-bold text-slate-900 focus:outline-…\" type=\"number\" value=\"1\">",
+            "selector": "div.p-3 > div.flex > div.flex > input.w-12",
+            "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+          }
+        },
+        {
+          "node": {
+            "snippet": "<input min=\"1\" class=\"w-12 text-center text-xs font-mono font-bold text-slate-900 focus:outline-…\" type=\"number\" value=\"1\">",
+            "selector": "div.p-3 > div.flex > div.flex > input.w-12",
+            "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+          }
+        },
+        {
+          "node": {
+            "snippet": "<input min=\"1\" class=\"w-12 text-center text-xs font-mono font-bold text-slate-900 focus:outline-…\" type=\"number\" value=\"1\">",
+            "selector": "div.p-3 > div.flex > div.flex > input.w-12",
+            "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+          }
+        },
+        {
+          "node": {
+            "snippet": "<input min=\"1\" class=\"w-12 text-center text-xs font-mono font-bold text-slate-900 focus:outline-…\" type=\"number\" value=\"1\">",
+            "selector": "div.p-3 > div.flex > div.flex > input.w-12",
+            "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+          }
+        },
+        {
+          "node": {
+            "snippet": "<input min=\"1\" class=\"w-12 text-center text-xs font-mono font-bold text-slate-900 focus:outline-…\" type=\"number\" value=\"1\">",
+            "selector": "div.p-3 > div.flex > div.flex > input.w-12",
+            "explanation": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\""
+          }
+        }
+      ]
+    },
+    {
+      "id": "total-byte-weight",
+      "title": "Avoid enormous network payloads",
+      "description": "Large network payloads cost users real money and are highly correlated with long load times. [Learn how to reduce payload sizes](https://developer.chrome.com/docs/lighthouse/performance/total-byte-weight/).",
+      "score": 0.5,
+      "displayValue": "Total size was 5,609 KiB",
+      "itemsCount": 10,
+      "sampleItems": [
+        {
+          "url": "http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c0f4a095"
+        },
+        {
+          "url": "http://localhost:3000/node_modules/.vite/deps/lucide-react.js?v=18881a19"
+        },
+        {
+          "url": "http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=f25051f4"
+        },
+        {
+          "url": "http://localhost:3000/node_modules/.vite/deps/motion_react.js?v=d5affaf7"
+        },
+        {
+          "url": "http://localhost:3000/src/store/useStore.ts"
+        }
+      ]
+    },
+    {
+      "id": "unminified-javascript",
+      "title": "Minify JavaScript",
+      "description": "Minifying JavaScript files can reduce payload sizes and script parse time. [Learn how to minify JavaScript](https://developer.chrome.com/docs/lighthouse/performance/unminified-javascript/).",
+      "score": 0,
+      "displayValue": "Est savings of 2,178 KiB",
+      "itemsCount": 42,
+      "sampleItems": [
+        {
+          "url": "http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c0f4a095",
+          "wastedBytes": 306609
+        },
+        {
+          "url": "http://localhost:3000/src/store/useStore.ts",
+          "wastedBytes": 297177
+        },
+        {
+          "url": "http://localhost:3000/node_modules/.vite/deps/lucide-react.js?v=18881a19",
+          "wastedBytes": 235158
+        },
+        {
+          "url": "http://localhost:3000/@vite/client",
+          "wastedBytes": 159056
+        },
+        {
+          "url": "http://localhost:3000/src/components/storefront/SolarBOMCalculator.tsx",
+          "wastedBytes": 148065
+        }
+      ]
+    },
+    {
+      "id": "unused-javascript",
+      "title": "Reduce unused JavaScript",
+      "description": "Reduce unused JavaScript and defer loading scripts until they are required to decrease bytes consumed by network activity. [Learn how to reduce unused JavaScript](https://developer.chrome.com/docs/lighthouse/performance/unused-javascript/).",
+      "score": 0,
+      "displayValue": "Est savings of 1,109 KiB",
+      "itemsCount": 6,
+      "sampleItems": [
+        {
+          "url": "http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=f25051f4",
+          "wastedBytes": 419816
+        },
+        {
+          "url": "http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c0f4a095",
+          "wastedBytes": 363808
+        },
+        {
+          "url": "http://localhost:3000/node_modules/.vite/deps/motion_react.js?v=d5affaf7",
+          "wastedBytes": 243129
+        },
+        {
+          "url": "http://localhost:3000/src/store/useStore.ts",
+          "wastedBytes": 61972
+        },
+        {
+          "url": "http://localhost:3000/node_modules/.vite/deps/lucide-react.js?v=18881a19",
+          "wastedBytes": 26273
+        }
+      ]
+    },
+    {
+      "id": "charset",
+      "title": "Charset declaration is missing or occurs too late in the HTML",
+      "description": "A character encoding declaration is required. It can be done with a `<meta>` tag in the first 1024 bytes of the HTML or in the Content-Type HTTP response header. [Learn more about declaring the character encoding](https://developer.chrome.com/docs/lighthouse/best-practices/charset/).",
+      "score": 0,
+      "displayValue": null,
+      "itemsCount": 0,
+      "sampleItems": []
+    },
+    {
+      "id": "agent-accessibility-tree",
+      "title": "Accessibility tree is not well-formed",
+      "description": "A well-formed [accessibility tree](https://developer.chrome.com/docs/lighthouse/agentic-browsing/accessibility-for-agents) helps AI agents to navigate and interact with the page.",
+      "score": 0,
+      "displayValue": null,
+      "itemsCount": 1,
+      "sampleItems": [
+        {}
+      ]
+    },
+    {
+      "id": "ard-schema",
+      "title": "`ai-catalog.json` schema is invalid",
+      "description": "Valid `ai-catalog.json` manifests are required for autonomous AI agents and registries to discover and verify your resources. [Learn more about the ARD specification](https://agenticresourcediscovery.org/spec/).",
+      "score": 0,
+      "displayValue": null,
+      "itemsCount": 1,
+      "sampleItems": [
+        {}
+      ]
+    },
+    {
+      "id": "document-latency-insight",
+      "title": "Document request latency",
+      "description": "Your first network request is the most important. [Reduce its latency](https://developer.chrome.com/docs/performance/insights/document-latency) by avoiding redirects, ensuring a fast server response, and enabling text compression.",
+      "score": 0.5,
+      "displayValue": "Est savings of 26 KiB",
+      "itemsCount": 0,
+      "sampleItems": []
+    },
+    {
+      "id": "duplicated-javascript-insight",
+      "title": "Duplicated JavaScript",
+      "description": "Remove large, [duplicate JavaScript modules](https://developer.chrome.com/docs/performance/insights/duplicated-javascript) from bundles to reduce unnecessary bytes consumed by network activity.",
+      "score": 0.5,
+      "displayValue": "Est savings of 1 KiB",
+      "itemsCount": 1,
+      "sampleItems": [
+        {
+          "wastedBytes": 652
+        }
+      ]
+    },
+    {
+      "id": "forced-reflow-insight",
+      "title": "Forced reflow",
+      "description": "A forced reflow occurs when JavaScript queries geometric properties (such as offsetWidth) after styles have been invalidated by a change to the DOM state. This can result in poor performance. Learn more about [forced reflows](https://developer.chrome.com/docs/performance/insights/forced-reflow) and possible mitigations.",
+      "score": 0,
+      "displayValue": null,
+      "itemsCount": 2,
+      "sampleItems": [
+        {},
+        {}
+      ]
+    },
+    {
+      "id": "image-delivery-insight",
+      "title": "Improve image delivery",
+      "description": "Reducing the download time of images can improve the perceived load time of the page and LCP. [Learn more about optimizing image size](https://developer.chrome.com/docs/performance/insights/image-delivery)",
+      "score": 0,
+      "displayValue": "Est savings of 121 KiB",
+      "itemsCount": 7,
+      "sampleItems": [
+        {
+          "node": {
+            "snippet": "<img alt=\"10 kW Industrial Solar Cleaning Combo Kit (20 Panels · 140 LPM Motor · Siz…\" class=\"w-full h-full object-contain\" loading=\"lazy\" decoding=\"async\" src=\"/solar_cleaning_fullset.webp\">",
+            "selector": "div.flex > div.flex > div.w-20 > img.w-full"
+          },
+          "url": "http://localhost:3000/solar_cleaning_fullset.webp",
+          "wastedBytes": 36087
+        },
+        {
+          "node": {
+            "snippet": "<img alt=\"Automatic Digital Solar Cleaning Water Timer &amp; Solenoid Valve\" class=\"max-h-full max-w-full object-contain filter drop-shadow-md group-hover:sca…\" loading=\"eager\" fetchpriority=\"high\" decoding=\"async\" width=\"256\" height=\"256\" src=\"/auto_timer.webp\">",
+            "selector": "div.grid > div#catalog-product-clamp > div.relative > img.max-h-full"
+          },
+          "url": "http://localhost:3000/auto_timer.webp",
+          "wastedBytes": 24795
+        },
+        {
+          "node": {
+            "snippet": "<img alt=\"Apollo Engineering Logo\" class=\"h-10 md:h-12 w-auto object-contain group-hover:scale-105 transition-transf…\" fetchpriority=\"high\" decoding=\"async\" src=\"/logo.webp\">",
+            "selector": "header.sticky > div.max-w-7xl > div.flex > img.h-10"
+          },
+          "url": "http://localhost:3000/logo.webp",
+          "wastedBytes": 23306
+        },
+        {
+          "node": {
+            "snippet": "<img alt=\"SS304 Solar Panel Sprinkler (AetherWash Tech · SS304 Grade)\" class=\"max-h-full max-w-full object-contain filter drop-shadow-md group-hover:sca…\" loading=\"lazy\" fetchpriority=\"low\" decoding=\"async\" width=\"256\" height=\"256\" src=\"/solar_sprinkler.webp\">",
+            "selector": "div.grid > div#catalog-product-sprinkler > div.relative > img.max-h-full"
+          },
+          "url": "http://localhost:3000/solar_sprinkler.webp",
+          "wastedBytes": 16043
+        },
+        {
+          "node": {
+            "snippet": "<img alt=\"Submersible Pump (0.5 HP) (Stainless Steel Body · Copper Winding)\" class=\"max-h-full max-w-full object-contain filter drop-shadow-md group-hover:sca…\" loading=\"eager\" fetchpriority=\"high\" decoding=\"async\" width=\"256\" height=\"256\" src=\"/pump.webp\">",
+            "selector": "div.grid > div#catalog-product-e1a6974f-6093-417f-b979-17388fbd2de9 > div.relative > img.max-h-full"
+          },
+          "url": "http://localhost:3000/pump.webp",
+          "wastedBytes": 8919
+        }
+      ]
+    },
+    {
+      "id": "network-dependency-tree-insight",
+      "title": "Network dependency tree",
+      "description": "[Avoid chaining critical requests](https://developer.chrome.com/docs/performance/insights/network-dependency-tree) by reducing the length of chains, reducing the download size of resources, or deferring the download of unnecessary resources to improve page load.",
+      "score": 0,
+      "displayValue": null,
+      "itemsCount": 3,
+      "sampleItems": [
+        {},
+        {},
+        {}
+      ]
+    }
+  ],
+  "remediationInstructions": [
+    "1. Inspect .audit/latest-health-report.json for high-priority items with score < 0.9.",
+    "2. Check traceArtifacts for Playwright interaction replays if functional tests failed.",
+    "3. For accessibility: modify corresponding JSX components with aria-label, semantic headings, or contrast fixes.",
+    "4. For performance: implement lazy loading, optimize images to WebP/AVIF, or code-split bundle chunks.",
+    "5. Re-run 'npm run test:full-audit' to verify score improvements."
+  ]
+}

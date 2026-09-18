@@ -1,4 +1,6 @@
+import contextlib
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import select
@@ -76,13 +78,11 @@ async def create_quote(
 )
 async def get_quote(
     quote_id: str,
-    session: AsyncSession = Depends(get_db),
+    session: Annotated[AsyncSession, Depends(get_db)],
 ) -> QuoteResponse:
     quote_uuid: uuid.UUID | None = None
-    try:
+    with contextlib.suppress(ValueError):
         quote_uuid = uuid.UUID(quote_id)
-    except ValueError:
-        pass
 
     if quote_uuid:
         stmt = select(Quote).where(Quote.id == quote_uuid).options(selectinload(Quote.items))

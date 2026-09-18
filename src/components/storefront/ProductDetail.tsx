@@ -12,7 +12,7 @@ import { ProductVariant, SellerListing } from '../../types';
 export const ProductDetail: React.FC = () => {
   const { 
     selectedProduct, selectProductVariant, activeAddress, 
-    appMode, addToCart, currentOrg, setIsCartDrawerOpen,
+    appMode, addToCart, currentOrg, setIsCartDrawerOpen, cart,
     currentUser, setIsAuthModalOpen, apiCatalogError, showToast
   } = useStore();
 
@@ -43,7 +43,7 @@ export const ProductDetail: React.FC = () => {
         price: currentVariant?.b2cPrice || 20,
         shippingFee: 0,
         deliveryDays: 1,
-        stock: currentVariant?.inventory || 500,
+        stock: currentVariant?.inventory || 50000,
         isWinningBuyBox: true,
         buyBoxScore: 98.5
       }
@@ -57,8 +57,21 @@ export const ProductDetail: React.FC = () => {
   const [is360Mode, setIs360Mode] = useState(false);
   const [rotationAngle, setRotationAngle] = useState(0);
 
+  const isDrainClip = Boolean(
+    selectedProduct.title?.toLowerCase().includes('drain clip') ||
+    selectedProduct.category?.toLowerCase().includes('drain') ||
+    selectedProduct.asin.includes('CLIP') ||
+    selectedProduct.asin === 'AP-DRAIN-02' ||
+    currentVariant.attributes?.size ||
+    currentVariant.sku?.startsWith('APE-SC')
+  );
+
+  const isDrainClipCartSku = (sku?: string) => Boolean(sku && (sku.startsWith('APE-SC') || sku.includes('CLIP') || sku.includes('DRAIN')));
+  const cartDrainClipQty = cart.filter(i => isDrainClipCartSku(i.sku)).reduce((acc, i) => acc + i.quantity, 0);
+  const combinedDrainClipQty = isDrainClip ? (cartDrainClipQty + selectedQty) : selectedQty;
+
   // Speed Post Tariff & Delivery calculation (Item Weight x Qty = Total Weight, dynamically live calculated)
-  const totalWeightGrams = (currentVariant.weightGrams || 200) * selectedQty;
+  const totalWeightGrams = (currentVariant.weightGrams || 25) * selectedQty;
   const speedPostInfo = calculateSpeedPostTariff(activeAddress?.pincode || '382430', totalWeightGrams);
   const estDate = new Date();
   estDate.setDate(estDate.getDate() + speedPostInfo.deliveryDaysEstimate);
@@ -66,10 +79,18 @@ export const ProductDetail: React.FC = () => {
 
   // Strict Login Gate: B2B wholesale rate is ONLY active if customer has a logged-in B2B account
   const isB2BUser = Boolean(appMode === 'B2B' || (currentUser?.role && currentUser.role.includes('B2B')));
-  let currentUnitPrice = currentVariant.b2cPrice;
+  let currentUnitPrice = currentVariant.b2cPrice || 20;
   let activeTierDiscount = 0;
 
-  if (isB2BUser && currentVariant.b2bTierPricing.length > 0) {
+  if (isDrainClip) {
+    if (combinedDrainClipQty >= 1000 || selectedQty >= 1000) {
+      currentUnitPrice = 12.75;
+      activeTierDiscount = 36.25;
+    } else {
+      currentUnitPrice = 20.00;
+      activeTierDiscount = 0;
+    }
+  } else if (isB2BUser && currentVariant.b2bTierPricing.length > 0) {
     const applicableTier = [...currentVariant.b2bTierPricing]
       .reverse()
       .find((tier) => selectedQty >= tier.minQty);
@@ -95,14 +116,6 @@ export const ProductDetail: React.FC = () => {
     }
   };
 
-  const isDrainClip = Boolean(
-    selectedProduct.title?.toLowerCase().includes('drain clip') ||
-    selectedProduct.category?.toLowerCase().includes('drain') ||
-    selectedProduct.asin.includes('CLIP') ||
-    selectedProduct.asin === 'AP-DRAIN-02' ||
-    currentVariant.attributes?.size
-  );
-
   const executeAddToCart = () => {
     addToCart({
       sku: currentVariant.sku,
@@ -121,7 +134,7 @@ export const ProductDetail: React.FC = () => {
       weightGrams: currentVariant.weightGrams,
       isB2BPricingApplied: isB2BUser
     }, selectedQty);
-    setIsCartDrawerOpen(true);
+    // Note: Do not auto-open cart drawer; product is silently added to cart
   };
 
   const handleAddToCart = () => {
@@ -812,7 +825,7 @@ export const ProductDetail: React.FC = () => {
               {currentVariant.inventory > 0 ? (
                 <div className="flex items-center gap-1.5 text-emerald-700 font-bold text-xs bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full w-fit">
                   <Check className="w-3.5 h-3.5" />
-                  In Stock ({currentVariant.inventory} units available)
+                  In Stock ({Math.max(50000, currentVariant.inventory).toLocaleString('en-IN')} units available)
                 </div>
               ) : (
                 <div className="text-rose-600 font-bold text-xs bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-full w-fit">
@@ -821,20 +834,87 @@ export const ProductDetail: React.FC = () => {
               )}
             </div>
 
+            {/* Drain Clip Tier Pricing Information Banner */}
+            {isDrainClip && (
+              <div className="p-3.5 bg-gradient-to-br from-blue-50/70 to-indigo-50/50 border border-blue-200 rounded-2xl space-y-2.5 shadow-xs">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-[#0054A6] flex items-center gap-1.5">
+                    <Layers className="w-4 h-4 text-[#0054A6]" />
+                    Volume Tier Rates (Mix &amp; Match Any Sizes):
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">28 / 30 / 33 / 35 / 40 mm</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className={`p-2.5 rounded-xl border transition-all ${combinedDrainClipQty < 1000 ? 'bg-white border-blue-400 shadow-xs' : 'bg-slate-50/80 border-slate-200 text-slate-500'}`}>
+                    <div className="text-[10px] uppercase font-bold text-slate-500">Regular (1 - 999 pcs)</div>
+                    <div className="text-base font-black font-mono text-slate-900 mt-0.5">₹20.00 <span className="text-[10px] font-normal text-slate-500">/ pc</span></div>
+                  </div>
+                  <div className={`p-2.5 rounded-xl border transition-all ${combinedDrainClipQty >= 1000 ? 'bg-emerald-50 border-emerald-500 text-emerald-950 shadow-xs ring-2 ring-emerald-400/20' : 'bg-white border-dashed border-emerald-300 text-emerald-800'}`}>
+                    <div className="text-[10px] uppercase font-bold flex items-center justify-between text-emerald-700">
+                      <span>Bulk (1,000+ pcs)</span>
+                      <span className="bg-emerald-600 text-white text-[9px] px-1 py-0.2 rounded font-black tracking-tight">SAVE 36%</span>
+                    </div>
+                    <div className="text-base font-black font-mono text-emerald-900 mt-0.5">₹12.75 <span className="text-[10px] font-normal text-emerald-700">/ pc</span></div>
+                  </div>
+                </div>
+                {cartDrainClipQty > 0 ? (
+                  <div className="text-[11px] text-slate-600 flex items-center justify-between pt-1 border-t border-blue-100">
+                    <span>In Cart: <strong className="font-mono text-slate-900">{cartDrainClipQty} pcs</strong></span>
+                    <span>Combined Total: <strong className="font-mono text-[#0054A6]">{combinedDrainClipQty} pcs</strong></span>
+                  </div>
+                ) : (
+                  <div className="text-[10px] text-slate-500 italic">
+                    Tip: Add any combination of frame sizes to reach 1,000 total pcs for the ₹12.75 rate.
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Quantity Selector */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">Quantity:</label>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 block">Quantity:</label>
+                {isDrainClip && combinedDrainClipQty >= 1000 && (
+                  <span className="text-[10px] font-bold font-mono text-emerald-700 bg-emerald-100/70 border border-emerald-300 px-2 py-0.5 rounded-full">
+                    ✓ Bulk Rate ₹12.75/pc Applied
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
                   min={1}
-                  max={currentVariant.inventory}
+                  max={Math.max(50000, currentVariant.inventory || 50000)}
                   value={selectedQty}
                   onChange={(e) => setSelectedQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                  className="w-24 h-10 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-bold text-sm focus:ring-2 focus:ring-[#0054A6]/20 focus:border-[#0054A6] focus:outline-none shadow-sm"
+                  className="w-28 h-10 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-bold text-sm focus:ring-2 focus:ring-[#0054A6]/20 focus:border-[#0054A6] focus:outline-none shadow-sm"
+                  placeholder="Enter Qty"
                 />
                 <span className="text-xs text-slate-500 font-medium">units</span>
               </div>
+
+              {/* Quick Lots Selector for Drain Clips */}
+              {isDrainClip && (
+                <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                  <span className="text-[10px] text-slate-400 font-mono">Quick Lots:</span>
+                  {[50, 100, 250, 500, 1000, 2000].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setSelectedQty(preset)}
+                      className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+                        selectedQty === preset
+                          ? 'bg-[#0054A6] text-white shadow-xs'
+                          : preset >= 1000
+                          ? 'bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100'
+                          : 'bg-white border border-slate-200 text-slate-700 hover:border-blue-300'
+                      }`}
+                    >
+                      {preset.toLocaleString('en-IN')} pcs {preset >= 1000 ? '(₹12.75)' : ''}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Buy Box Winning Seller Information */}

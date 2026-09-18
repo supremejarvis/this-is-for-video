@@ -25,7 +25,17 @@ export const BuyerCatalog: React.FC = () => {
   const isB2B = Boolean(appMode === 'B2B' || (currentUser?.role && currentUser.role.includes('B2B')) || currentOrg?.gstin);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [sizeModalProduct, setSizeModalProduct] = useState<ApiProduct | null>(null);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [modalQuantity, setModalQuantity] = useState<number>(isB2B ? 20 : 1);
   const t = getTranslation(selectedLanguage);
+
+  const getSelectedQty = (productId: string) => {
+    return quantities[productId] || (isB2B ? 20 : 1);
+  };
+
+  const setProductQty = (productId: string, qty: number) => {
+    setQuantities(prev => ({ ...prev, [productId]: Math.max(1, qty) }));
+  };
 
   useEffect(() => {
     fetchApiCatalog();
@@ -181,10 +191,11 @@ const seenNames = new Set<string>();
     }
   };
 
-  const handleAddToCart = (product: ApiProduct, variant: ApiProductVariant) => {
+  const handleAddToCart = (product: ApiProduct, variant: ApiProductVariant, customQty?: number) => {
     const isSprinkler = product.name.toLowerCase().includes('sprinkler') || variant.sku.toLowerCase().includes('sprinkler');
     const isDrain = product.name.toLowerCase().includes('drain') || product.name.toLowerCase().includes('clamp');
     const productImage = getProductImage(product);
+    const quantityToAdd = customQty !== undefined ? customQty : getSelectedQty(product.id);
 
     // Use variant unit_price when available and valid; otherwise fall back to first variant price or default
     const variantBasePrice = typeof variant.unit_price === 'number' && variant.unit_price > 0
@@ -207,8 +218,8 @@ const seenNames = new Set<string>();
       sku: variant.sku,
       productId: product.id,
       variantId: variant.id || variant.sku,
-      parentAsin: product.id,
-      asin: product.id,
+      parentAsin: product.rawProduct?.asin || product.id,
+      asin: product.rawProduct?.asin || product.id,
       productTitle: product.name,
       variantTitle: variant.display_label || (isSprinkler ? 'SS304 Solar Sprinkler' : `${variant.frame_thickness_mm || ''} mm SS304 Solar Clamp`),
       attributes: {
@@ -226,7 +237,7 @@ const seenNames = new Set<string>();
       fulfillmentType: 'FBF',
       weightGrams: isSprinkler ? 180 : 45,
       isB2BPricingApplied: isB2B,
-    }, 1);
+    }, quantityToAdd);
   };
 
   return (
@@ -521,6 +532,62 @@ const seenNames = new Set<string>();
                       <strong className="text-slate-900 font-mono">Kathwada 382430</strong>
                     </div>
                   </div>
+
+                  {/* Wholesale Quantity Selector & Quick Batch Chips */}
+                  <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800 font-mono flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-[#0054A6]" />
+                        {isB2B ? 'B2B Wholesale Quantity:' : 'Order Quantity:'}
+                      </span>
+                      <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-xl border border-slate-300 shadow-xs">
+                        <button
+                          type="button"
+                          aria-label="Decrease quantity"
+                          onClick={() => setProductQty(product.id, getSelectedQty(product.id) - (isB2B ? 5 : 1))}
+                          className="px-2 py-0.5 text-slate-600 hover:text-slate-900 font-bold active:scale-95"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          min={1}
+                          value={getSelectedQty(product.id)}
+                          onChange={(e) => setProductQty(product.id, parseInt(e.target.value, 10) || 1)}
+                          className="w-12 text-center text-xs font-mono font-bold text-slate-900 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          aria-label="Increase quantity"
+                          onClick={() => setProductQty(product.id, getSelectedQty(product.id) + (isB2B ? 5 : 1))}
+                          className="px-2 py-0.5 text-slate-600 hover:text-slate-900 font-bold active:scale-95"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Quick Preset Buttons (e.g. 20, 50, 100, 500, 1000 pcs) */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] text-slate-400 font-mono">Presets:</span>
+                      {(isDrain || isB2B ? [20, 50, 100, 500, 1000] : [1, 5, 10, 20, 50]).map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setProductQty(product.id, preset)}
+                          className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+                            getSelectedQty(product.id) === preset
+                              ? 'bg-[#0054A6] text-white shadow-xs'
+                              : preset >= 1000
+                              ? 'bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100'
+                              : 'bg-white border border-slate-200 text-slate-700 hover:border-blue-300'
+                          }`}
+                        >
+                          {preset} pcs {preset >= 1000 ? '(₹12.75)' : ''}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Card Action / Add to Cart & View Details */}
@@ -623,6 +690,59 @@ const seenNames = new Set<string>();
                 </span>
               </div>
 
+              {/* Batch Quantity Selector inside Modal */}
+              <div className="p-3.5 bg-blue-50/70 rounded-2xl border border-blue-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 font-mono flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-[#0054A6]" />
+                    Quantity for this size:
+                  </span>
+                  <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-xl border border-slate-300">
+                    <button
+                      type="button"
+                      onClick={() => setModalQuantity(Math.max(1, modalQuantity - (isB2B ? 5 : 1)))}
+                      className="px-2 py-0.5 text-slate-600 hover:text-slate-950 font-bold"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={1}
+                      value={modalQuantity}
+                      onChange={(e) => setModalQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      className="w-14 text-center text-xs font-mono font-bold text-slate-900 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setModalQuantity(modalQuantity + (isB2B ? 5 : 1))}
+                      className="px-2 py-0.5 text-slate-600 hover:text-slate-950 font-bold"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-slate-500 font-mono">Quick lots:</span>
+                  {(Boolean(sizeModalProduct.name.toLowerCase().includes('drain') || sizeModalProduct.sku_prefix === 'APE-SC') || isB2B ? [20, 50, 100, 500, 1000] : [1, 5, 10, 20, 50]).map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setModalQuantity(preset)}
+                      className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+                        modalQuantity === preset
+                          ? 'bg-[#0054A6] text-white shadow-xs'
+                          : preset >= 1000
+                          ? 'bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100'
+                          : 'bg-white border border-slate-200 text-slate-700 hover:border-blue-300'
+                      }`}
+                    >
+                      {preset} pcs {preset >= 1000 ? '(₹12.75)' : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* 5 Sizes List */}
               <div className="space-y-2">
                 <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
@@ -641,14 +761,17 @@ const seenNames = new Set<string>();
                       ? '72-Cell Utility / Commercial' 
                       : '330W Poly / Mono';
 
+                    const isDrainVariant = Boolean(sizeModalProduct.name.toLowerCase().includes('drain') || sizeModalProduct.sku_prefix === 'APE-SC' || v.sku.startsWith('APE-SC'));
+                    const displayPrice = (isDrainVariant && modalQuantity >= 1000) ? 12.75 : (v.unit_price || 20);
+
                     return (
                       <button
                         key={v.sku}
                         type="button"
-                        aria-label={`Select ${v.display_label || `${mm} mm`} and add to cart at ₹${v.unit_price || 20}`}
+                        aria-label={`Select ${v.display_label || `${mm} mm`} and add ${modalQuantity} units to cart at ₹${displayPrice}`}
                         onClick={() => {
                           handleSelectVariant(sizeModalProduct.id, v.sku);
-                          handleAddToCart(sizeModalProduct, v);
+                          handleAddToCart(sizeModalProduct, v, modalQuantity);
                           setSizeModalProduct(null);
                         }}
                         className="p-3 rounded-2xl border-2 border-slate-200 hover:border-[#0054A6] hover:bg-blue-50/50 transition-all text-left group cursor-pointer flex flex-col justify-between shadow-xs hover:shadow-md"
@@ -657,15 +780,15 @@ const seenNames = new Set<string>();
                           <span className="text-xl font-black font-mono text-slate-900 group-hover:text-[#0054A6]">
                             {v.display_label || `${mm} mm`}
                           </span>
-                          <span className="text-xs font-mono font-black text-amber-700">
-                            ₹{v.unit_price || 20}
+                          <span className={`text-xs font-mono font-black ${modalQuantity >= 1000 && isDrainVariant ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200' : 'text-amber-700'}`}>
+                            ₹{displayPrice}
                           </span>
                         </div>
                         <span className="text-[10px] text-slate-600 mt-1 font-medium">
                           {popularLabel}
                         </span>
                         <div className="mt-2 text-[11px] font-bold text-[#0054A6] flex items-center gap-1 opacity-90 group-hover:opacity-100">
-                          <span>Select & Add to Cart</span>
+                          <span>Add {modalQuantity} Units to Cart</span>
                           <span>→</span>
                         </div>
                       </button>

@@ -38,6 +38,111 @@ const UNITS_OF_MEASURE = [
   { value: 'ROLL', label: 'ROLL (Rolls - Wire / Seal Tape)' }
 ];
 
+const DEFAULT_DRAIN_CLIP_B2B_TIERS = [
+  { minQty: 50, pricePerUnit: 16, discountPercent: 27 },
+  { minQty: 200, pricePerUnit: 14, discountPercent: 36 },
+  { minQty: 500, pricePerUnit: 11.5, discountPercent: 48 }
+];
+
+interface ManualSampleItem {
+  size: string;
+  sku: string;
+  b2cPrice: number;
+  b2bPrice: number;
+  b2bMoq: number;
+  inventory: number;
+  barcode: string;
+}
+
+const DEFAULT_SAMPLE_MANUAL_ITEMS: ManualSampleItem[] = [
+  { size: '28mm', sku: 'APE-DC-28MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1000, barcode: 'B0GSSF4SBB' },
+  { size: '30mm', sku: 'APE-DC-30MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1500, barcode: 'B0GSRXJFD9' },
+  { size: '33mm', sku: 'APE-DC-33MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1000, barcode: 'B0GSS295GM' },
+  { size: '35mm', sku: 'APE-DC-35MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 2500, barcode: 'B0H3ZJ1J5L' },
+  { size: '40mm', sku: 'APE-DC-40MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1200, barcode: 'B0GSRSG56R' }
+];
+
+interface ImageSlotCardProps {
+  slotNumber: number;
+  title: string;
+  badgeText: string;
+  badgeColorClass: string;
+  alt: string;
+  imageUrl: string;
+  onImageUrlChange: (val: string) => void;
+  onFileUpload: (file: File) => void;
+}
+
+const ImageSlotCard: React.FC<ImageSlotCardProps> = ({
+  slotNumber,
+  title,
+  badgeText,
+  badgeColorClass,
+  alt,
+  imageUrl,
+  onImageUrlChange,
+  onFileUpload,
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className="bg-white p-4.5 rounded-2xl border border-slate-200 space-y-3.5 shadow-sm flex flex-col justify-between">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-slate-900 font-mono">{slotNumber}. {title}</span>
+          <span className={`px-2 py-0.5 rounded ${badgeColorClass} text-[10px] font-bold`}>{badgeText}</span>
+        </div>
+
+        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-center h-40 relative group">
+          {imageUrl ? (
+            <img src={imageUrl} alt={alt} className="max-h-36 object-contain" />
+          ) : (
+            <div className="text-center text-slate-400 text-xs">No Image Selected</div>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files?.[0]) onFileUpload(e.target.files[0]);
+          }}
+        />
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex-1 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-300 transition-colors"
+          >
+            <Upload className="w-3.5 h-3.5" /> Upload File
+          </button>
+          {imageUrl && (
+            <button
+              type="button"
+              onClick={() => onImageUrlChange('')}
+              className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        <input
+          type="text"
+          placeholder="Or enter image URL..."
+          value={imageUrl}
+          onChange={(e) => onImageUrlChange(e.target.value)}
+          className="w-full h-8 px-2.5 bg-white border border-slate-300 rounded-lg text-[11px] text-slate-800 font-mono focus:outline-none focus:border-[#0054A6]"
+        />
+      </div>
+    </div>
+  );
+};
+
 export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = ({
   initialProduct,
   onClose,
@@ -55,21 +160,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
   // Manual 5-Item Custom Builder state (Add 5 items manually)
   const [isManualBuilderOpen, setIsManualBuilderOpen] = useState(false);
   const [manualEntryMode, setManualEntryMode] = useState<'TABLE' | 'QUICK'>('TABLE');
-  const [manualItems, setManualItems] = useState<{
-    size: string;
-    sku: string;
-    b2cPrice: number;
-    b2bPrice: number;
-    b2bMoq: number;
-    inventory: number;
-    barcode: string;
-  }[]>([
-    { size: '28mm', sku: 'APE-DC-28MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1000, barcode: 'B0GSSF4SBB' },
-    { size: '30mm', sku: 'APE-DC-30MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1500, barcode: 'B0GSRXJFD9' },
-    { size: '33mm', sku: 'APE-DC-33MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1000, barcode: 'B0GSS295GM' },
-    { size: '35mm', sku: 'APE-DC-35MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 2500, barcode: 'B0H3ZJ1J5L' },
-    { size: '40mm', sku: 'APE-DC-40MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1200, barcode: 'B0GSRSG56R' },
-  ]);
+  const [manualItems, setManualItems] = useState<ManualSampleItem[]>(DEFAULT_SAMPLE_MANUAL_ITEMS);
 
   // Active Wizard Tab: If new product, start on DETAILS (Tab 1), else start on VARIATIONS (Tab 3)
   const [activeListingTab, setActiveListingTab] = useState<'DETAILS' | 'MEDIA' | 'VARIATIONS' | 'OFFER' | 'COMPLIANCE'>(
@@ -146,12 +237,6 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
     initialProduct?.videoUrl || initialProduct?.variants[0]?.videoUrl || 'https://www.w3schools.com/html/mov_bbb.mp4'
   );
 
-  const fileInputRef1 = useRef<HTMLInputElement>(null);
-  const fileInputRef2 = useRef<HTMLInputElement>(null);
-  const fileInputRef3 = useRef<HTMLInputElement>(null);
-  const fileInputRef4 = useRef<HTMLInputElement>(null);
-  const fileInputRef5 = useRef<HTMLInputElement>(null);
-  const fileInputRef6 = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const csvImportRef = useRef<HTMLInputElement>(null);
 
@@ -485,13 +570,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
   };
 
   const handleLoadManualSampleClips = () => {
-    setManualItems([
-      { size: '28mm', sku: 'APE-DC-28MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1000, barcode: 'B0GSSF4SBB' },
-      { size: '30mm', sku: 'APE-DC-30MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1500, barcode: 'B0GSRXJFD9' },
-      { size: '33mm', sku: 'APE-DC-33MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1000, barcode: 'B0GSS295GM' },
-      { size: '35mm', sku: 'APE-DC-35MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 2500, barcode: 'B0H3ZJ1J5L' },
-      { size: '40mm', sku: 'APE-DC-40MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1200, barcode: 'B0GSRSG56R' },
-    ]);
+    setManualItems(DEFAULT_SAMPLE_MANUAL_ITEMS);
     showToast('Loaded 5 sample items into manual builder.', 'info');
   };
 
@@ -651,11 +730,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
         attributes: { size: '28mm', material: 'AISI SS304', packSize: 'Pack of 50' },
         mrp: 35,
         b2cPrice: 22,
-        b2bTierPricing: [
-          { minQty: 50, pricePerUnit: 16, discountPercent: 27 },
-          { minQty: 200, pricePerUnit: 14, discountPercent: 36 },
-          { minQty: 500, pricePerUnit: 11.5, discountPercent: 48 }
-        ],
+        b2bTierPricing: DEFAULT_DRAIN_CLIP_B2B_TIERS,
         inventory: 2500,
         lowStockThreshold: 100,
         barcode: 'B0GSSF4SBB',
@@ -673,11 +748,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
         attributes: { size: '30mm', material: 'AISI SS304', packSize: 'Pack of 50' },
         mrp: 35,
         b2cPrice: 22,
-        b2bTierPricing: [
-          { minQty: 50, pricePerUnit: 16, discountPercent: 27 },
-          { minQty: 200, pricePerUnit: 14, discountPercent: 36 },
-          { minQty: 500, pricePerUnit: 11.5, discountPercent: 48 }
-        ],
+        b2bTierPricing: DEFAULT_DRAIN_CLIP_B2B_TIERS,
         inventory: 3500,
         lowStockThreshold: 100,
         barcode: 'B0GSRXJFD9',
@@ -695,11 +766,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
         attributes: { size: '33mm', material: 'AISI SS304', packSize: 'Pack of 50' },
         mrp: 35,
         b2cPrice: 22,
-        b2bTierPricing: [
-          { minQty: 50, pricePerUnit: 16, discountPercent: 27 },
-          { minQty: 200, pricePerUnit: 14, discountPercent: 36 },
-          { minQty: 500, pricePerUnit: 11.5, discountPercent: 48 }
-        ],
+        b2bTierPricing: DEFAULT_DRAIN_CLIP_B2B_TIERS,
         inventory: 2000,
         lowStockThreshold: 100,
         barcode: 'B0GSS295GM',
@@ -717,11 +784,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
         attributes: { size: '35mm', material: 'AISI SS304', packSize: 'Pack of 50' },
         mrp: 35,
         b2cPrice: 22,
-        b2bTierPricing: [
-          { minQty: 50, pricePerUnit: 16, discountPercent: 27 },
-          { minQty: 200, pricePerUnit: 14, discountPercent: 36 },
-          { minQty: 500, pricePerUnit: 11.5, discountPercent: 48 }
-        ],
+        b2bTierPricing: DEFAULT_DRAIN_CLIP_B2B_TIERS,
         inventory: 4500,
         lowStockThreshold: 100,
         barcode: 'B0H3ZJ1J5L',
@@ -739,11 +802,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
         attributes: { size: '40mm', material: 'AISI SS304', packSize: 'Pack of 50' },
         mrp: 35,
         b2cPrice: 22,
-        b2bTierPricing: [
-          { minQty: 50, pricePerUnit: 16, discountPercent: 27 },
-          { minQty: 200, pricePerUnit: 14, discountPercent: 36 },
-          { minQty: 500, pricePerUnit: 11.5, discountPercent: 48 }
-        ],
+        b2bTierPricing: DEFAULT_DRAIN_CLIP_B2B_TIERS,
         inventory: 2800,
         lowStockThreshold: 100,
         barcode: 'B0GSRSG56R',
@@ -826,11 +885,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
           attributes: { size: sizeStr, material: 'AISI SS304', packSize: 'Pack of 50' },
           mrp: 35,
           b2cPrice: 22,
-          b2bTierPricing: [
-            { minQty: 50, pricePerUnit: 16, discountPercent: 27 },
-            { minQty: 200, pricePerUnit: 14, discountPercent: 36 },
-            { minQty: 500, pricePerUnit: 11.5, discountPercent: 48 }
-          ],
+          b2bTierPricing: DEFAULT_DRAIN_CLIP_B2B_TIERS,
           inventory: 3000,
           lowStockThreshold: 100,
           barcode: item.asin,
@@ -1732,343 +1787,66 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
 
               {/* 6 Dedicated Enterprise Image Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                
-                {/* IMAGE 1: MAIN HERO IMAGE */}
-                <div className="bg-white p-4.5 rounded-2xl border border-slate-200 space-y-3.5 shadow-sm flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 font-mono">1. Main Hero (Pure White BG) *</span>
-                      <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">Primary</span>
-                    </div>
-
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-center h-40 relative group">
-                      {image1 ? (
-                        <img src={image1} alt="Hero Image" className="max-h-36 object-contain" />
-                      ) : (
-                        <div className="text-center text-slate-400 text-xs">No Image Selected</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <input
-                      type="file"
-                      ref={fileInputRef1}
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files?.[0]) handleFileUpload(e.target.files[0], setImage1, 'image');
-                      }}
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef1.current?.click()}
-                        className="flex-1 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-300 transition-colors"
-                      >
-                        <Upload className="w-3.5 h-3.5" /> Upload File
-                      </button>
-                      {image1 && (
-                        <button
-                          type="button"
-                          onClick={() => setImage1('')}
-                          className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    <input
-                      type="text"
-                      placeholder="Or enter image URL..."
-                      value={image1}
-                      onChange={(e) => setImage1(e.target.value)}
-                      className="w-full h-8 px-2.5 bg-white border border-slate-300 rounded-lg text-[11px] text-slate-800 font-mono focus:outline-none focus:border-[#0054A6]"
-                    />
-                  </div>
-                </div>
-
-                {/* IMAGE 2: INFOGRAPHIC / FEATURE HIGHLIGHTS */}
-                <div className="bg-white p-4.5 rounded-2xl border border-slate-200 space-y-3.5 shadow-sm flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 font-mono">2. Infographic & Features</span>
-                      <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-bold">Callouts</span>
-                    </div>
-
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-center h-40 relative group">
-                      {image2 ? (
-                        <img src={image2} alt="Infographic" className="max-h-36 object-contain" />
-                      ) : (
-                        <div className="text-center text-slate-400 text-xs">No Image Selected</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <input
-                      type="file"
-                      ref={fileInputRef2}
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files?.[0]) handleFileUpload(e.target.files[0], setImage2, 'image');
-                      }}
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef2.current?.click()}
-                        className="flex-1 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-300 transition-colors"
-                      >
-                        <Upload className="w-3.5 h-3.5" /> Upload File
-                      </button>
-                      {image2 && (
-                        <button
-                          type="button"
-                          onClick={() => setImage2('')}
-                          className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    <input
-                      type="text"
-                      placeholder="Or enter image URL..."
-                      value={image2}
-                      onChange={(e) => setImage2(e.target.value)}
-                      className="w-full h-8 px-2.5 bg-white border border-slate-300 rounded-lg text-[11px] text-slate-800 font-mono focus:outline-none focus:border-[#0054A6]"
-                    />
-                  </div>
-                </div>
-
-                {/* IMAGE 3: BLUEPRINT & FRAME SIZING DIMENSIONS */}
-                <div className="bg-white p-4.5 rounded-2xl border border-slate-200 space-y-3.5 shadow-sm flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 font-mono">3. Dimensions & Blueprint</span>
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold">28-40mm</span>
-                    </div>
-
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-center h-40 relative group">
-                      {image3 ? (
-                        <img src={image3} alt="Dimensions" className="max-h-36 object-contain" />
-                      ) : (
-                        <div className="text-center text-slate-400 text-xs">No Image Selected</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <input
-                      type="file"
-                      ref={fileInputRef3}
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files?.[0]) handleFileUpload(e.target.files[0], setImage3, 'image');
-                      }}
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef3.current?.click()}
-                        className="flex-1 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-300 transition-colors"
-                      >
-                        <Upload className="w-3.5 h-3.5" /> Upload File
-                      </button>
-                      {image3 && (
-                        <button
-                          type="button"
-                          onClick={() => setImage3('')}
-                          className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    <input
-                      type="text"
-                      placeholder="Or enter image URL..."
-                      value={image3}
-                      onChange={(e) => setImage3(e.target.value)}
-                      className="w-full h-8 px-2.5 bg-white border border-slate-300 rounded-lg text-[11px] text-slate-800 font-mono focus:outline-none focus:border-[#0054A6]"
-                    />
-                  </div>
-                </div>
-
-                {/* IMAGE 4: IN-ACTION SOLAR INSTALLATION */}
-                <div className="bg-white p-4.5 rounded-2xl border border-slate-200 space-y-3.5 shadow-sm flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 font-mono">4. In-Action Installation</span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold">Rooftop/Park</span>
-                    </div>
-
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-center h-40 relative group">
-                      {image4 ? (
-                        <img src={image4} alt="Installation Image" className="max-h-36 object-contain" />
-                      ) : (
-                        <div className="text-center text-slate-400 text-xs">No Image Selected</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <input
-                      type="file"
-                      ref={fileInputRef4}
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files?.[0]) handleFileUpload(e.target.files[0], setImage4, 'image');
-                      }}
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef4.current?.click()}
-                        className="flex-1 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-300 transition-colors"
-                      >
-                        <Upload className="w-3.5 h-3.5" /> Upload File
-                      </button>
-                      {image4 && (
-                        <button
-                          type="button"
-                          onClick={() => setImage4('')}
-                          className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    <input
-                      type="text"
-                      placeholder="Or enter image URL..."
-                      value={image4}
-                      onChange={(e) => setImage4(e.target.value)}
-                      className="w-full h-8 px-2.5 bg-white border border-slate-300 rounded-lg text-[11px] text-slate-800 font-mono focus:outline-none focus:border-[#0054A6]"
-                    />
-                  </div>
-                </div>
-
-                {/* IMAGE 5: PACKAGING & WHAT'S IN THE BOX */}
-                <div className="bg-white p-4.5 rounded-2xl border border-slate-200 space-y-3.5 shadow-sm flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 font-mono">5. Pack Box & Contents</span>
-                      <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">Pack of 50</span>
-                    </div>
-
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-center h-40 relative group">
-                      {image5 ? (
-                        <img src={image5} alt="Packaging Image" className="max-h-36 object-contain" />
-                      ) : (
-                        <div className="text-center text-slate-400 text-xs">No Image Selected</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <input
-                      type="file"
-                      ref={fileInputRef5}
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files?.[0]) handleFileUpload(e.target.files[0], setImage5, 'image');
-                      }}
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef5.current?.click()}
-                        className="flex-1 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-300 transition-colors"
-                      >
-                        <Upload className="w-3.5 h-3.5" /> Upload File
-                      </button>
-                      {image5 && (
-                        <button
-                          type="button"
-                          onClick={() => setImage5('')}
-                          className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    <input
-                      type="text"
-                      placeholder="Or enter image URL..."
-                      value={image5}
-                      onChange={(e) => setImage5(e.target.value)}
-                      className="w-full h-8 px-2.5 bg-white border border-slate-300 rounded-lg text-[11px] text-slate-800 font-mono focus:outline-none focus:border-[#0054A6]"
-                    />
-                  </div>
-                </div>
-
-                {/* IMAGE 6: MATERIAL MILL TEST CERTIFICATE & QUALITY ASSURANCE */}
-                <div className="bg-white p-4.5 rounded-2xl border border-slate-200 space-y-3.5 shadow-sm flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 font-mono">6. SS304 Mill Certificate</span>
-                      <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200 text-[10px] font-bold">Tested QA</span>
-                    </div>
-
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-center h-40 relative group">
-                      {image6 ? (
-                        <img src={image6} alt="Certificate Image" className="max-h-36 object-contain" />
-                      ) : (
-                        <div className="text-center text-slate-400 text-xs">No Image Selected</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <input
-                      type="file"
-                      ref={fileInputRef6}
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files?.[0]) handleFileUpload(e.target.files[0], setImage6, 'image');
-                      }}
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef6.current?.click()}
-                        className="flex-1 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-300 transition-colors"
-                      >
-                        <Upload className="w-3.5 h-3.5" /> Upload File
-                      </button>
-                      {image6 && (
-                        <button
-                          type="button"
-                          onClick={() => setImage6('')}
-                          className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    <input
-                      type="text"
-                      placeholder="Or enter image URL..."
-                      value={image6}
-                      onChange={(e) => setImage6(e.target.value)}
-                      className="w-full h-8 px-2.5 bg-white border border-slate-300 rounded-lg text-[11px] text-slate-800 font-mono focus:outline-none focus:border-[#0054A6]"
-                    />
-                  </div>
-                </div>
-
+                <ImageSlotCard
+                  slotNumber={1}
+                  title="Main Hero (Pure White BG) *"
+                  badgeText="Primary"
+                  badgeColorClass="bg-amber-50 text-amber-800 border border-amber-200"
+                  alt="Hero Image"
+                  imageUrl={image1}
+                  onImageUrlChange={setImage1}
+                  onFileUpload={(file) => handleFileUpload(file, setImage1, 'image')}
+                />
+                <ImageSlotCard
+                  slotNumber={2}
+                  title="Infographic & Features"
+                  badgeText="Callouts"
+                  badgeColorClass="bg-blue-50 text-blue-800 border border-blue-200"
+                  alt="Infographic"
+                  imageUrl={image2}
+                  onImageUrlChange={setImage2}
+                  onFileUpload={(file) => handleFileUpload(file, setImage2, 'image')}
+                />
+                <ImageSlotCard
+                  slotNumber={3}
+                  title="Dimensions & Blueprint"
+                  badgeText="28-40mm"
+                  badgeColorClass="bg-slate-100 text-slate-700 border border-slate-200"
+                  alt="Dimensions"
+                  imageUrl={image3}
+                  onImageUrlChange={setImage3}
+                  onFileUpload={(file) => handleFileUpload(file, setImage3, 'image')}
+                />
+                <ImageSlotCard
+                  slotNumber={4}
+                  title="In-Action Installation"
+                  badgeText="Rooftop/Park"
+                  badgeColorClass="bg-emerald-50 text-emerald-800 border border-emerald-200"
+                  alt="Installation Image"
+                  imageUrl={image4}
+                  onImageUrlChange={setImage4}
+                  onFileUpload={(file) => handleFileUpload(file, setImage4, 'image')}
+                />
+                <ImageSlotCard
+                  slotNumber={5}
+                  title="Pack Box & Contents"
+                  badgeText="Pack of 50"
+                  badgeColorClass="bg-amber-50 text-amber-800 border border-amber-200"
+                  alt="Packaging Image"
+                  imageUrl={image5}
+                  onImageUrlChange={setImage5}
+                  onFileUpload={(file) => handleFileUpload(file, setImage5, 'image')}
+                />
+                <ImageSlotCard
+                  slotNumber={6}
+                  title="SS304 Mill Certificate"
+                  badgeText="Tested QA"
+                  badgeColorClass="bg-purple-50 text-purple-800 border border-purple-200"
+                  alt="Certificate Image"
+                  imageUrl={image6}
+                  onImageUrlChange={setImage6}
+                  onFileUpload={(file) => handleFileUpload(file, setImage6, 'image')}
+                />
               </div>
 
               {/* 1 Dedicated Video Card */}

@@ -5,6 +5,7 @@ If unreachable, cleanly skips external database integration tests so unit test s
 and offline workflows proceed reliably.
 """
 import socket
+
 import pytest
 
 
@@ -28,7 +29,9 @@ def initialize_postgres_database():
         return
 
     import asyncio
+
     from sqlalchemy.ext.asyncio import create_async_engine
+
     from app.models import Base
 
     db_url = "postgresql+asyncpg://postgres_test:postgres@localhost:5432/apollo_disposable_test"

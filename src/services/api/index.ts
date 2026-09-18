@@ -33,3 +33,6 @@ export type { InventoryItemDto, InventoryReceiptPayload, InventoryAdjustmentPayl
 
 export { pricingApi, PricingApi } from './pricingApi';
 export type { ActivePriceQuery, PriceVersionDto, OrderCalculationRequest, OrderCalculationResult } from './pricingApi';
+
+export { systemApi, SystemApi } from './systemApi';
+export type { SystemStatusResponse, CircuitBreakerStatus, BackgroundWorkersStatus, CacheStatus } from './systemApi';

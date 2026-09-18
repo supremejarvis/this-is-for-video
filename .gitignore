@@ -16,6 +16,8 @@ coverage/
 backend/.env
 backend/.env.*
 !backend/.env.example
+tools.yaml
+backend/tools.yaml
 *.db
 *.sqlite
 *.sqlite3

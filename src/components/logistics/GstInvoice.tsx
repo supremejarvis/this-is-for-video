@@ -4,48 +4,11 @@ import {
   Truck, CreditCard, Clock, MapPin, Building2 
 } from 'lucide-react';
 import { Order } from '../../types';
+import { numberToIndianWords } from '../../utils/numberToWords';
 
 interface GstInvoiceProps {
   order: Order;
   onClose: () => void;
-}
-
-function numberToIndianWords(num: number): string {
-  const rounded = Math.round(num);
-  if (rounded === 0) return 'Zero Rupees only';
-  const ones = [
-    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
-    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
-  ];
-  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-
-  function convertTwoDigits(n: number): string {
-    if (n < 20) return ones[n];
-    const unit = n % 10;
-    return tens[Math.floor(n / 10)] + (unit ? ' ' + ones[unit] : '');
-  }
-
-  function convertThreeDigits(n: number): string {
-    const hundred = Math.floor(n / 100);
-    const rest = n % 100;
-    let res = '';
-    if (hundred) res += ones[hundred] + ' Hundred';
-    if (rest) res += (hundred ? ' and ' : '') + convertTwoDigits(rest);
-    return res;
-  }
-
-  const crore = Math.floor(rounded / 10000000);
-  const lakh = Math.floor((rounded % 10000000) / 100000);
-  const thousand = Math.floor((rounded % 100000) / 1000);
-  const remaining = rounded % 1000;
-
-  let words = '';
-  if (crore) words += convertTwoDigits(crore) + ' Crore ';
-  if (lakh) words += convertTwoDigits(lakh) + ' Lakh ';
-  if (thousand) words += convertTwoDigits(thousand) + ' Thousand ';
-  if (remaining) words += convertThreeDigits(remaining);
-
-  return words.trim() + ' Rupees only';
 }
 
 export const GstInvoice: React.FC<GstInvoiceProps> = ({ order, onClose }) => {
@@ -330,7 +293,7 @@ export const GstInvoice: React.FC<GstInvoiceProps> = ({ order, onClose }) => {
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                   <div className="font-bold text-slate-900">Total Invoice Value in Words:</div>
                   <div className="font-semibold text-slate-800 italic">
-                    {numberToIndianWords(grandTotal)}
+                    {numberToIndianWords(grandTotal, { suffix: 'Rupees only' })}
                   </div>
                 </div>
                 <div className="text-[10px] text-slate-500 leading-relaxed">

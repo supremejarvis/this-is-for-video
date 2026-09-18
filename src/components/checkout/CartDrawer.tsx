@@ -2,7 +2,7 @@ import React, { useEffect, useState, useId } from 'react';
 import { 
   X, Trash2, Plus, Minus, ShoppingCart, 
   Truck, ShieldCheck, ArrowRight, RefreshCw,
-  Clock, AlertTriangle, CheckCircle2, Lock, FileText, Info
+  Clock, AlertTriangle, CheckCircle2, Lock, FileText, Info, Layers, AlertCircle
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { getTranslation } from '../../utils/i18n';
@@ -17,7 +17,8 @@ export const CartDrawer: React.FC = () => {
     destinationPincode, setDestinationPincode,
     fetchAuthoritativeQuote, selectedLanguage,
     setIsCheckoutOpen, apiCatalogError,
-    authStatus, setAuthDestination, setIsAuthModalOpen
+    authStatus, setAuthDestination, setIsAuthModalOpen,
+    appMode, b2cCodLimit
   } = useStore();
 
   const [pincodeInput, setPincodeInput] = useState(destinationPincode || '382430');
@@ -90,7 +91,22 @@ export const CartDrawer: React.FC = () => {
   ]);
 
   const { currentUser } = useStore();
-  const isAuthed = authStatus === 'AUTHENTICATED' || Boolean(currentUser);
+  const isAuthed = authStatus === 'AUTHENTICATED' || Boolean(currentUser && currentUser.id && currentUser.id !== 'usr_guest');
+
+  const totalCartUnits = cart.reduce((sum, i) => sum + i.quantity, 0);
+  const estimatedPrepaid = currentQuote ? Number(currentQuote.prepaid_total) : cart.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+  const isCodLimitExceeded = appMode === 'B2C' && estimatedPrepaid > b2cCodLimit;
+
+  // Auto-switch COD to PREPAID if B2B mode or if B2C order exceeds COD limit
+  useEffect(() => {
+    if (appMode === 'B2B' && quotePaymentMethod === 'COD') {
+      setQuotePaymentMethod('PREPAID');
+    } else if (appMode === 'B2C' && quotePaymentMethod === 'COD') {
+      if (estimatedPrepaid > b2cCodLimit) {
+        setQuotePaymentMethod('PREPAID');
+      }
+    }
+  }, [appMode, quotePaymentMethod, estimatedPrepaid, b2cCodLimit, setQuotePaymentMethod]);
 
   if (!isCartDrawerOpen) return null;
 
@@ -187,6 +203,35 @@ export const CartDrawer: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* B2B Mixed Wholesale Batch Pooling Banner */}
+                {appMode === 'B2B' && (
+                  <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl space-y-2 shadow-sm">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-[#0054A6] flex items-center gap-1.5">
+                        <Layers className="w-4 h-4 text-[#0054A6]" /> B2B Wholesale Batch Pooling
+                      </span>
+                      <span className="font-mono font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-blue-200">
+                        {totalCartUnits} / 50 units
+                      </span>
+                    </div>
+                    <div className="w-full bg-blue-100 rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="bg-gradient-to-r from-[#0054A6] to-blue-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, (totalCartUnits / 50) * 100)}%` }}
+                      />
+                    </div>
+                    <div className="text-[11px] text-slate-600 font-mono flex items-center justify-between">
+                      {totalCartUnits >= 50 ? (
+                        <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Wholesale batch unlocked! Mixed sizes qualify for factory B2B pricing.
+                        </span>
+                      ) : (
+                        <span>Add <strong>{50 - totalCartUnits}</strong> more units (any mix of sizes/items) to qualify for wholesale batch.</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Items Container */}
                 <div className="space-y-3">
                   {cart.map((item) => (
@@ -218,35 +263,35 @@ export const CartDrawer: React.FC = () => {
                           <span className="text-[11px] font-mono font-bold text-[#0054A6] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                             {item.variantTitle}
                           </span>
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            SKU: {item.sku}
+                          <span className="text-xs font-mono font-bold text-slate-900">
+                            ₹{item.unitPrice.toFixed(2)}
                           </span>
                         </div>
 
                         {/* Quantity Counter */}
-                        <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-100">
-                          <div className="flex items-center gap-2 bg-slate-50 px-2 py-0.5 rounded-xl border border-slate-200 shadow-inner">
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
                             <button
-                              onClick={() => updateCartQuantity(item.sku, item.quantity - 1)}
-                              className="text-slate-500 hover:text-slate-900 p-0.5"
+                              onClick={() => updateCartQuantity(item.sku, item.quantity - (appMode === 'B2B' ? 5 : 1))}
+                              className="p-1 rounded-lg bg-white text-slate-600 hover:text-slate-900 shadow-xs active:scale-95 transition-transform"
                               aria-label="Decrease quantity"
                             >
                               <Minus className="w-3 h-3" />
                             </button>
-                            <span className="font-bold text-xs text-slate-900 font-mono px-2">
+                            <span className="text-xs font-mono font-bold px-2 text-slate-800">
                               {item.quantity}
                             </span>
                             <button
-                              onClick={() => updateCartQuantity(item.sku, item.quantity + 1)}
-                              className="text-slate-500 hover:text-slate-900 p-0.5"
+                              onClick={() => updateCartQuantity(item.sku, item.quantity + (appMode === 'B2B' ? 5 : 1))}
+                              className="p-1 rounded-lg bg-white text-slate-600 hover:text-slate-900 shadow-xs active:scale-95 transition-transform"
                               aria-label="Increase quantity"
                             >
                               <Plus className="w-3 h-3" />
                             </button>
                           </div>
 
-                          <span className="text-[10px] text-slate-500 font-mono">
-                            HSN: {item.hsnCode || '73269099'} ({item.gstRate ? `${item.gstRate}%` : '18%'} GST)
+                          <span className="text-xs font-mono font-bold text-slate-900">
+                            ₹{(item.unitPrice * item.quantity).toFixed(2)}
                           </span>
                         </div>
                       </div>
@@ -254,12 +299,12 @@ export const CartDrawer: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Shipping & Payment Method Controls */}
+                {/* Logistics & Payment Configuration */}
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                   {/* Destination PIN Code Input */}
                   <div className="space-y-1.5">
                     <label 
-                      htmlFor={pincodeInputId}
+                      htmlFor={pincodeInputId} 
                       className="text-xs font-bold text-slate-700 flex items-center justify-between"
                     >
                       <span className="flex items-center gap-1.5">
@@ -292,52 +337,79 @@ export const CartDrawer: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Payment Method Radio Selection */}
+                  {/* Payment Method Selection */}
                   <div className="space-y-1.5">
                     <span className="text-xs font-bold text-slate-700 block">
                       {t.paymentMethod}
                     </span>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        aria-label="Select Prepaid UPI payment method"
-                        aria-pressed={quotePaymentMethod === 'PREPAID'}
-                        onClick={() => setQuotePaymentMethod('PREPAID')}
-                        className={`p-3 rounded-2xl border text-left transition-all ${
-                          quotePaymentMethod === 'PREPAID'
-                            ? 'bg-blue-50/80 border-[#0054A6] ring-1 ring-[#0054A6] shadow-sm'
-                            : 'bg-slate-50 border-slate-200 hover:border-blue-200'
-                        }`}
-                      >
+                    {appMode === 'B2B' ? (
+                      <div className="p-3.5 rounded-2xl border border-blue-200 bg-blue-50/70 space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <strong className="text-xs font-bold text-slate-900">{t.prepaidUpi}</strong>
-                          {quotePaymentMethod === 'PREPAID' && (
-                            <span className="w-2 h-2 rounded-full bg-[#0054A6]" />
-                          )}
+                          <strong className="text-xs font-bold text-[#0054A6] flex items-center gap-1.5">
+                            <ShieldCheck className="w-4 h-4 text-[#0054A6]" />
+                            {t.prepaidUpi} / GST Direct Settlement
+                          </strong>
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold font-mono bg-[#0054A6] text-white">
+                            B2B Verified
+                          </span>
                         </div>
-                        <p className="text-[10px] text-slate-500 mt-0.5">{t.prepaidDesc}</p>
-                      </button>
+                        <p className="text-[11px] text-slate-600 leading-relaxed">
+                          Cash on Delivery (COD) is removed for B2B wholesale orders. Online payment (UPI, NetBanking, NEFT, Cards) or approved terms are required for GST tax invoices and ITC reconciliation.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          aria-label="Select Prepaid UPI payment method"
+                          aria-pressed={quotePaymentMethod === 'PREPAID'}
+                          onClick={() => setQuotePaymentMethod('PREPAID')}
+                          className={`p-3 rounded-2xl border text-left transition-all ${
+                            quotePaymentMethod === 'PREPAID'
+                              ? 'bg-blue-50/80 border-[#0054A6] ring-1 ring-[#0054A6] shadow-sm'
+                              : 'bg-slate-50 border-slate-200 hover:border-blue-200'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <strong className="text-xs font-bold text-slate-900">{t.prepaidUpi}</strong>
+                            {quotePaymentMethod === 'PREPAID' && (
+                              <span className="w-2 h-2 rounded-full bg-[#0054A6]" />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-0.5">{t.prepaidDesc}</p>
+                        </button>
 
-                      <button
-                        type="button"
-                        aria-label="Select Cash on Delivery payment method"
-                        aria-pressed={quotePaymentMethod === 'COD'}
-                        onClick={() => setQuotePaymentMethod('COD')}
-                        className={`p-3 rounded-2xl border text-left transition-all ${
-                          quotePaymentMethod === 'COD'
-                            ? 'bg-amber-50/80 border-amber-500 ring-1 ring-amber-500 shadow-sm'
-                            : 'bg-slate-50 border-slate-200 hover:border-amber-200'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <strong className="text-xs font-bold text-slate-900">{t.cod}</strong>
-                          {quotePaymentMethod === 'COD' && (
-                            <span className="w-2 h-2 rounded-full bg-amber-500" />
-                          )}
-                        </div>
-                        <p className="text-[10px] text-slate-500 mt-0.5">{t.codDesc}</p>
-                      </button>
-                    </div>
+                        <button
+                          type="button"
+                          aria-label="Select Cash on Delivery payment method"
+                          aria-pressed={quotePaymentMethod === 'COD'}
+                          disabled={isCodLimitExceeded}
+                          onClick={() => !isCodLimitExceeded && setQuotePaymentMethod('COD')}
+                          className={`p-3 rounded-2xl border text-left transition-all ${
+                            isCodLimitExceeded
+                              ? 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed'
+                              : quotePaymentMethod === 'COD'
+                              ? 'bg-amber-50/80 border-amber-500 ring-1 ring-amber-500 shadow-sm'
+                              : 'bg-slate-50 border-slate-200 hover:border-amber-200'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <strong className="text-xs font-bold text-slate-900">{t.cod}</strong>
+                            {quotePaymentMethod === 'COD' && !isCodLimitExceeded && (
+                              <span className="w-2 h-2 rounded-full bg-amber-500" />
+                            )}
+                            {isCodLimitExceeded && (
+                              <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">
+                                Over Limit
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-0.5">
+                            {isCodLimitExceeded ? `Exceeds max COD limit of ₹${b2cCodLimit.toLocaleString('en-IN')}` : t.codDesc}
+                          </p>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -587,7 +659,7 @@ export const CartDrawer: React.FC = () => {
                   disabled={!isCheckoutAllowed}
                   onClick={() => {
                     if (!isCheckoutAllowed) return;
-                    if (authStatus === 'AUTHENTICATED') {
+                    if (isAuthed) {
                       setIsCartDrawerOpen(false);
                       setIsCheckoutOpen(true);
                     } else {

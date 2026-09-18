@@ -1,52 +1,43 @@
 import React, { useRef, useState } from 'react';
 import { Printer, Download, X, Check, ShieldCheck, Building2 } from 'lucide-react';
 import { Order } from '../../types';
+import { numberToIndianWords } from '../../utils/numberToWords';
 
 interface StandardTaxInvoiceProps {
   order: Order;
   onClose: () => void;
 }
 
-// Convert numbers to Indian English words
-function numberToIndianWords(num: number): string {
-  const rounded = Math.round(num);
-  if (rounded === 0) return 'Zero only';
-
-  const ones = [
-    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
-    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
-    'Seventeen', 'Eighteen', 'Nineteen'
-  ];
-  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-
-  function convertTwoDigits(n: number): string {
-    if (n < 20) return ones[n];
-    const unit = n % 10;
-    return tens[Math.floor(n / 10)] + (unit ? ' ' + ones[unit] : '');
-  }
-
-  function convertThreeDigits(n: number): string {
-    const hundred = Math.floor(n / 100);
-    const rest = n % 100;
-    let res = '';
-    if (hundred) res += ones[hundred] + ' Hundred';
-    if (rest) res += (hundred ? ' and ' : '') + convertTwoDigits(rest);
-    return res;
-  }
-
-  let crore = Math.floor(rounded / 10000000);
-  let lakh = Math.floor((rounded % 10000000) / 100000);
-  let thousand = Math.floor((rounded % 100000) / 1000);
-  let remaining = rounded % 1000;
-
-  let words = '';
-  if (crore) words += convertTwoDigits(crore) + ' Crore ';
-  if (lakh) words += convertTwoDigits(lakh) + ' Lakh ';
-  if (thousand) words += convertTwoDigits(thousand) + ' Thousand ';
-  if (remaining) words += convertThreeDigits(remaining);
-
-  return words.trim() + ' only';
+interface AddressBlockProps {
+  title: string;
+  name: string;
+  address: string;
+  state: string;
+  pincode: string;
+  stateCode: string;
 }
+
+const InvoiceAddressCard: React.FC<AddressBlockProps> = ({
+  title,
+  name,
+  address,
+  state,
+  pincode,
+  stateCode,
+}) => (
+  <div className="space-y-0.5">
+    <div className="font-bold uppercase text-[10px] text-slate-800">{title} :</div>
+    <div className="font-black text-xs uppercase">{name}</div>
+    <div className="text-[10.5px] text-slate-800 leading-snug uppercase">
+      {address}<br />
+      {state.toUpperCase()}, {pincode}<br />
+      IN
+    </div>
+    <div className="font-mono text-[10.5px]">
+      <strong>State/UT Code:</strong> {stateCode}
+    </div>
+  </div>
+);
 
 export const StandardTaxInvoice: React.FC<StandardTaxInvoiceProps> = ({ order, onClose }) => {
   const printRef = useRef<HTMLDivElement>(null);
@@ -196,30 +187,24 @@ export const StandardTaxInvoice: React.FC<StandardTaxInvoiceProps> = ({ order, o
 
               {/* Right Column: Billing & Shipping Address Block */}
               <div className="space-y-2">
-                <div className="space-y-0.5">
-                  <div className="font-bold uppercase text-[10px] text-slate-800">Billing Address :</div>
-                  <div className="font-black text-xs uppercase">{customerName}</div>
-                  <div className="text-[10.5px] text-slate-800 leading-snug uppercase">
-                    {addressLine}<br />
-                    {state.toUpperCase()}, {pincode}<br />
-                    IN
-                  </div>
-                  <div className="font-mono text-[10.5px]">
-                    <strong>State/UT Code:</strong> {stateCode}
-                  </div>
-                </div>
+                <InvoiceAddressCard
+                  title="Billing Address"
+                  name={customerName}
+                  address={addressLine}
+                  state={state}
+                  pincode={pincode}
+                  stateCode={stateCode}
+                />
 
                 <div className="space-y-0.5 pt-1.5 border-t border-slate-200">
-                  <div className="font-bold uppercase text-[10px] text-slate-800">Shipping Address :</div>
-                  <div className="font-black text-xs uppercase">{customerName}</div>
-                  <div className="text-[10.5px] text-slate-800 leading-snug uppercase">
-                    {addressLine}<br />
-                    {state.toUpperCase()}, {pincode}<br />
-                    IN
-                  </div>
-                  <div className="font-mono text-[10.5px]">
-                    <strong>State/UT Code:</strong> {stateCode}
-                  </div>
+                  <InvoiceAddressCard
+                    title="Shipping Address"
+                    name={customerName}
+                    address={addressLine}
+                    state={state}
+                    pincode={pincode}
+                    stateCode={stateCode}
+                  />
                   <div className="text-[10px] font-mono pt-0.5 flex items-center gap-3">
                     <span><strong>Place of supply:</strong> {state.toUpperCase()}</span>
                     <span><strong>Place of delivery:</strong> {state.toUpperCase()}</span>

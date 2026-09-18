@@ -7,9 +7,11 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from starlette.middleware.gzip import GZipMiddleware
 
 from app.api.v1.api import api_router
 from app.core.config import settings
+from app.core.load_optimizer import ConcurrencyLimiterMiddleware
 from app.core.monitoring import setup_monitoring
 from app.core.rate_limiter import limiter
 
@@ -53,7 +55,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("Database initialized and catalog seeded successfully.")
     except Exception as e:
         logger.warning(f"Database auto-initialization / seeding notice: {e}")
+
+    # Start Enterprise Background Workers (Outbox Publisher, Quote Cleanup)
+    from app.core.worker import worker_manager
+    worker_manager.start_all()
+
     yield
+
+    # Graceful shutdown of background workers
+    await worker_manager.stop_all()
 
 
 app = FastAPI(
@@ -63,6 +73,10 @@ app = FastAPI(
     docs_url=f"{settings.API_V1_STR}/docs" if docs_enabled else None,
     redoc_url=f"{settings.API_V1_STR}/redoc" if docs_enabled else None,
 )
+
+# Load Optimizer: Response Compression (70-80% payload bandwidth savings)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(ConcurrencyLimiterMiddleware, max_concurrent_requests=150)
 
 # Monitoring & Audit Logging Middleware
 setup_monitoring(app)

@@ -39,8 +39,8 @@ describe('Solar Drain Clip Frame Thickness Confirmation Workflow', () => {
     // Click Confirm & Add to Cart
     fireEvent.click(confirmBtn);
 
-    // Verify item was added to cart and cart drawer opened
+    // Verify item was added to cart while keeping cart drawer closed (as per user requirement)
     expect(useStore.getState().cart.length).toBeGreaterThan(0);
-    expect(useStore.getState().isCartDrawerOpen).toBe(true);
+    expect(useStore.getState().isCartDrawerOpen).toBe(false);
   }, 20000);
 });

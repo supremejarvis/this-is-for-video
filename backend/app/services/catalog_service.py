@@ -3,6 +3,7 @@ import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,6 +48,56 @@ class CatalogService:
     """Business logic for Products, structured Solar Panel Clamp Variants, and outbox event streaming."""
 
     @classmethod
+    def _emit_product_outbox_event(
+        cls,
+        session: AsyncSession,
+        product: Product,
+        event_type: str = "catalog.product.changed",
+        extra_payload: dict[str, Any] | None = None,
+    ) -> None:
+        payload: dict[str, Any] = {
+            "product_id": str(product.id),
+            "sku_prefix": product.sku_prefix,
+            "name": product.name,
+            "is_active": product.is_active,
+            "updated_at": product.updated_at.isoformat(),
+        }
+        if extra_payload:
+            payload.update(extra_payload)
+        OutboxService.emit_event(
+            session=session,
+            event_type=event_type,
+            aggregate_type="product",
+            aggregate_id=product.id,
+            payload=payload,
+        )
+
+    @classmethod
+    def _emit_variant_outbox_event(
+        cls,
+        session: AsyncSession,
+        variant: ProductVariant,
+        extra_payload: dict[str, Any] | None = None,
+    ) -> None:
+        fit_mode_str = variant.fit_mode.value if hasattr(variant.fit_mode, "value") else str(variant.fit_mode)
+        payload: dict[str, Any] = {
+            "variant_id": str(variant.id),
+            "product_id": str(variant.product_id),
+            "sku": variant.sku,
+            "fit_mode": fit_mode_str,
+            "display_label": variant.display_label,
+        }
+        if extra_payload:
+            payload.update(extra_payload)
+        OutboxService.emit_event(
+            session=session,
+            event_type="catalog.variant.changed",
+            aggregate_type="variant",
+            aggregate_id=variant.id,
+            payload=payload,
+        )
+
+    @classmethod
     async def create_product(
         cls,
         db: AsyncSession,
@@ -75,19 +126,7 @@ class CatalogService:
         await db.flush()
 
         # Emit transactional outbox event
-        OutboxService.emit_event(
-            session=db,
-            event_type="catalog.product.changed",
-            aggregate_type="product",
-            aggregate_id=product.id,
-            payload={
-                "product_id": str(product.id),
-                "sku_prefix": product.sku_prefix,
-                "name": product.name,
-                "is_active": product.is_active,
-                "updated_at": product.updated_at.isoformat(),
-            },
-        )
+        cls._emit_product_outbox_event(session=db, product=product)
 
         # 2. Process variants if provided
         for v_data in data.variants:
@@ -129,20 +168,7 @@ class CatalogService:
         await db.flush()
 
         # Emit outbox event for variant change
-        fit_mode_str = variant.fit_mode.value if hasattr(variant.fit_mode, "value") else str(variant.fit_mode)
-        OutboxService.emit_event(
-            session=db,
-            event_type="catalog.variant.changed",
-            aggregate_type="variant",
-            aggregate_id=variant.id,
-            payload={
-                "variant_id": str(variant.id),
-                "product_id": str(product_id),
-                "sku": variant.sku,
-                "fit_mode": fit_mode_str,
-                "display_label": variant.display_label,
-            },
-        )
+        cls._emit_variant_outbox_event(session=db, variant=variant)
 
         # Create corresponding InventoryItem
         inv_item = InventoryItem(
@@ -331,19 +357,10 @@ class CatalogService:
         product.updated_at = utcnow()
 
         # Emit outbox event with version
-        OutboxService.emit_event(
+        cls._emit_product_outbox_event(
             session=db,
-            event_type="catalog.product.changed",
-            aggregate_type="product",
-            aggregate_id=product.id,
-            payload={
-                "product_id": str(product.id),
-                "sku_prefix": product.sku_prefix,
-                "name": product.name,
-                "is_active": product.is_active,
-                "version": product.version,
-                "updated_at": product.updated_at.isoformat(),
-            },
+            product=product,
+            extra_payload={"version": product.version},
         )
 
         await db.commit()
@@ -365,17 +382,11 @@ class CatalogService:
             variant.version += 1
 
         # Emit outbox event for archive
-        OutboxService.emit_event(
+        cls._emit_product_outbox_event(
             session=db,
+            product=product,
             event_type="catalog.product.archived",
-            aggregate_type="product",
-            aggregate_id=product.id,
-            payload={
-                "product_id": str(product.id),
-                "is_archived": True,
-                "version": product.version,
-                "updated_at": product.updated_at.isoformat(),
-            },
+            extra_payload={"is_archived": True, "version": product.version},
         )
 
         await db.commit()
@@ -413,20 +424,10 @@ class CatalogService:
 
         variant.version += 1
 
-        fit_mode_str = variant.fit_mode.value if hasattr(variant.fit_mode, "value") else str(variant.fit_mode)
-        OutboxService.emit_event(
+        cls._emit_variant_outbox_event(
             session=db,
-            event_type="catalog.variant.changed",
-            aggregate_type="variant",
-            aggregate_id=variant.id,
-            payload={
-                "variant_id": str(variant.id),
-                "product_id": str(variant.product_id),
-                "sku": variant.sku,
-                "fit_mode": fit_mode_str,
-                "display_label": variant.display_label,
-                "version": variant.version,
-            },
+            variant=variant,
+            extra_payload={"version": variant.version},
         )
 
         await db.commit()
@@ -444,18 +445,10 @@ class CatalogService:
         variant.is_archived = True
         variant.is_active = False
 
-        fit_mode_str = variant.fit_mode.value if hasattr(variant.fit_mode, "value") else str(variant.fit_mode)
-        OutboxService.emit_event(
+        cls._emit_variant_outbox_event(
             session=db,
-            event_type="catalog.variant.changed",
-            aggregate_type="variant",
-            aggregate_id=variant.id,
-            payload={
-                "variant_id": str(variant.id),
-                "product_id": str(variant.product_id),
-                "is_archived": True,
-                "fit_mode": fit_mode_str,
-            },
+            variant=variant,
+            extra_payload={"is_archived": True},
         )
 
         await db.commit()

@@ -17,7 +17,6 @@ from app.api.deps import (
 )
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.rate_limiter import limiter
 from app.core.security import (
     generate_secure_token,
     hash_token,

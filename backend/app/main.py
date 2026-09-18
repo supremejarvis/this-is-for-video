@@ -10,6 +10,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.api.v1.api import api_router
 from app.core.config import settings
+from app.core.monitoring import setup_monitoring
 from app.core.rate_limiter import limiter
 
 logger = logging.getLogger("apollo.security")
@@ -62,6 +63,9 @@ app = FastAPI(
     docs_url=f"{settings.API_V1_STR}/docs" if docs_enabled else None,
     redoc_url=f"{settings.API_V1_STR}/redoc" if docs_enabled else None,
 )
+
+# Monitoring & Audit Logging Middleware
+setup_monitoring(app)
 
 # Rate limiter setup
 app.state.limiter = limiter

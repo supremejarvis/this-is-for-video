@@ -10,7 +10,7 @@
  */
 
 const STORAGE_VERSION_KEY = 'apollo_storage_version';
-const CURRENT_STORAGE_VERSION = '2.0.0';
+const CURRENT_STORAGE_VERSION = '2.1.0';
 
 export function runStorageMigration(): void {
   if (typeof window === 'undefined' || !window.localStorage) return;
@@ -24,6 +24,7 @@ export function runStorageMigration(): void {
         'apollo_session_24h',
         'apollo_user_session',
         'ape-store-storage',
+        'apollo_products',
       ];
 
       piiKeysToPurge.forEach((key) => {

@@ -10,6 +10,7 @@ from app.models.inventory import (
 from app.models.order import (
     FulfilmentStatus,
     Order,
+    OrderAddress,
     OrderItem,
     OrderStatus,
     Payment,
@@ -34,6 +35,7 @@ __all__ = [
     "InventoryReservation",
     "MovementType",
     "Order",
+    "OrderAddress",
     "OrderItem",
     "OrderStatus",
     "OutboxEvent",

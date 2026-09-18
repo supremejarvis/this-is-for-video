@@ -35,8 +35,9 @@ export const FlashDealBanner: React.FC = () => {
 
   const handleClaimDeal = () => {
     addToCart({
-      sku: 'AE-CLIP-35MM-SS',
-      parentAsin: 'AP-CLIP-35MM',
+      sku: 'J9-IJCH-26WX',
+      parentAsin: 'AP-DRAINCLIPS-02',
+      asin: 'AP-DRAINCLIPS-02',
       productTitle: 'Apollo SS304 Solar Auto Drain Clips (35mm Frame Size)',
       variantTitle: isB2B ? 'Pack of 50 Pcs - B2B Factory Wholesale Tier' : 'Pack of 10 Pcs - Retail Flash Deal',
       attributes: { size: '35mm', material: 'SS304' },

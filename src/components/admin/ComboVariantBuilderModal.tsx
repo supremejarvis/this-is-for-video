@@ -35,8 +35,8 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
   // Components List (Product X, Y, Z with exact photos, motor specs, and unit prices)
   const [components, setComponents] = useState<ComboComponentItem[]>([
     {
-      asin: 'AP-SPRINKLER-180',
-      sku: 'AE-SPRINKLER-180',
+      asin: 'AP-SPRINKLER-01',
+      sku: 'AE-SPRINKLER-SS304',
       productTitle: 'Apollo SS304 Shadowless Sprinkler (180° Curtain)',
       imageUrl: '/solar_sprinkler.webp',
       quantity: 6,
@@ -51,8 +51,8 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
       }
     },
     {
-      asin: 'AP-CLIP-35MM',
-      sku: 'AE-CLIP-35MM-SS',
+      asin: 'AP-DRAINCLIPS-02',
+      sku: 'J9-IJCH-26WX',
       productTitle: 'Apollo SS304 Auto Drain Clips (Frame Thickness: 35mm)',
       imageUrl: '/Drain_clips.webp',
       quantity: 12,
@@ -66,8 +66,8 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
       }
     },
     {
-      asin: 'AP-CLAMP-GI',
-      sku: 'AE-CLAMP-GI-20MM',
+      asin: 'AP-GICLAMP-03',
+      sku: 'AE-CLAMP-GI-HALF',
       productTitle: 'Heavy Galvanized GI Piping Support Clamps',
       imageUrl: '/gi_pipe_clamp.webp',
       quantity: 6,
@@ -82,7 +82,7 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
     },
     {
       asin: 'AP-TIMER-07',
-      sku: 'AE-TIMER-PROG',
+      sku: 'AE-TIMER-DIGITAL',
       productTitle: 'Apollo Digital Programmable Solar Cleaning Automation Controller',
       imageUrl: '/auto_timer.webp',
       quantity: 1,
@@ -96,7 +96,7 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
     },
     {
       asin: 'AP-PUMP-06',
-      sku: 'AE-PUMP-42LPM',
+      sku: 'AE-PUMP-05HP',
       productTitle: 'High-Pressure Booster Motor (42 LPM · 0.5 HP · Single Phase)',
       imageUrl: '/pump.webp',
       quantity: 1,
@@ -111,8 +111,8 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
       }
     },
     {
-      asin: 'AP-TEE-UPVC',
-      sku: 'AE-TEE-UPVC-15MM',
+      asin: 'AP-FITTINGTEE-04',
+      sku: 'AE-TEE-UPVC-HALF',
       productTitle: 'UPVC Threaded Brass Insert Tees (Matches Sprinkler Count)',
       imageUrl: '/cpvc_upvc.webp',
       quantity: 6,
@@ -156,8 +156,8 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
 
     const autoComponents: ComboComponentItem[] = [
       {
-        asin: 'AP-SPRINKLER-180',
-        sku: 'AE-SPRINKLER-180',
+        asin: 'AP-SPRINKLER-01',
+        sku: 'AE-SPRINKLER-SS304',
         productTitle: 'Apollo SS304 Shadowless Sprinkler (180° Curtain)',
         imageUrl: '/solar_sprinkler.webp',
         quantity: panels, // 1 per panel
@@ -171,7 +171,7 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
         }
       },
       {
-        asin: 'AP-CLIP-35MM',
+        asin: 'AP-DRAINCLIPS-02',
         sku: `AE-CLIP-${panelThicknessMm}MM-SS`,
         productTitle: `Apollo SS304 Auto Drain Clips (Frame Thickness: ${panelThicknessMm}mm)`,
         imageUrl: '/Drain_clips.webp',
@@ -185,8 +185,8 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
         }
       },
       {
-        asin: 'AP-CLAMP-GI',
-        sku: 'AE-CLAMP-GI-20MM',
+        asin: 'AP-GICLAMP-03',
+        sku: 'AE-CLAMP-GI-HALF',
         productTitle: 'Heavy Galvanized GI Piping Support Clamps',
         imageUrl: '/gi_pipe_clamp.webp',
         quantity: panels, // 1 per panel
@@ -199,7 +199,7 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
       },
       {
         asin: 'AP-TIMER-07',
-        sku: 'AE-TIMER-PROG',
+        sku: 'AE-TIMER-DIGITAL',
         productTitle: 'Apollo Digital Programmable Solar Cleaning Controller',
         imageUrl: '/auto_timer.webp',
         quantity: 1, // 1 timer per kit
@@ -227,8 +227,8 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
         }
       },
       {
-        asin: 'AP-TEE-UPVC',
-        sku: 'AE-TEE-UPVC-15MM',
+        asin: 'AP-FITTINGTEE-04',
+        sku: 'AE-TEE-UPVC-HALF',
         productTitle: 'UPVC Threaded Brass Insert Tees (Matches Sprinklers)',
         imageUrl: '/cpvc_upvc.webp',
         quantity: panels, // Equal to sprinklers
@@ -261,12 +261,12 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
 
     // Pick proper photo
     let img = variant?.images[0] || '/logo.webp';
-    if (prod.asin === 'AP-SPRINKLER-180') img = '/solar_sprinkler.webp';
-    if (prod.asin === 'AP-CLIP-35MM') img = '/Drain_clips.webp';
-    if (prod.asin === 'AP-CLAMP-GI') img = '/gi_pipe_clamp.webp';
+    if (prod.asin === 'AP-SPRINKLER-01' || prod.asin === 'AP-SPRINKLER-180') img = '/solar_sprinkler.webp';
+    if (prod.asin === 'AP-DRAINCLIPS-02' || prod.asin === 'AP-CLIP-35MM') img = '/Drain_clips.webp';
+    if (prod.asin === 'AP-GICLAMP-03' || prod.asin === 'AP-CLAMP-GI') img = '/gi_pipe_clamp.webp';
     if (prod.asin === 'AP-TIMER-07') img = '/auto_timer.webp';
     if (prod.asin === 'AP-PUMP-06') img = '/pump.webp';
-    if (prod.asin === 'AP-TEE-UPVC') img = '/cpvc_upvc.webp';
+    if (prod.asin === 'AP-FITTINGTEE-04' || prod.asin === 'AP-TEE-UPVC') img = '/cpvc_upvc.webp';
 
     const newItem: ComboComponentItem = {
       asin: prod.asin,
@@ -338,14 +338,14 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
         plantCapacityKw: plantKw,
         panelCount: panelCount,
         panelThicknessMm: panelThicknessMm,
-        sprinklerPcs: components.find(c => c.asin === 'AP-SPRINKLER-180')?.quantity || panelCount,
-        drainClipsPcs: components.find(c => c.asin === 'AP-CLIP-35MM')?.quantity || (panelCount * 2),
-        giClampsPcs: components.find(c => c.asin === 'AP-CLAMP-GI')?.quantity || panelCount,
+        sprinklerPcs: components.find(c => c.asin === 'AP-SPRINKLER-01' || c.asin === 'AP-SPRINKLER-180')?.quantity || panelCount,
+        drainClipsPcs: components.find(c => c.asin === 'AP-DRAINCLIPS-02' || c.asin === 'AP-CLIP-35MM')?.quantity || (panelCount * 2),
+        giClampsPcs: components.find(c => c.asin === 'AP-GICLAMP-03' || c.asin === 'AP-CLAMP-GI')?.quantity || panelCount,
         timerPcs: components.find(c => c.asin === 'AP-TIMER-07')?.quantity || 1,
         motorLpm: panelCount * 7,
         motorHp: panelCount <= 8 ? '0.5 HP' : panelCount <= 15 ? '1.0 HP' : '2.0 HP',
         electricalPhase: panelCount > 25 ? '3-Phase 415V' : 'Single Phase 220V/230V AC (50Hz)',
-        upvcTeePcs: components.find(c => c.asin === 'AP-TEE-UPVC')?.quantity || panelCount,
+        upvcTeePcs: components.find(c => c.asin === 'AP-FITTINGTEE-04' || c.asin === 'AP-TEE-UPVC')?.quantity || panelCount,
         localPipeNotice: pipeNotice
       }
     };
@@ -420,8 +420,8 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
                 onChange={(e) => setSelectedAsin(e.target.value)}
                 className="w-full h-10 px-3 bg-white border border-slate-300 rounded-xl font-mono font-bold text-xs text-slate-900 focus:outline-none focus:border-[#0054A6]"
               >
-                {products.map(p => (
-                  <option key={p.asin} value={p.asin}>
+                {products.map((p, pIdx) => (
+                  <option key={`${p.asin}-${pIdx}`} value={p.asin}>
                     {p.asin} — {p.title.slice(0, 55)}...
                   </option>
                 ))}
@@ -673,8 +673,8 @@ export const ComboVariantBuilderModal: React.FC<ComboVariantBuilderModalProps> =
                   defaultValue=""
                 >
                   <option value="" disabled>+ Add Product from Catalog...</option>
-                  {products.map(p => (
-                    <option key={p.asin} value={p.asin}>
+                  {products.map((p, pIdx) => (
+                    <option key={`${p.asin}-${pIdx}`} value={p.asin}>
                       + {p.title.slice(0, 40)}...
                     </option>
                   ))}

@@ -102,6 +102,7 @@ async def create_product(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from None
 
 
+@router.get("", response_model=list[ProductResponse], include_in_schema=False)
 @router.get("/", response_model=list[ProductResponse])
 async def list_products(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -130,6 +131,7 @@ async def get_product(
 
 
 @router.put("/{product_id}", response_model=ProductResponse)
+@router.patch("/{product_id}", response_model=ProductResponse)
 async def update_product(
     product_id: uuid.UUID,
     data: ProductUpdate,

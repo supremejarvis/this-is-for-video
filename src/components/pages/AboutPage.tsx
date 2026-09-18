@@ -68,9 +68,9 @@ export function AboutPage() {
               <span className="text-[10px] font-mono uppercase tracking-[0.25em] font-extrabold text-solar-gold block mb-3">
                 About Apollo Engineering
               </span>
-              <h1 id="about-title" className="font-display text-4xl sm:text-5xl md:text-6xl font-black text-deep-blue leading-[1.05] tracking-tight">
+              <h1 id="about-title" className="font-display text-4xl sm:text-5xl md:text-6xl font-black text-deep-blue leading-snug tracking-tight">
                 Leading Manufacturer of <br />
-                <span className="bg-gradient-to-r from-brand-blue to-accent bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-brand-blue to-accent bg-clip-text text-transparent box-decoration-clone">
                   Solar Maintenance Hardware
                 </span>
               </h1>

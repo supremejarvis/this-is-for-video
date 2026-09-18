@@ -8,6 +8,7 @@ import {
 import { useStore } from '../../store/useStore';
 import { DeliveryAddress, PostOfficeInfo, Order } from '../../types';
 import { ORIGIN_HUB_PINCODE, lookupPincode } from '../../services/logisticsService';
+import { GstInvoice } from '../logistics/GstInvoice';
 
 export const CustomerAccountModal: React.FC = () => {
   const { 
@@ -40,10 +41,10 @@ export const CustomerAccountModal: React.FC = () => {
 
   // Pincode lookup for address editor
   useEffect(() => {
-    if (formPincode.trim().length === 6) {
+    if (isAccountModalOpen && (isEditingShipping || isEditingBilling) && formPincode.trim().length === 6) {
       handlePincodeFetch(formPincode.trim());
     }
-  }, [formPincode]);
+  }, [formPincode, isAccountModalOpen, isEditingShipping, isEditingBilling]);
 
   const handlePincodeFetch = async (pin: string) => {
     setIsLoadingPin(true);
@@ -316,6 +317,8 @@ export const CustomerAccountModal: React.FC = () => {
                       <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-slate-300 select-none">
                         <input
                           type="checkbox"
+                          id="billing-same-as-shipping"
+                          name="billingSameAsShipping"
                           checked={isBillingSame}
                           onChange={(e) => setIsBillingSame(e.target.checked)}
                           className="rounded text-amber-500"
@@ -518,75 +521,10 @@ export const CustomerAccountModal: React.FC = () => {
 
         {/* Tax Invoice Modal Overlay */}
         {selectedInvoiceOrder && (
-          <div className="fixed inset-0 z-[180] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-            <div className="bg-white text-slate-900 rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl border border-slate-300">
-              <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-                <div className="flex items-center gap-3">
-                  <img src="/logo.webp" alt="Logo" className="h-10 w-auto" />
-                  <div>
-                    <h3 className="font-black text-lg text-[#0054A6]">TAX INVOICE</h3>
-                    <p className="text-[10px] text-slate-500 font-mono">Original for Recipient</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setSelectedInvoiceOrder(null)}
-                  className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div>
-                  <strong className="block text-slate-900">Seller / Manufacturer:</strong>
-                  <div className="text-slate-600">Apollo Engineering</div>
-                  <div className="text-slate-600">100 / Gopinath Ind. Landmark, Kathwada GIDC, Ahmedabad, Gujarat - 382430</div>
-                  <div className="font-mono text-slate-700">GSTIN: 24AAAPA1234F1Z9</div>
-                </div>
-
-                <div>
-                  <strong className="block text-slate-900">Buyer / Billed To:</strong>
-                  <div className="text-slate-600 font-bold">{selectedInvoiceOrder.deliveryAddress?.fullName}</div>
-                  <div className="text-slate-600">{selectedInvoiceOrder.deliveryAddress?.flatBuilding}, {selectedInvoiceOrder.deliveryAddress?.streetArea}</div>
-                  <div className="text-slate-600">{selectedInvoiceOrder.deliveryAddress?.city}, {selectedInvoiceOrder.deliveryAddress?.state} - {selectedInvoiceOrder.deliveryAddress?.pincode}</div>
-                  <div className="font-mono text-slate-700">Invoice: {selectedInvoiceOrder.invoiceNumber}</div>
-                </div>
-              </div>
-
-              {/* Items Table */}
-              <table className="w-full text-xs text-left border border-slate-200">
-                <thead className="bg-slate-100 font-bold text-slate-700 border-b border-slate-200">
-                  <tr>
-                    <th className="p-2">Item Description</th>
-                    <th className="p-2">HSN</th>
-                    <th className="p-2 text-center">Qty</th>
-                    <th className="p-2 text-right">Price</th>
-                    <th className="p-2 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {selectedInvoiceOrder.shipments[0]?.items.map((it, i) => (
-                    <tr key={i}>
-                      <td className="p-2 font-medium">{it.productTitle} ({it.sku})</td>
-                      <td className="p-2 font-mono text-slate-500">{it.hsnCode}</td>
-                      <td className="p-2 text-center font-mono">{it.quantity}</td>
-                      <td className="p-2 text-right font-mono">₹{it.unitPrice}</td>
-                      <td className="p-2 text-right font-mono font-bold">₹{it.unitPrice * it.quantity}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-                <button
-                  onClick={() => window.print()}
-                  className="px-5 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center gap-2"
-                >
-                  <Printer className="w-4 h-4" /> Print Tax Invoice
-                </button>
-              </div>
-            </div>
-          </div>
+          <GstInvoice
+            order={selectedInvoiceOrder}
+            onClose={() => setSelectedInvoiceOrder(null)}
+          />
         )}
       </div>
     </div>

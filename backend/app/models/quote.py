@@ -35,7 +35,7 @@ class Quote(Base):
     cod_surcharge: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     cod_raw_total: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     cod_total: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
-    rounding_multiple: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    rounding_multiple: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 

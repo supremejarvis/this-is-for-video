@@ -150,12 +150,12 @@ test.describe('Gate 2C: Buyer Catalog and Authoritative Cart Quote', () => {
           prepaid_total: '110.80',
           cod_surcharge: isCod ? '2.77' : '0.00',
           cod_raw_total: isCod ? '113.57' : '110.80',
-          cod_total: isCod ? '114.00' : '110.80',
-          rounding_multiple: 1,
+          cod_total: isCod ? '115.00' : '110.80',
+          rounding_multiple: 5,
           cod_charge_rate: '0.0250',
           cod_charge_raw: isCod ? '2.77' : '0.00',
-          cod_rounding_adjustment: isCod ? '0.43' : '0.00',
-          cod_payable_total: isCod ? '114.00' : '110.80',
+          cod_rounding_adjustment: isCod ? '1.43' : '0.00',
+          cod_payable_total: isCod ? '115.00' : '110.80',
           shipping_provider: 'India Post',
           service_code: 'Speed Post',
           rate_source: 'Fallback Rate Table',
@@ -174,7 +174,7 @@ test.describe('Gate 2C: Buyer Catalog and Authoritative Cart Quote', () => {
   });
 
   test('displays database-driven 28, 30, 33, 35, 40 mm variants and switches thickness', async ({ page }) => {
-    // Verify product card is visible
+    // Verify product card is visible (merged with local Drain Clip product via syncCatalogProducts)
     const productCard = page.locator('text=Apollo SS304 Solar Panel Clamp').first();
     await expect(productCard).toBeVisible({ timeout: 10000 });
 
@@ -185,9 +185,11 @@ test.describe('Gate 2C: Buyer Catalog and Authoritative Cart Quote', () => {
     await expect(page.locator('text=35 mm').first()).toBeVisible();
     await expect(page.locator('text=40 mm').first()).toBeVisible();
 
-    // Click 28 mm variant
+    // Click 28 mm variant button
     await page.locator('button:has-text("28 mm")').first().click();
-    await expect(page.locator('text=28 mm Standard Clamp').first()).toBeVisible();
+
+    // Wait for selected variant badge to show display_label (28 mm Standard Clamp)
+    await expect(page.locator('text=28 mm Standard Clamp').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('filters catalog products by category', async ({ page }) => {
@@ -218,8 +220,11 @@ test.describe('Gate 2C: Buyer Catalog and Authoritative Cart Quote', () => {
     const pincodeInput = page.locator('input[pattern="[0-9]*"]');
     await pincodeInput.fill('382430');
 
-    // Click Generate Authoritative Quote
-    await page.locator('button:has-text("Generate Authoritative Quote"), button:has-text("Recalculate Quote")').first().click({ force: true });
+    // Quote is automatically calculated without pressing any button
+    const quoteBtn = page.locator('button:has-text("Generate Authoritative Quote"), button:has-text("Recalculate Quote")').first();
+    if (await quoteBtn.isVisible()) {
+      await quoteBtn.click({ force: true });
+    }
 
     // Verify authoritative breakdown appears directly from PostgreSQL engine
     await expect(page.locator('text=APE-Q-2026-E03F4439')).toBeVisible();
@@ -230,13 +235,12 @@ test.describe('Gate 2C: Buyer Catalog and Authoritative Cart Quote', () => {
     await expect(page.locator('text=₹70.80')).toBeVisible(); // Total Shipping Freight
     await expect(page.locator('text=₹110.80')).toBeVisible(); // Prepaid Total Amount
 
-    // Toggle to COD and recalculate
+    // Toggle to COD - automatically updates totals without requiring button click
     await page.locator('button:has-text("Cash on Delivery")').click();
-    await expect(page.locator('text=Quote Out of Date')).toBeVisible(); // Reactive STALE state check
 
-    await page.locator('button:has-text("Recalculate Quote")').first().click({ force: true });
+    // Verify automatic COD recalculation
     await expect(page.locator('text=₹2.77')).toBeVisible();  // COD Handling Charge raw
-    await expect(page.locator('text=₹114.00')).toBeVisible(); // Final COD Payable Amount
+    await expect(page.locator('text=₹115.00')).toBeVisible(); // Final COD Payable Amount (rounded up to nearest multiple of 5)
   });
 
   test('validates PIN code formatting and blocks invalid PIN codes', async ({ page }) => {

@@ -66,51 +66,16 @@ export interface CreateQuotePayload {
   payment_method?: 'PREPAID' | 'COD';
   base_shipping?: string;
   idempotency_key?: string;
+  rounding_multiple?: number;
 }
 
-const API_BASE = '/api/v1';
+import { quoteApi } from './api/quoteApi';
 
 export class QuoteService {
   /**
    * Generates an authoritative server-calculated quote for the current cart and destination pincode.
    */
   static async requestQuote(payload: CreateQuotePayload): Promise<AuthoritativeQuote> {
-    if (!payload.items || payload.items.length === 0) {
-      throw new Error('Cart must contain at least one item to generate a quote.');
-    }
-
-    if (!payload.destination_pincode || !/^[1-9][0-9]{5}$/.test(payload.destination_pincode.trim())) {
-      throw new Error('Valid 6-digit Indian PIN code required.');
-    }
-
-    const cleanPayload = {
-      items: payload.items.map((i) => ({
-        ...(i.variant_id ? { variant_id: i.variant_id } : {}),
-        ...(i.sku ? { sku: i.sku } : {}),
-        quantity: i.quantity,
-      })),
-      destination_pincode: payload.destination_pincode.trim(),
-      payment_method: payload.payment_method || 'PREPAID',
-      ...(payload.base_shipping ? { base_shipping: payload.base_shipping } : {}),
-      ...(payload.idempotency_key ? { idempotency_key: payload.idempotency_key } : {}),
-    };
-
-    const response = await fetch(`${API_BASE}/quotes`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(cleanPayload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const detail = errorData.detail || `Server error (HTTP ${response.status})`;
-      throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
-    }
-
-    const quote: AuthoritativeQuote = await response.json();
-    return quote;
+    return quoteApi.requestQuote(payload);
   }
 }

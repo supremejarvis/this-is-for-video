@@ -1,5 +1,0 @@
-src/components/checkout/CheckoutModal.tsx(132,6): error TS17008: JSX element 'div' has no corresponding closing tag.
-src/components/checkout/CheckoutModal.tsx(283,16): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
-src/components/checkout/CheckoutModal.tsx(286,13): error TS1005: ')' expected.
-src/components/checkout/CheckoutModal.tsx(632,1): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
-src/components/checkout/CheckoutModal.tsx(633,1): error TS1005: '</' expected.

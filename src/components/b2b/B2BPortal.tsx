@@ -49,6 +49,14 @@ export const B2BPortal: React.FC = () => {
             sellerName: 'Apex Direct Industrial',
             fulfillmentType: 'FBF'
           };
+
+          // Compute wholesale tiered price based on ordered volume
+          const tiers = variant.b2bTierPricing || [];
+          const applicableTier = [...tiers]
+            .reverse()
+            .find((t) => qty >= t.minQty) || tiers[0];
+          const unitPrice = applicableTier ? applicableTier.pricePerUnit : variant.b2cPrice;
+
           addToCart({
             sku: variant.sku,
             parentAsin: parentProd.asin,
@@ -56,7 +64,7 @@ export const B2BPortal: React.FC = () => {
             variantTitle: variant.title,
             attributes: variant.attributes as Record<string, string>,
             imageUrl: variant.images[0],
-            unitPrice: variant.b2cPrice,
+            unitPrice: unitPrice,
             mrp: variant.mrp,
             gstRate: variant.gstRatePercent,
             hsnCode: variant.hsnCode,

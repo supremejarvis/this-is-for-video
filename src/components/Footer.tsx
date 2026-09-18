@@ -36,6 +36,8 @@ export function Footer() {
               src="/logo.webp" 
               alt="Apollo Engineering Logo" 
               className="h-10 w-auto object-contain transition-transform group-hover:scale-105 pointer-events-none select-none"
+              loading="lazy"
+              decoding="async"
             />
           </Link>
 

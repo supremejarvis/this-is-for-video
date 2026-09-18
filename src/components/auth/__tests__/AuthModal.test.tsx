@@ -28,8 +28,8 @@ describe('APE Store Customer Login Modal Redesign', () => {
   it('renders clean Apollo Engineering customer branding and text', () => {
     render(<AuthModal />);
 
-    expect(screen.getByRole('heading', { name: /Welcome to APE Store/i })).toBeInTheDocument();
-    expect(screen.getByText(/Sign in to view your orders, invoices and dispatch updates/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Mobile OTP Instant Sign-In/i })).toBeInTheDocument();
+    expect(screen.getByText(/Instant access via 10-digit mobile number/i)).toBeInTheDocument();
     expect(screen.getByAltText(/Apollo Engineering/i)).toBeInTheDocument();
   });
 
@@ -116,22 +116,15 @@ describe('APE Store Customer Login Modal Redesign', () => {
     expect(screen.getByRole('button', { name: /Change Number/i })).toBeInTheDocument();
   });
 
-  it('allows switching to Create Account (Signup) and back to Sign In', () => {
+  it('informs customers that upfront registration is not required', () => {
     render(<AuthModal />);
 
-    const createAccountBtn = screen.getByRole('button', { name: /Create Account/i });
-    fireEvent.click(createAccountBtn);
+    // Verify frictionless no-registration guidance is displayed
+    expect(screen.getByText(/No Upfront Registration Required/i)).toBeInTheDocument();
+    expect(screen.getByText(/You can add your delivery name, address, and B2B GST details during checkout or in your profile/i)).toBeInTheDocument();
 
-    // Now in Sign Up view
-    expect(screen.getByRole('heading', { name: /Create Your Account/i })).toBeInTheDocument();
-    expect(screen.getByText(/Full Name \*/i)).toBeInTheDocument();
-    expect(screen.getByText(/Email Address \*/i)).toBeInTheDocument();
-
-    // Switch back to Sign In
-    const signInBtn = screen.getByRole('button', { name: /Sign In/i });
-    fireEvent.click(signInBtn);
-
-    expect(screen.getByRole('heading', { name: /Welcome to APE Store/i })).toBeInTheDocument();
+    // Verify upfront full name and email fields are NOT on the initial sign-in modal
+    expect(screen.queryByLabelText(/Full Name \*/i)).not.toBeInTheDocument();
   });
 
   it('closes modal when close button (X) is clicked', () => {

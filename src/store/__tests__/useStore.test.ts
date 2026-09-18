@@ -62,6 +62,21 @@ describe('Zustand State Store Actions & Order Workflow', () => {
     expect(org.kycStatus).toBe('VERIFIED');
   });
 
+  it('clears B2B organization details and reverts to Retail B2C mode', () => {
+    useStore.getState().updateOrgDetails({
+      companyName: 'Test Solar Infra',
+      gstin: '24ABCDE1234F1Z5'
+    });
+    expect(useStore.getState().appMode).toBe('B2B');
+    expect(useStore.getState().currentUser.role).toBe('B2B_BUYER');
+
+    useStore.getState().clearOrgDetails();
+    expect(useStore.getState().appMode).toBe('B2C');
+    expect(useStore.getState().currentUser.role).toBe('B2C_CUSTOMER');
+    expect(useStore.getState().currentOrg.companyName).toBe('');
+    expect(useStore.getState().currentOrg.gstin).toBe('');
+  });
+
   it('creates order with NET_30_PO payment method and advances shipment milestones', () => {
     const item: CartItem = {
       sku: 'AE-SPRINK-SS304-01',
@@ -213,4 +228,61 @@ describe('Zustand State Store Actions & Order Workflow', () => {
     expect(stored).toBeDefined();
     expect(stored?.variants.length).toBe(combined?.variants.length);
   });
+
+  it('synchronizes admin product title and category edits directly to apiCatalogProducts', () => {
+    const products = useStore.getState().products;
+    const testProd = products[0];
+    const newTitle = 'SS304 Premium High-Pressure Cleaning Sprinkler';
+
+    useStore.getState().updateProduct(testProd.asin, {
+      title: newTitle,
+      category: 'SS304 GRADE',
+    });
+
+    // Check products state
+    const updatedProd = useStore.getState().products.find(p => p.asin === testProd.asin);
+    expect(updatedProd?.title).toBe(newTitle);
+
+    // Check apiCatalogProducts state (which buyer catalog renders)
+    const apiProds = useStore.getState().apiCatalogProducts;
+    const matchingApi = apiProds.find(p => p.id === testProd.asin || p.rawProduct?.asin === testProd.asin);
+    expect(matchingApi).toBeDefined();
+    expect(matchingApi?.name).toBe(newTitle);
+  });
+
+  it('permanently removes deleted product from both products and apiCatalogProducts', () => {
+    const products = useStore.getState().products;
+    const prodToDelete = products[products.length - 1];
+    const targetAsin = prodToDelete.asin;
+
+    useStore.getState().deleteProduct(targetAsin);
+
+    // Verify removed from products
+    expect(useStore.getState().products.some(p => p.asin === targetAsin)).toBe(false);
+
+    // Verify removed from apiCatalogProducts (buyer catalog)
+    expect(useStore.getState().apiCatalogProducts.some(p => p.id === targetAsin || p.rawProduct?.asin === targetAsin)).toBe(false);
+  });
+
+  it('persists buyer user profile name, email, and address details', () => {
+    const newUser = {
+      id: 'usr_buyer_test_101',
+      name: 'Rajesh Patel',
+      email: 'rajesh.patel@example.com',
+      phone: '9876543210',
+      role: 'B2C_CUSTOMER' as const,
+      isPrime: false,
+      createdAt: new Date().toISOString()
+    };
+
+    useStore.getState().setCurrentUser(newUser);
+    expect(useStore.getState().currentUser.name).toBe('Rajesh Patel');
+    expect(useStore.getState().currentUser.email).toBe('rajesh.patel@example.com');
+    expect(useStore.getState().authStatus).toBe('AUTHENTICATED');
+
+    // Update profile
+    useStore.getState().updateUserProfile({ name: 'Rajesh K. Patel' });
+    expect(useStore.getState().currentUser.name).toBe('Rajesh K. Patel');
+  });
 });
+

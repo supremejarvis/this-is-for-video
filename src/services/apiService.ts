@@ -5,6 +5,7 @@
  */
 
 import { ORIGIN_HUB_PINCODE, ORIGIN_HUB_NAME } from '../constants';
+import { orderApi } from './api/orderApi';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -194,7 +195,7 @@ export const apiService = {
    * Resilient Web3Forms Contact Submission with transparent local queue fallback
    */
   async submitContact(formData: Record<string, string>): Promise<ApiResponse<{ message: string; isLocalQueue?: boolean }>> {
-    const accessKey = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY || 'aca2959e-73bb-4608-965d-1d0a92dacd9b';
+    const accessKey = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY || '';
 
     return fetchWithRetry(async () => {
       try {
@@ -303,28 +304,16 @@ export const apiService = {
     carrier?: string
   ): Promise<ApiResponse<any>> {
     return fetchWithRetry(async () => {
-      const response = await fetch(`/api/v1/orders/${encodeURIComponent(orderId)}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          order_status: status === 'DELIVERED' ? 'COMPLETED' : 'CONFIRMED',
-          fulfilment_status: status,
-          awb_number: awbNumber,
-          carrier: carrier || 'INDIA_POST'
-        })
+      const data = await orderApi.transitionStatus(orderId, {
+        order_status: status === 'DELIVERED' ? 'COMPLETED' : 'CONFIRMED',
+        fulfilment_status: status,
+        awb_number: awbNumber,
+        carrier: carrier || 'INDIA_POST',
       });
-
-      if (!response.ok) {
-        throw new Error(`Server returned status ${response.status}`);
-      }
-
-      const data = await response.json();
       return {
         success: true,
         data,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }, 1, 300);
   }

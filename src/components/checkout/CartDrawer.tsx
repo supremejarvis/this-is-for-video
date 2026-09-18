@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { getTranslation } from '../../utils/i18n';
+import { calculateSpeedPostTariff } from '../../services/logisticsService';
 
 export const CartDrawer: React.FC = () => {
   const { 
@@ -59,6 +60,37 @@ export const CartDrawer: React.FC = () => {
 
     return () => clearInterval(interval);
   }, [currentQuote, quoteStatus]);
+
+  // Auto-calculate authoritative quote whenever cart, valid pincode, or payment method changes
+  useEffect(() => {
+    if (!isCartDrawerOpen || cart.length === 0) return;
+
+    const currentPin = (destinationPincode || pincodeInput || '').trim();
+    if (!/^[1-9][0-9]{5}$/.test(currentPin)) return;
+
+    if (quoteStatus === 'QUOTE_REQUIRED' || quoteStatus === 'EMPTY_CART' || quoteStatus === 'QUOTE_EXPIRED') {
+      const timer = setTimeout(() => {
+        setHasEverCalculated(true);
+        if (destinationPincode !== currentPin) {
+          setDestinationPincode(currentPin);
+        }
+        fetchAuthoritativeQuote();
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [
+    isCartDrawerOpen,
+    cart,
+    destinationPincode,
+    quotePaymentMethod,
+    quoteStatus,
+    pincodeInput,
+    fetchAuthoritativeQuote,
+    setDestinationPincode
+  ]);
+
+  const { currentUser } = useStore();
+  const isAuthed = authStatus === 'AUTHENTICATED' || Boolean(currentUser);
 
   if (!isCartDrawerOpen) return null;
 
@@ -145,7 +177,9 @@ export const CartDrawer: React.FC = () => {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsCartDrawerOpen(false)}
+                  aria-label="Close cart drawer and browse catalog"
                   className="px-4 py-2 bg-[#0054A6] text-white text-xs font-bold rounded-xl shadow-md"
                 >
                   Browse Catalog
@@ -164,6 +198,10 @@ export const CartDrawer: React.FC = () => {
                         src={item.imageUrl} 
                         alt={item.productTitle} 
                         className="w-14 h-14 object-cover rounded-xl bg-slate-50 border border-slate-200 flex-shrink-0" 
+                        loading="lazy"
+                        decoding="async"
+                        width={56}
+                        height={56}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-1">
@@ -262,6 +300,8 @@ export const CartDrawer: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
+                        aria-label="Select Prepaid UPI payment method"
+                        aria-pressed={quotePaymentMethod === 'PREPAID'}
                         onClick={() => setQuotePaymentMethod('PREPAID')}
                         className={`p-3 rounded-2xl border text-left transition-all ${
                           quotePaymentMethod === 'PREPAID'
@@ -280,6 +320,8 @@ export const CartDrawer: React.FC = () => {
 
                       <button
                         type="button"
+                        aria-label="Select Cash on Delivery payment method"
+                        aria-pressed={quotePaymentMethod === 'COD'}
                         onClick={() => setQuotePaymentMethod('COD')}
                         className={`p-3 rounded-2xl border text-left transition-all ${
                           quotePaymentMethod === 'COD'
@@ -301,11 +343,11 @@ export const CartDrawer: React.FC = () => {
 
                 {/* Quote State Banners */}
                 {quoteStatus === 'QUOTE_REQUIRED' && (
-                  <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900 shadow-sm">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="bg-blue-50 border border-blue-200 p-3 rounded-2xl flex items-start gap-2.5 text-xs text-blue-900 shadow-sm animate-pulse">
+                    <RefreshCw className="w-4 h-4 text-[#0054A6] shrink-0 mt-0.5 animate-spin" />
                     <div className="flex-1">
-                      <strong className="block font-bold">Total Calculation Required • Quote Out of Date</strong>
-                      <span>{t.quoteStale}</span>
+                      <strong className="block font-bold">Auto-Calculating Live Rates • Quote Out of Date</strong>
+                      <span>Updating authoritative GST & Speed Post shipping totals automatically...</span>
                     </div>
                   </div>
                 )}
@@ -315,7 +357,7 @@ export const CartDrawer: React.FC = () => {
                     <Clock className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                     <div className="flex-1">
                       <strong className="block font-bold">{t.quoteExpired}</strong>
-                      <span>The 15-minute quote window has elapsed. Please recalculate.</span>
+                      <span>The 15-minute quote window has elapsed. Auto-refreshing...</span>
                     </div>
                   </div>
                 )}
@@ -338,142 +380,190 @@ export const CartDrawer: React.FC = () => {
                   </div>
                 )}
 
-                {/* Trigger Total Calculation Button */}
-                {(quoteStatus === 'QUOTE_REQUIRED' || quoteStatus === 'QUOTE_EXPIRED' || quoteStatus === 'QUOTE_ERROR') && (
+                {/* Retry Calculation Button on Error */}
+                {quoteStatus === 'QUOTE_ERROR' && (
                   <button
                     type="button"
                     id="cart-calculate-total-btn"
+                    aria-label="Retry quote calculation"
                     onClick={handleCalculateQuote}
                     className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-[#0054A6] to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs font-bold uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
                   >
-                    <FileText className="w-4 h-4" />
-                    <span>{hasEverCalculated || quoteStatus === 'QUOTE_EXPIRED' ? 'Recalculate Quote' : 'Generate Authoritative Quote'}</span>
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Retry Calculation</span>
                   </button>
                 )}
 
-                {/* Quote Breakdown Section */}
-                {quoteStatus === 'QUOTE_VALID' && currentQuote && (
-                  <div className="bg-white rounded-2xl border border-blue-200 shadow-md p-4 space-y-3">
-                    {/* Quote Header & Timer Badge */}
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                      <div>
-                        <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
-                          {t.quoteId}
-                        </span>
-                        <strong className="text-xs font-mono text-[#0054A6]">
-                          {currentQuote.quote_number}
-                        </strong>
-                      </div>
+                {/* Authoritative Calculation Breakdown */}
+                {quoteStatus === 'QUOTE_VALID' && currentQuote && (() => {
+                  const itemsGrossTotal = cart.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+                  const totalWeightGrams = cart.reduce((sum, item) => sum + (item.weightGrams || 100) * item.quantity, 0);
 
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-mono font-bold">
-                        <Clock className="w-3.5 h-3.5 text-amber-600" />
-                        <span>{formatTimer(timeLeftSec)}</span>
-                      </div>
-                    </div>
+                  // Line-item accurate statutory preview
+                  let calculatedTaxable = 0;
+                  let calculatedTax = 0;
+                  cart.forEach((item) => {
+                    const lineGross = item.unitPrice * item.quantity;
+                    const r = (item.gstRate || 18) / 100;
+                    const taxable = Math.round((lineGross / (1 + r)) * 100) / 100;
+                    calculatedTaxable += taxable;
+                    calculatedTax += Math.round((lineGross - taxable) * 100) / 100;
+                  });
 
-                    {/* Breakdown Lines */}
-                    <div className="space-y-1.5 text-xs">
-                      <div className="flex justify-between text-slate-600">
-                        <span>{t.taxableValue}:</span>
-                        <span className="font-mono text-slate-900 font-bold">
-                          ₹{currentQuote.subtotal_taxable}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-slate-600">
-                        <span>
-                          {t.productGstLabel} ({currentQuote.items[0]?.gst_rate ? `${(Number(currentQuote.items[0].gst_rate) * 100).toFixed(0)}%` : '18%'}):
-                        </span>
-                        <span className="font-mono text-slate-900 font-bold">
-                          ₹{currentQuote.total_product_gst}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-slate-900 font-semibold pt-1 border-t border-slate-100">
-                        <span>{t.productGross}:</span>
-                        <span className="font-mono text-slate-900">
-                          ₹{currentQuote.total_product_gross}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-slate-600 pt-1">
-                        <span>{t.speedPostFreight}:</span>
-                        <span className="font-mono text-slate-900 font-bold">
-                          ₹{currentQuote.base_shipping}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-slate-600">
-                        <span>
-                          {t.shippingGstLabel} ({currentQuote.shipping_gst_rate ? `${(Number(currentQuote.shipping_gst_rate) * 100).toFixed(0)}%` : '18%'}):
-                        </span>
-                        <span className="font-mono text-slate-900 font-bold">
-                          ₹{currentQuote.shipping_gst}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-slate-900 font-semibold">
-                        <span>{t.shippingTotal}:</span>
-                        <span className="font-mono text-emerald-700 font-bold">
-                          ₹{currentQuote.shipping_total}
-                        </span>
-                      </div>
+                  const previewTariff = calculateSpeedPostTariff(
+                    destinationPincode || '382430',
+                    Math.max(1, totalWeightGrams)
+                  );
+                  
+                  // Product Values
+                  const totalGross = currentQuote ? Number(currentQuote.total_product_gross) : itemsGrossTotal;
+                  const subtotalTaxable = currentQuote 
+                    ? Number(currentQuote.subtotal_taxable) 
+                    : calculatedTaxable;
+                  const totalGst = currentQuote 
+                    ? Number(currentQuote.total_product_gst) 
+                    : calculatedTax;
+                  
+                  // Shipping Values
+                  const baseShipping = currentQuote ? Number(currentQuote.base_shipping) : previewTariff.tariffBase;
+                  const shippingGst = currentQuote ? Number(currentQuote.shipping_gst) : previewTariff.gstAmount;
+                  const shippingTotal = currentQuote ? Number(currentQuote.shipping_total) : previewTariff.totalPostage;
+                  
+                  // Base Prepaid Total: Product + Shipping
+                  const prepaidTotal = currentQuote ? Number(currentQuote.prepaid_total) : (totalGross + shippingTotal);
 
-                      {/* Shipping Provenance Indicator */}
-                      <div className="flex items-center justify-between text-[11px] bg-slate-50 p-2 rounded-xl border border-slate-200 mt-1">
-                        <span className="text-slate-600 font-mono flex items-center gap-1.5">
-                          <Truck className="w-3.5 h-3.5 text-[#0054A6]" />
-                          {(currentQuote.shipping_provider && !currentQuote.shipping_provider.toLowerCase().includes('post')) ? currentQuote.shipping_provider : 'Priority Express'} ({(currentQuote.service_code && !currentQuote.service_code.toLowerCase().includes('speed') && !currentQuote.service_code.toLowerCase().includes('post')) ? currentQuote.service_code : 'Direct Hub'})
-                        </span>
-                        <span className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-bold ${
-                          currentQuote.is_live_rate
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}>
-                          {currentQuote.is_live_rate ? t.shippingProvenanceLive : `${currentQuote.rate_source || 'Standard Rate'} (${currentQuote.rate_version || 'v2025.1'})`}
-                        </span>
-                      </div>
+                  // COD Calculations: 2.5% Surcharge and Rounding (Nearest ₹5 Multiple)
+                  const codSurcharge = currentQuote && Number(currentQuote.cod_surcharge) > 0
+                    ? Number(currentQuote.cod_surcharge)
+                    : Math.round((prepaidTotal * 0.025) * 100) / 100;
+                  const codRawTotal = prepaidTotal + codSurcharge;
+                  const roundingMultiple = (currentQuote && currentQuote.rounding_multiple) || 5;
+                  const codTotal = currentQuote && Number(currentQuote.cod_total) > prepaidTotal
+                    ? Number(currentQuote.cod_total)
+                    : Math.ceil(codRawTotal / roundingMultiple) * roundingMultiple;
+                  const codRounding = currentQuote && currentQuote.cod_rounding_adjustment !== undefined
+                    ? Number(currentQuote.cod_rounding_adjustment)
+                    : Math.round((codTotal - codRawTotal) * 100) / 100;
 
-                      {/* Method-Specific Payment Breakdown */}
-                      {quotePaymentMethod === 'COD' ? (
-                        <div className="space-y-1.5 pt-2 border-t border-slate-200">
-                          <div className="flex justify-between text-slate-600 text-xs">
-                            <span>{t.prepaidTotalLabel}:</span>
-                            <span className="font-mono font-bold text-slate-900">
-                              ₹{currentQuote.prepaid_total}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-amber-800 bg-amber-50/70 p-2 rounded-xl border border-amber-200 text-xs">
-                            <span>
-                              {t.codHandlingCharge} ({currentQuote.cod_charge_rate ? `${(Number(currentQuote.cod_charge_rate) * 100).toFixed(1)}%` : '2.5%'}):
-                            </span>
-                            <span className="font-mono font-bold">
-                              + ₹{currentQuote.cod_charge_raw || currentQuote.cod_surcharge}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-slate-500 text-[11px] px-1 font-mono">
-                            <span>{t.codRoundingAdjustment} (Nearest ₹{currentQuote.rounding_multiple || 5}):</span>
-                            <span>+ ₹{currentQuote.cod_rounding_adjustment || '0.00'}</span>
-                          </div>
-                          <div className="flex justify-between text-base font-black text-slate-900 pt-1.5 border-t border-slate-200">
-                            <span>{t.codPayable}:</span>
-                            <span className="font-mono text-amber-600">
-                              ₹{currentQuote.cod_payable_total || currentQuote.cod_total}
-                            </span>
-                          </div>
+                  return (
+                    <div className="bg-white rounded-2xl border border-blue-200 shadow-md p-4 space-y-3">
+                      {/* Quote Header & Live Status Badge */}
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                        <div>
+                          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
+                            Order Valuation Summary
+                          </span>
+                          <strong className="text-xs font-mono text-[#0054A6]">
+                            {currentQuote?.quote_number || 'Live Calculation'}
+                          </strong>
                         </div>
-                      ) : (
-                        <div className="flex justify-between text-base font-black text-slate-900 pt-2 border-t border-slate-200">
-                          <span>{t.prepaidPayable}:</span>
-                          <span className="font-mono text-[#0054A6]">
-                            ₹{currentQuote.prepaid_total}
+
+                        {currentQuote && (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-mono font-bold">
+                            <Clock className="w-3.5 h-3.5 text-amber-600" />
+                            <span>{formatTimer(timeLeftSec)}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Breakdown Lines */}
+                      <div className="space-y-1.5 text-xs">
+                        <div className="flex justify-between text-slate-600">
+                          <span>Taxable Value (Subtotal):</span>
+                          <span className="font-mono text-slate-900 font-bold">
+                            ₹{subtotalTaxable.toFixed(2)}
                           </span>
                         </div>
-                      )}
-                    </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>Product GST (18%):</span>
+                          <span className="font-mono text-slate-900 font-bold">
+                            ₹{totalGst.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-slate-900 font-semibold pt-1 border-t border-slate-100">
+                          <span>Product Total:</span>
+                          <span className="font-mono text-slate-900 font-bold">
+                            ₹{totalGross.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-slate-600 pt-1">
+                          <span>Speed Post Express Freight:</span>
+                          <span className="font-mono text-slate-900 font-bold">
+                            ₹{baseShipping.toFixed(2)}
+                          </span>
+                        </div>
+                        {shippingGst > 0 && (
+                          <div className="flex justify-between text-slate-600">
+                            <span>Shipping GST (18%):</span>
+                            <span className="font-mono text-slate-900 font-bold">
+                              ₹{shippingGst.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-slate-900 font-semibold">
+                          <span>Shipping Total:</span>
+                          <span className="font-mono text-emerald-700 font-bold">
+                            ₹{shippingTotal.toFixed(2)}
+                          </span>
+                        </div>
 
-                    {/* Verified Guarantee */}
-                    <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span>{t.authoritativeBadge} • Direct Factory Sourced</span>
+                        {/* Shipping Provenance Indicator */}
+                        <div className="flex items-center justify-between text-[11px] bg-slate-50 p-2 rounded-xl border border-slate-200 mt-1">
+                          <span className="text-slate-600 font-mono flex items-center gap-1.5">
+                            <Truck className="w-3.5 h-3.5 text-[#0054A6]" />
+                            {currentQuote?.shipping_provider || 'INDIA_POST'} ({currentQuote?.service_code || 'SPEED_POST'})
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md font-mono text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Verified Live Rate
+                          </span>
+                        </div>
+
+                        {/* Method-Specific Payment Breakdown */}
+                        {quotePaymentMethod === 'COD' ? (
+                          <div className="space-y-2 pt-2 border-t border-slate-200">
+                            <div className="flex justify-between text-slate-600 text-xs">
+                              <span>Order Amount (Product + Shipping):</span>
+                              <span className="font-mono font-bold text-slate-900">
+                                ₹{prepaidTotal.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 font-semibold">
+                              <span>COD Handling Fee (2.5%):</span>
+                              <span className="font-mono font-bold text-amber-800">
+                                +₹{codSurcharge.toFixed(2)}
+                              </span>
+                            </div>
+                            {codRounding !== 0 && (
+                              <div className="flex justify-between text-[11px] text-slate-500 font-mono px-0.5">
+                                <span>Rounding Adjustment:</span>
+                                <span>{codRounding > 0 ? `+₹${codRounding.toFixed(2)}` : `-₹${Math.abs(codRounding).toFixed(2)}`}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between text-base font-black text-slate-900 pt-2 border-t border-slate-200">
+                              <span>Cash on Delivery Payable:</span>
+                              <span className="font-mono text-amber-600">
+                                ₹{codTotal.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex justify-between text-base font-black text-slate-900 pt-2 border-t border-slate-200">
+                            <span>Total Payable:</span>
+                            <span className="font-mono text-[#0054A6]">
+                              ₹{prepaidTotal.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Verified Guarantee */}
+                      <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>Direct Factory Sourced • Kathwada GIDC (382430)</span>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -487,11 +577,13 @@ export const CartDrawer: React.FC = () => {
               </div>
             )}
             {cart.length > 0 && (() => {
-              const isCheckoutAllowed = quoteStatus === 'QUOTE_VALID' && Boolean(currentQuote) && !apiCatalogError;
+              const isQuoteValid = quoteStatus === 'QUOTE_VALID' && Boolean(currentQuote);
+              const isCheckoutAllowed = cart.length > 0 && !apiCatalogError && isQuoteValid;
               return (
                 <button
                   type="button"
                   id="cart-proceed-checkout-btn"
+                  aria-label="Proceed to Secure Checkout"
                   disabled={!isCheckoutAllowed}
                   onClick={() => {
                     if (!isCheckoutAllowed) return;

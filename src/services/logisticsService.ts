@@ -96,8 +96,8 @@ export const PINCODE_DIRECTORY: Record<string, { district: string; state: string
   }
 };
 
-// In-memory cache for fast responsive lookups
-const pincodeMemoryCache: Record<string, { district: string; state: string; stateCode: string; postOffices: PostOfficeInfo[] }> = {};
+// In-memory cache for fast responsive lookups (pre-seeded with standard hubs to prevent slow external API hops)
+const pincodeMemoryCache: Record<string, { district: string; state: string; stateCode: string; postOffices: PostOfficeInfo[] }> = { ...PINCODE_DIRECTORY };
 
 /**
  * Official 2-digit GST State Code mapping
@@ -334,69 +334,57 @@ export function calculateSpeedPostTariff(
   destPincode: string,
   weightGrams: number
 ): {
+  distanceZone: 'LOCAL' | 'INTRASTATE' | 'METRO' | 'REST_OF_INDIA';
+  deliveryDaysEstimate: number;
   tariffBase: number;
   gstAmount: number;
   totalPostage: number;
-  distanceZone: 'LOCAL' | 'INTRASTATE' | 'METRO' | 'REST_OF_INDIA';
-  deliveryDaysEstimate: number;
 } {
   const cleanPin = (destPincode || '').trim();
   const isLocal = isLocalPincode(cleanPin);
-  const isIntrastate = !isLocal && (cleanPin.startsWith('36') || cleanPin.startsWith('37') || cleanPin.startsWith('38') || cleanPin.startsWith('39'));
-  const isMetro = !isLocal && !isIntrastate && isMetroPincode(cleanPin);
+  const isMetro = isMetroPincode(cleanPin);
+  const isIntrastate = !isLocal && !isMetro && (cleanPin.startsWith('36') || cleanPin.startsWith('37') || cleanPin.startsWith('38') || cleanPin.startsWith('39'));
 
   let distanceZone: 'LOCAL' | 'INTRASTATE' | 'METRO' | 'REST_OF_INDIA' = 'REST_OF_INDIA';
-  let base50g = 45;
-  let add50gTo200g = 15;
-  let add200gTo500g = 20;
-  let addPer500gThereafter = 25;
   let deliveryDaysEstimate = 3;
+  let baseTariff = 0;
 
   if (isLocal) {
     distanceZone = 'LOCAL';
-    base50g = 15;
-    add50gTo200g = 5;
-    add200gTo500g = 8;
-    addPer500gThereafter = 10;
     deliveryDaysEstimate = 1;
-  } else if (isIntrastate) {
-    distanceZone = 'INTRASTATE';
-    base50g = 25;
-    add50gTo200g = 8;
-    add200gTo500g = 12;
-    addPer500gThereafter = 15;
-    deliveryDaysEstimate = 1;
+    // LOCAL: First 250g = ₹15, additional 250g = ₹13 (minimum chargeable 250g, but first 250g after 0 adds ₹13)
+    const units250 = weightGrams > 0 ? Math.max(2, Math.ceil(weightGrams / 250)) : 1;
+    baseTariff = 15 + Math.max(0, units250 - 1) * 13;
   } else if (isMetro) {
     distanceZone = 'METRO';
-    base50g = 35;
-    add50gTo200g = 12;
-    add200gTo500g = 15;
-    addPer500gThereafter = 20;
     deliveryDaysEstimate = 2;
+    // METRO: First 500g = ₹62, additional 500g = ₹20
+    const units500 = Math.max(1, Math.ceil(weightGrams / 500));
+    baseTariff = 62 + Math.max(0, units500 - 1) * 20;
+  } else if (isIntrastate) {
+    distanceZone = 'INTRASTATE';
+    deliveryDaysEstimate = 1;
+    // INTRASTATE: First 500g = ₹25, additional 500g = ₹8
+    const units500 = Math.max(1, Math.ceil(weightGrams / 500));
+    baseTariff = 25 + Math.max(0, units500 - 1) * 8;
+  } else {
+    distanceZone = 'REST_OF_INDIA';
+    deliveryDaysEstimate = 3;
+    // REST_OF_INDIA: First 500g = ₹45, additional 500g = ₹15
+    const units500 = Math.max(1, Math.ceil(weightGrams / 500));
+    baseTariff = 45 + Math.max(0, units500 - 1) * 15;
   }
 
-  const effectiveWeight = Math.max(0, weightGrams);
-  let tariffBase = base50g;
-  if (effectiveWeight > 50 && effectiveWeight <= 200) {
-    tariffBase = base50g + add50gTo200g;
-  } else if (effectiveWeight > 200 && effectiveWeight <= 500) {
-    tariffBase = base50g + add50gTo200g + add200gTo500g;
-  } else if (effectiveWeight > 500) {
-    const extraWeight = effectiveWeight - 500;
-    const extraSlabs = Math.ceil(extraWeight / 500);
-    tariffBase = base50g + add50gTo200g + add200gTo500g + (extraSlabs * addPer500gThereafter);
-  }
-
-  const taxCalculation = calculateExclusiveGst(tariffBase, DEFAULT_GST_RATE_PERCENT, isIntrastate || isLocal);
-  const gstAmount = taxCalculation.totalTax;
-  const totalPostage = taxCalculation.grossAmount;
+  const gstRate = 0.18;
+  const gstAmount = Math.round(baseTariff * gstRate * 100) / 100;
+  const totalPostage = Math.round((baseTariff + gstAmount) * 100) / 100;
 
   return {
-    tariffBase,
-    gstAmount,
-    totalPostage,
     distanceZone,
-    deliveryDaysEstimate
+    deliveryDaysEstimate,
+    tariffBase: baseTariff,
+    gstAmount,
+    totalPostage
   };
 }
 

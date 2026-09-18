@@ -7,7 +7,7 @@ import { PostOfficeInfo } from '../../types';
 export const AddressModal: React.FC = () => {
   const { 
     isAddressModalOpen, setIsAddressModalOpen, 
-    addresses, activeAddress, setActiveAddress, addAddress, deleteAddress, appMode, currentOrg 
+    addresses, activeAddress, setActiveAddress, addAddress, deleteAddress, appMode, currentOrg, currentUser 
   } = useStore();
 
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -28,10 +28,22 @@ export const AddressModal: React.FC = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (pincode.length === 6) {
+    if (isAddressModalOpen && addresses.length === 0) {
+      setIsCreatingNew(true);
+      if (currentUser?.name && !currentUser.name.startsWith('Customer ')) {
+        setFullName(currentUser.name);
+      }
+      if (currentUser?.phone) {
+        setPhone(currentUser.phone);
+      }
+    }
+  }, [isAddressModalOpen, addresses.length, currentUser]);
+
+  useEffect(() => {
+    if (isAddressModalOpen && pincode.length === 6) {
       handlePincodeLookup(pincode);
     }
-  }, [pincode]);
+  }, [pincode, isAddressModalOpen]);
 
   const handlePincodeLookup = async (pin: string) => {
     setIsLoadingPincode(true);
@@ -54,10 +66,13 @@ export const AddressModal: React.FC = () => {
     e.preventDefault();
     if (!selectedPostOffice) return;
 
+    const trimmedName = fullName.trim();
+    const trimmedPhone = phone.trim();
+
     addAddress({
-      userId: 'u_active',
-      fullName,
-      phone,
+      userId: currentUser?.id || 'u_active',
+      fullName: trimmedName,
+      phone: trimmedPhone,
       addressType,
       flatBuilding,
       streetArea,
@@ -67,9 +82,26 @@ export const AddressModal: React.FC = () => {
       state,
       stateCode,
       isDefault: true,
-      gstin: addressType === 'WAREHOUSE' || addressType === 'OFFICE' ? gstin || currentOrg.gstin : undefined,
+      gstin: addressType === 'WAREHOUSE' || addressType === 'OFFICE' || gstin ? gstin || currentOrg.gstin : undefined,
       dockInstructions: addressType === 'WAREHOUSE' ? dockInstructions : undefined
     });
+
+    // Auto-update customer profile name & phone if currently generic!
+    if (trimmedName && (!currentUser?.name || currentUser.name.startsWith('Customer ') || currentUser.name === 'Valued Customer')) {
+      useStore.getState().updateUserProfile({
+        name: trimmedName,
+        phone: trimmedPhone || currentUser?.phone
+      });
+    }
+
+    // If B2B GSTIN or Organization is supplied, automatically upgrade to B2B
+    if (gstin && gstin.trim()) {
+      useStore.getState().updateOrgDetails({
+        gstin: gstin.trim().toUpperCase(),
+        companyName: (addressType === 'OFFICE' || addressType === 'WAREHOUSE') ? trimmedName : currentOrg.companyName
+      });
+      useStore.getState().setAppMode('B2B');
+    }
 
     setIsCreatingNew(false);
     setIsAddressModalOpen(false);

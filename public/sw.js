@@ -32,8 +32,10 @@ self.addEventListener('activate', (event) => {
 
 // Fetch: network-first strategy with cache fallback
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests and API calls
+  // Skip non-GET requests, non-http(s) schemes, and API calls
   if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  if (!['http:', 'https:'].includes(url.protocol)) return;
   if (event.request.url.includes('/api/')) return;
   if (event.request.url.includes('msg91')) return;
   if (event.request.url.includes('razorpay')) return;

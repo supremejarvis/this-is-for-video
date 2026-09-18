@@ -120,9 +120,9 @@ export const StorePage: React.FC = () => {
           </div>
 
           {/* Massive SOLAR ENGINEERED Title */}
-          <h1 className="font-display text-5xl sm:text-7xl md:text-8xl font-black leading-[0.92] tracking-tighter mb-4 text-deep-blue">
+          <h1 className="font-display text-5xl sm:text-7xl md:text-8xl font-black leading-[1.1] tracking-tighter mb-4 text-deep-blue">
             SOLAR<br />
-            <span className="bg-gradient-to-r from-brand-blue via-solar-gold to-accent bg-clip-text text-transparent">
+            <span className="inline-block bg-gradient-to-r from-brand-blue via-solar-gold to-accent bg-clip-text text-transparent box-decoration-clone">
               ENGINEERED
             </span>
           </h1>

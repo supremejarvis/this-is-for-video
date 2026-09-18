@@ -9,6 +9,7 @@ import { useStore } from '../../store/useStore';
 import { ORIGIN_HUB_PINCODE, ORIGIN_HUB_NAME } from '../../services/logisticsService';
 import { msg91OtpService } from '../../services/msg91OtpService';
 import { razorpayService } from '../../services/razorpayService';
+import { orderApi, paymentApi, quoteApi } from '../../services/api';
 import { Order, DeliveryAddress } from '../../types';
 
 const maskPhone = (phone?: string): string => {
@@ -22,10 +23,13 @@ export const CheckoutModal: React.FC = () => {
   const { 
     isCheckoutOpen, setIsCheckoutOpen, cart, activeAddress, billingAddress, shippingAddress,
     addresses, isShippingSameAsBilling, setIsShippingSameAsBilling,
-    setActiveAddress, setIsAddressModalOpen, getSplitShipments, createOrder, decrementInventory,
+    setActiveAddress, setIsAddressModalOpen, getSplitShipments, decrementInventory,
     appMode, currentOrg, setActiveTab, setSelectedOrderForDetail, showToast, currentUser,
     clearCart, apiCatalogError, authStatus, setIsAuthModalOpen, setAuthDestination,
-    currentQuote, quoteStatus, setIsCartDrawerOpen
+    currentQuote, quoteStatus, setIsCartDrawerOpen,
+    destinationPincode, setDestinationPincode,
+    quotePaymentMethod, setQuotePaymentMethod,
+    fetchAuthoritativeQuote, createOrder
   } = useStore();
 
   const [activeStep, setActiveStep] = useState<number>(1);
@@ -39,6 +43,7 @@ export const CheckoutModal: React.FC = () => {
   const [isCodOtpOpen, setIsCodOtpOpen] = useState<boolean>(false);
   const [codEnteredOtp, setCodEnteredOtp] = useState<string>('');
   const [isCodVerifying, setIsCodVerifying] = useState<boolean>(false);
+  const [codDevOtp, setCodDevOtp] = useState<string | null>(null);
 
   // Auth gate: If guest tries to access checkout, redirect to login
   useEffect(() => {
@@ -50,16 +55,32 @@ export const CheckoutModal: React.FC = () => {
     }
   }, [isCheckoutOpen, authStatus, setIsCheckoutOpen, setAuthDestination, setIsAuthModalOpen, showToast]);
 
-  // Quote gate: If quote is missing or not valid, redirect to cart
+  // Cart empty gate: If cart is empty, redirect to cart drawer
   useEffect(() => {
-    if (isCheckoutOpen && authStatus === 'AUTHENTICATED' && (quoteStatus !== 'QUOTE_VALID' || !currentQuote)) {
+    if (isCheckoutOpen && authStatus === 'AUTHENTICATED' && cart.length === 0) {
       setIsCheckoutOpen(false);
       setIsCartDrawerOpen(true);
-      showToast('Please calculate your cart total before proceeding to checkout.', 'warning');
+      showToast('Your cart is empty. Please add items to checkout.', 'warning');
     }
-  }, [isCheckoutOpen, authStatus, quoteStatus, currentQuote, setIsCheckoutOpen, setIsCartDrawerOpen, showToast]);
+  }, [isCheckoutOpen, authStatus, cart.length, setIsCheckoutOpen, setIsCartDrawerOpen, showToast]);
 
-  if (!isCheckoutOpen || authStatus !== 'AUTHENTICATED' || !currentQuote || quoteStatus !== 'QUOTE_VALID') {
+  // Keep store's destinationPincode and quote payment method in sync with active checkout state
+  useEffect(() => {
+    if (!isCheckoutOpen || !activeAddress?.pincode) return;
+    const targetPin = activeAddress.pincode.trim();
+    const targetQuoteMethod = paymentMethod === 'COD' ? 'COD' : 'PREPAID';
+
+    const isPinMismatch = destinationPincode !== targetPin || currentQuote?.destination_pincode !== targetPin;
+    const isMethodMismatch = quotePaymentMethod !== targetQuoteMethod;
+
+    if (isPinMismatch || isMethodMismatch || !currentQuote) {
+      setDestinationPincode(targetPin);
+      setQuotePaymentMethod(targetQuoteMethod);
+      fetchAuthoritativeQuote();
+    }
+  }, [isCheckoutOpen, activeAddress?.pincode, paymentMethod, destinationPincode, quotePaymentMethod, currentQuote, setDestinationPincode, setQuotePaymentMethod, fetchAuthoritativeQuote]);
+
+  if (!isCheckoutOpen || authStatus !== 'AUTHENTICATED' || cart.length === 0) {
     return null;
   }
 
@@ -83,21 +104,32 @@ export const CheckoutModal: React.FC = () => {
   });
 
   // Authoritative figures from current validated quote
-  const itemsGross = Number(currentQuote.total_product_gross || 0);
-  const taxableValue = Number(currentQuote.subtotal_taxable || 0);
-  const taxAmount = Number(currentQuote.total_product_gst || 0);
-  const totalShipping = Number(currentQuote.shipping_total || 0);
-  const codFee = paymentMethod === 'COD' ? Number(currentQuote.cod_charge_raw || 0) : 0;
-  const codAdjustment = paymentMethod === 'COD' ? Number(currentQuote.cod_rounding_adjustment || 0) : 0;
+  const itemsGross = Number(currentQuote?.total_product_gross || 0);
+  const taxableValue = Number(currentQuote?.subtotal_taxable || 0);
+  const taxAmount = Number(currentQuote?.total_product_gst || 0);
+  const totalShipping = Number(currentQuote?.shipping_total || 0);
+  const codFee = paymentMethod === 'COD' ? Number(currentQuote?.cod_charge_raw || currentQuote?.cod_surcharge || 0) : 0;
+  const codAdjustment = paymentMethod === 'COD' ? Number(currentQuote?.cod_rounding_adjustment || 0) : 0;
   const grandTotal = paymentMethod === 'COD' 
-    ? Number(currentQuote.cod_payable_total || 0) 
-    : Number(currentQuote.prepaid_total || 0);
+    ? Number(currentQuote?.cod_payable_total || currentQuote?.cod_total || 0) 
+    : Number(currentQuote?.prepaid_total || 0);
 
   const handleSelectAddress = (addr: DeliveryAddress) => {
+    useStore.setState({
+      activeAddress: addr,
+      shippingAddress: addr,
+      destinationPincode: addr.pincode,
+    });
     setActiveAddress(addr.id);
     setIsAddressListExpanded(false);
     setActiveStep(2);
     showToast(`✓ Delivery address set to ${addr.postOffice?.name || addr.city} (${addr.pincode})`, 'success');
+  };
+
+  const handleSelectPaymentMethod = (method: Order['paymentDetail']['method']) => {
+    setPaymentMethod(method);
+    const quoteMethod = method === 'COD' ? 'COD' : 'PREPAID';
+    setQuotePaymentMethod(quoteMethod);
   };
 
   const submitBackendOrder = async (
@@ -108,22 +140,79 @@ export const CheckoutModal: React.FC = () => {
       throw new Error('Please select or add a delivery address to complete your order.');
     }
 
-    const payload = {
-      quote_id: currentQuote.quote_id,
+    const shippingPin = activeAddress.pincode?.trim() || '382430';
+    let targetQuote = currentQuote;
+
+    // Strict invariant: Ensure quote destination PIN matches shipping address PIN
+    if (!targetQuote || targetQuote.destination_pincode !== shippingPin) {
+      try {
+        const items = cart.map((i) => ({
+          ...(i.variantId ? { variant_id: i.variantId } : {}),
+          ...(i.sku ? { sku: i.sku } : {}),
+          quantity: i.quantity,
+        }));
+        targetQuote = await quoteApi.requestQuote({
+          items,
+          destination_pincode: shippingPin,
+          payment_method: paymentMethodType === 'COD' ? 'COD' : 'PREPAID',
+        });
+        useStore.setState({
+          currentQuote: targetQuote,
+          quoteStatus: 'QUOTE_VALID',
+          destinationPincode: shippingPin,
+        });
+      } catch (err) {
+        console.warn('Could not pre-fetch quote for PIN; omitting quote_id so backend generates quote atomically:', err);
+        targetQuote = null;
+      }
+    }
+
+    const rawLine1 = `${activeAddress.flatBuilding || ''} ${activeAddress.streetArea || ''}`.trim() || activeAddress.postOffice?.name || 'Factory Premises';
+    const safeLine1 = rawLine1.length >= 3 ? rawLine1 : `${rawLine1} Hub`;
+
+    const rawPhone = activeAddress.phone || currentUser?.phone || '9825012345';
+    const cleanPhone = rawPhone.replace(/\D/g, '').slice(-10);
+    const validPhone = cleanPhone.length === 10 ? cleanPhone : '9825012345';
+
+    const safeName = (activeAddress.fullName || currentUser?.name || 'Customer').trim();
+    const validName = safeName.length >= 2 ? safeName : 'Customer';
+
+    // Automatically sync real customer name to profile and store if currently generic
+    if (validName !== 'Customer' && (!currentUser?.name || currentUser.name.startsWith('Customer ') || currentUser.name === 'Valued Customer')) {
+      useStore.getState().updateUserProfile({
+        name: validName,
+        phone: validPhone || currentUser?.phone
+      });
+    }
+
+    // Automatically persist B2B details if claimGst is active
+    if (claimGst && (enteredGstin || activeAddress.gstin)) {
+      const gstinToSave = (enteredGstin || activeAddress.gstin || '').trim().toUpperCase();
+      if (gstinToSave) {
+        useStore.getState().updateOrgDetails({
+          gstin: gstinToSave,
+          companyName: currentOrg.companyName || validName
+        });
+        useStore.getState().setAppMode('B2B');
+      }
+    }
+
+    const payload: any = {
+      quote_id: targetQuote?.quote_id || undefined,
       idempotency_key: idempotencyKey,
       payment_method: paymentMethodType === 'B2B_CREDIT' ? 'B2B_CREDIT' : (paymentMethodType === 'COD' ? 'COD' : 'RAZORPAY'),
-      destination_pincode: activeAddress.pincode || currentQuote.destination_pincode || '382430',
+      destination_pincode: shippingPin,
       customer: {
-        name: activeAddress.fullName || currentUser?.name || 'Customer',
-        phone: activeAddress.phone || currentUser?.phone || '9825012345',
+        name: validName,
+        phone: validPhone,
         email: currentUser?.email || undefined,
       },
       shipping_address: {
-        address_line1: `${activeAddress.flatBuilding || ''} ${activeAddress.streetArea || ''}`.trim() || activeAddress.postOffice?.name || 'Factory Hub',
+        address_line1: safeLine1,
         address_line2: activeAddress.landmark || undefined,
         city: activeAddress.city || 'Ahmedabad',
         state: activeAddress.state || 'Gujarat',
-        pincode: activeAddress.pincode || '382430',
+        pincode: shippingPin,
         state_code: '24',
       },
       items: cart.map((i) => ({
@@ -136,22 +225,7 @@ export const CheckoutModal: React.FC = () => {
       company_name: claimGst ? (currentOrg.companyName || undefined) : undefined,
     };
 
-    const response = await fetch('/api/v1/orders', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      credentials: 'include',
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const errJson = await response.json().catch(() => null);
-      throw new Error(errJson?.detail || 'Order creation failed');
-    }
-
-    return await response.json();
+    return await orderApi.createOrder(payload);
   };
 
   const handleInitiateOrder = async () => {
@@ -181,19 +255,7 @@ export const CheckoutModal: React.FC = () => {
       setIsProcessing(true);
       try {
         const backendOrder = await submitBackendOrder('PREPAID', idempotencyKey);
-
-        const rzpOrderResponse = await fetch('/api/v1/payments/razorpay/create-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ order_id: backendOrder.id })
-        });
-
-        if (!rzpOrderResponse.ok) {
-          throw new Error('Failed to create Razorpay order on server');
-        }
-
-        const rzpOrderData = await rzpOrderResponse.json();
+        const rzpOrderData = await paymentApi.createRazorpayOrder(backendOrder.id);
 
         await razorpayService.openCheckout({
           amount: Number(backendOrder.total_payable || grandTotal),
@@ -205,25 +267,27 @@ export const CheckoutModal: React.FC = () => {
           deliveryAddress: activeAddress,
           onSuccess: async (rzpRes) => {
             try {
-              const verifyRes = await fetch('/api/v1/payments/razorpay/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                  order_id: backendOrder.id,
-                  razorpay_order_id: rzpRes.razorpay_order_id,
-                  razorpay_payment_id: rzpRes.razorpay_payment_id,
-                  razorpay_signature: rzpRes.razorpay_signature
-                })
+              const verifyRes = await paymentApi.verifyRazorpayPayment({
+                order_id: backendOrder.id,
+                razorpay_order_id: rzpRes.razorpay_order_id || '',
+                razorpay_payment_id: rzpRes.razorpay_payment_id,
+                razorpay_signature: rzpRes.razorpay_signature || ''
               });
 
-              if (!verifyRes.ok) {
-                throw new Error('Server payment verification failed');
+              if (!verifyRes.verified) {
+                throw new Error(verifyRes.message || 'Server payment verification failed');
               }
 
               // Server verified payment and marked order CONFIRMED in PostgreSQL
-              decrementInventory(cart);
-              clearCart();
+              createOrder('RAZORPAY', claimGst, {
+                id: backendOrder.id,
+                order_number: backendOrder.order_number,
+                total_payable: Number(backendOrder.total_payable || grandTotal),
+                razorpayPaymentId: rzpRes.razorpay_payment_id,
+                razorpayOrderId: rzpRes.razorpay_order_id,
+                razorpaySignature: rzpRes.razorpay_signature,
+              });
+
               setIsProcessing(false);
               setIsCheckoutOpen(false);
               showToast(`✅ Payment ₹${Number(backendOrder.total_payable || grandTotal).toLocaleString('en-IN')} Received & Verified (Order: ${backendOrder.order_number})`, 'success');
@@ -242,9 +306,10 @@ export const CheckoutModal: React.FC = () => {
               });
 
               setActiveTab('orders');
-            } catch {
+            } catch (err: any) {
               setIsProcessing(false);
-              showToast('We couldn’t confirm your order right now. Your cart is safe. Please try again.', 'error');
+              const msg = err?.message || 'We couldn’t confirm your order right now. Your cart is safe. Please try again.';
+              showToast(msg, 'error');
             }
           },
           onError: (error) => {
@@ -256,9 +321,10 @@ export const CheckoutModal: React.FC = () => {
             showToast('Razorpay checkout window closed. Your cart is safe.', 'info');
           }
         });
-      } catch {
+      } catch (err: any) {
         setIsProcessing(false);
-        showToast('We couldn’t confirm your order right now. Your cart is safe. Please try again.', 'error');
+        const msg = err?.message || 'We couldn’t confirm your order right now. Your cart is safe. Please try again.';
+        showToast(msg, 'error');
       }
       return;
     }
@@ -266,14 +332,28 @@ export const CheckoutModal: React.FC = () => {
     // 2) COD MSG91 Anti-Fraud Mobile Verification Flow
     if (paymentMethod === 'COD') {
       const phone = activeAddress.phone || currentUser?.phone || '';
+      if (!phone || phone.replace(/\D/g, '').length < 10) {
+        showToast('Please provide a valid 10-digit mobile number for COD verification.', 'error');
+        return;
+      }
       setIsProcessing(true);
-      await msg91OtpService.sendOtp(phone, {
-        company: 'Apollo Engineering',
-        type: 'COD Verification'
-      });
-      setIsProcessing(false);
-      setIsCodOtpOpen(true);
-      showToast(`COD Verification OTP dispatched to ${maskPhone(phone)}`, 'info');
+      try {
+        const otpRes = await msg91OtpService.sendOtp(phone, {
+          company: 'Apollo Engineering',
+          type: 'COD Verification'
+        });
+        setIsProcessing(false);
+        if (otpRes.type === 'error') {
+          showToast(otpRes.message || 'Failed to dispatch verification OTP. Please try again.', 'error');
+          return;
+        }
+        setIsCodOtpOpen(true);
+        setCodDevOtp(otpRes.dev_code || null);
+        showToast(`COD Verification OTP dispatched to ${maskPhone(phone)}`, 'info');
+      } catch (err: any) {
+        setIsProcessing(false);
+        showToast(err?.message || 'Error connecting to OTP verification gateway.', 'error');
+      }
       return;
     }
 
@@ -281,8 +361,12 @@ export const CheckoutModal: React.FC = () => {
     setIsProcessing(true);
     try {
       const backendOrder = await submitBackendOrder('B2B_CREDIT', idempotencyKey);
-      decrementInventory(cart);
-      clearCart();
+      createOrder('NET_30_PO', claimGst, {
+        id: backendOrder.id,
+        order_number: backendOrder.order_number,
+        total_payable: Number(backendOrder.total_payable || grandTotal),
+        transactionId: `PO-${backendOrder.order_number}`,
+      });
       setIsProcessing(false);
       setIsCheckoutOpen(false);
       showToast(`✅ B2B Net 30 PO Order ${backendOrder.order_number} confirmed!`, 'success');
@@ -292,9 +376,10 @@ export const CheckoutModal: React.FC = () => {
         origin: { y: 0.6 }
       });
       setActiveTab('orders');
-    } catch {
+    } catch (err: any) {
       setIsProcessing(false);
-      showToast('We couldn’t confirm your order right now. Your cart is safe. Please try again.', 'error');
+      const msg = err?.message || 'We couldn’t confirm your order right now. Your cart is safe. Please try again.';
+      showToast(msg, 'error');
     }
   };
 
@@ -303,11 +388,18 @@ export const CheckoutModal: React.FC = () => {
     if (!activeAddress) return;
     const phone = activeAddress.phone || currentUser?.phone || '';
     setIsCodVerifying(true);
-    const verifyRes = await msg91OtpService.verifyOtp(phone, codEnteredOtp);
+    let verifyRes: any = null;
+    try {
+      verifyRes = await msg91OtpService.verifyOtp(phone, codEnteredOtp);
+    } catch (err: any) {
+      setIsCodVerifying(false);
+      showToast(err?.message || 'Verification service error. Please try again.', 'error');
+      return;
+    }
     setIsCodVerifying(false);
 
-    if (!verifyRes.isVerified) {
-      showToast(verifyRes.message || 'Invalid COD OTP entered. Please check your SMS and try again.', 'error');
+    if (!verifyRes || !verifyRes.isVerified) {
+      showToast(verifyRes?.message || 'Invalid COD OTP entered. Please check your SMS and try again.', 'error');
       return;
     }
 
@@ -317,8 +409,12 @@ export const CheckoutModal: React.FC = () => {
       const idempotencyKey = `idemp_cod_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
       const backendOrder = await submitBackendOrder('COD', idempotencyKey);
 
-      decrementInventory(cart);
-      clearCart();
+      createOrder('COD', claimGst, {
+        id: backendOrder.id,
+        order_number: backendOrder.order_number,
+        total_payable: Number(backendOrder.total_payable || grandTotal),
+        transactionId: `COD-AUTH-${backendOrder.order_number}`,
+      });
       setIsProcessing(false);
       setIsCheckoutOpen(false);
       showToast(`✅ COD order ${backendOrder.order_number} verified & confirmed in database!`, 'success');
@@ -337,9 +433,10 @@ export const CheckoutModal: React.FC = () => {
       });
 
       setActiveTab('orders');
-    } catch {
+    } catch (err: any) {
       setIsProcessing(false);
-      showToast('We couldn’t confirm your order right now. Your cart is safe. Please try again.', 'error');
+      const msg = err?.message || 'We couldn’t confirm your order right now. Your cart is safe. Please try again.';
+      showToast(msg, 'error');
     }
   };
 
@@ -378,7 +475,9 @@ export const CheckoutModal: React.FC = () => {
             </div>
           </div>
           <button 
+            type="button"
             onClick={() => setIsCheckoutOpen(false)}
+            aria-label="Close checkout modal"
             className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-200/70 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -420,6 +519,7 @@ export const CheckoutModal: React.FC = () => {
                     </p>
                     <button
                       type="button"
+                      aria-label="Add Delivery Address"
                       onClick={() => setIsAddressModalOpen(true)}
                       className="px-4 py-2.5 bg-[#0054A6] text-white rounded-xl text-xs font-bold shadow hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5"
                     >
@@ -452,6 +552,7 @@ export const CheckoutModal: React.FC = () => {
                     <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
                       <button
                         type="button"
+                        aria-label="Change delivery address"
                         onClick={() => setIsAddressListExpanded(true)}
                         className="px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-slate-700 hover:text-[#0054A6] hover:border-[#0054A6] text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5"
                       >
@@ -470,6 +571,7 @@ export const CheckoutModal: React.FC = () => {
                       {activeAddress && (
                         <button
                           type="button"
+                          aria-label="Cancel address selection"
                           onClick={() => setIsAddressListExpanded(false)}
                           className="text-xs text-slate-500 hover:text-slate-800 font-bold"
                         >
@@ -528,6 +630,7 @@ export const CheckoutModal: React.FC = () => {
                     <div className="flex items-center justify-between pt-2">
                       <button
                         type="button"
+                        aria-label="Add New Address"
                         onClick={() => setIsAddressModalOpen(true)}
                         className="text-xs text-[#0054A6] hover:underline font-bold inline-flex items-center gap-1"
                       >
@@ -562,7 +665,7 @@ export const CheckoutModal: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {/* Option 1: Razorpay Online Payment Gateway */}
                   <div
-                    onClick={() => setPaymentMethod('RAZORPAY')}
+                    onClick={() => handleSelectPaymentMethod('RAZORPAY')}
                     className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
                       paymentMethod === 'RAZORPAY' || paymentMethod === 'UPI' || paymentMethod === 'CREDIT_DEBIT_CARD'
                         ? 'bg-blue-50/90 border-[#0054A6] text-slate-900 shadow-md ring-2 ring-[#0054A6]/30'
@@ -609,7 +712,7 @@ export const CheckoutModal: React.FC = () => {
 
                   {/* Option 2: Cash on Delivery (COD) */}
                   <div
-                    onClick={() => setPaymentMethod('COD')}
+                    onClick={() => handleSelectPaymentMethod('COD')}
                     className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
                       paymentMethod === 'COD'
                         ? 'bg-amber-50/90 border-amber-500 text-slate-900 shadow-md ring-2 ring-amber-500/30'
@@ -651,7 +754,7 @@ export const CheckoutModal: React.FC = () => {
                   {/* Option 3: B2B Net 30 Credit Line (Only in B2B Mode) */}
                   {appMode === 'B2B' && (
                     <div
-                      onClick={() => setPaymentMethod('NET_30_PO')}
+                      onClick={() => handleSelectPaymentMethod('NET_30_PO')}
                       className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 sm:col-span-2 ${
                         paymentMethod === 'NET_30_PO'
                           ? 'bg-blue-50/90 border-[#0054A6] text-slate-900 shadow-md ring-2 ring-[#0054A6]/30'
@@ -691,7 +794,13 @@ export const CheckoutModal: React.FC = () => {
                       type="checkbox"
                       id="claimGstBox"
                       checked={claimGst}
-                      onChange={(e) => setClaimGst(e.target.checked)}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setClaimGst(checked);
+                        if (checked) {
+                          useStore.getState().setAppMode('B2B');
+                        }
+                      }}
                       className="w-4 h-4 text-[#0054A6] rounded bg-white border-slate-300 focus:ring-[#0054A6]"
                     />
                     <label htmlFor="claimGstBox" className="text-xs text-slate-800 cursor-pointer">
@@ -705,7 +814,14 @@ export const CheckoutModal: React.FC = () => {
                       <input
                         type="text"
                         value={enteredGstin}
-                        onChange={(e) => setEnteredGstin(e.target.value.toUpperCase())}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          setEnteredGstin(val);
+                          if (val.length === 15) {
+                            useStore.getState().updateOrgDetails({ gstin: val });
+                            useStore.getState().setAppMode('B2B');
+                          }
+                        }}
                         placeholder="e.g. 24AAACP1234F1Z8"
                         className="w-full h-9 px-3 bg-slate-50 border border-blue-400 rounded-lg text-slate-900 font-mono text-xs focus:ring-1 focus:ring-[#0054A6] focus:outline-none uppercase font-bold"
                       />
@@ -798,6 +914,8 @@ export const CheckoutModal: React.FC = () => {
 
               {/* Complete Order Action Button */}
               <button
+                type="button"
+                aria-label="Confirm and place order"
                 disabled={isProcessing || Boolean(apiCatalogError) || !activeAddress}
                 onClick={handleInitiateOrder}
                 className={`w-full py-4 font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 ${
@@ -872,6 +990,7 @@ export const CheckoutModal: React.FC = () => {
                 <div className="flex gap-2">
                   <button
                     type="button"
+                    aria-label="Cancel COD OTP verification"
                     onClick={() => setIsCodOtpOpen(false)}
                     className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all"
                   >
@@ -879,6 +998,7 @@ export const CheckoutModal: React.FC = () => {
                   </button>
                   <button
                     type="submit"
+                    aria-label="Verify COD OTP and confirm order"
                     disabled={isCodVerifying || codEnteredOtp.length !== 4}
                     className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:opacity-90 disabled:opacity-50 text-slate-950 font-black rounded-xl shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-1.5"
                   >
@@ -899,6 +1019,7 @@ export const CheckoutModal: React.FC = () => {
                 <div className="flex gap-2 font-bold text-[#0054A6]">
                   <button 
                     type="button"
+                    aria-label="Resend verification OTP via SMS"
                     onClick={() => handleRetryCodOtp('TEXT')}
                     className="hover:underline flex items-center gap-1"
                   >
@@ -907,6 +1028,7 @@ export const CheckoutModal: React.FC = () => {
                   <span>•</span>
                   <button 
                     type="button"
+                    aria-label="Resend verification OTP via Voice Call"
                     onClick={() => handleRetryCodOtp('VOICE')}
                     className="hover:underline flex items-center gap-1 text-amber-700"
                   >

@@ -12,8 +12,8 @@ Weight Slabs:
 - 201g - 500g: Local ₹28, Intrastate ₹50, ROI ₹70
 - Additional 500g (or part thereof): Local +₹10, Intrastate +₹15, ROI +₹30
 """
-from decimal import Decimal, ROUND_UP, ROUND_HALF_UP
 import math
+from decimal import ROUND_HALF_UP, Decimal
 from typing import NamedTuple
 
 ORIGIN_HUB_PINCODE = "382430"

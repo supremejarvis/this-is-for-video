@@ -1,6 +1,12 @@
 """Pytest configuration and shared fixtures."""
+import os
 import sys
 from pathlib import Path
+
+# Set test environment variables BEFORE ANY IMPORTS
+os.environ.setdefault("ENVIRONMENT", "development")
+os.environ.setdefault("RAZORPAY_WEBHOOK_SECRET", "test_webhook_secret_for_testing_only")
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 import pytest
 from sqlalchemy.dialects.postgresql import JSONB

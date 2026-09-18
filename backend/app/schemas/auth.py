@@ -8,11 +8,15 @@ from app.models.auth import UserRole
 
 
 class UserLoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
 
 
 class AdminLoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     email: EmailStr = Field(default="admin@apolloengineering.co.in")
     password: str = Field(..., min_length=6, max_length=128)
     totp_code: str = Field(..., min_length=6, max_length=6)
@@ -31,6 +35,13 @@ class UserUpdateRequest(BaseModel):
     role: UserRole | None = None
     is_active: bool | None = None
     new_password: str | None = Field(default=None, min_length=12, max_length=128)
+
+
+class UserProfileUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    full_name: str | None = Field(default=None, min_length=2, max_length=255)
+    email: EmailStr | None = None
 
 
 class UserResponse(BaseModel):

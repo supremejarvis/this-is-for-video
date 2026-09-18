@@ -26,7 +26,7 @@ from app.services.inventory import (
     StockUnavailablePostExpiryError,
 )
 
-DATABASE_URL = "postgresql+asyncpg://postgres@localhost:5433/apollo_disposable_test"
+DATABASE_URL = "postgresql+asyncpg://postgres_test:postgres@localhost:5432/apollo_disposable_test"
 
 
 @pytest.fixture

@@ -5,11 +5,6 @@ import { Header } from './components/storefront/Header';
 import { Footer } from './components/Footer';
 import { WhatsAppButton } from './components/WhatsAppButton';
 import { Background } from './components/Background';
-import { CartDrawer } from './components/checkout/CartDrawer';
-import { CheckoutModal } from './components/checkout/CheckoutModal';
-import { AddressModal } from './components/auth/AddressModal';
-import { AuthModal } from './components/auth/AuthModal';
-import { CustomerAccountModal } from './components/auth/CustomerAccountModal';
 import { useStore } from './store/useStore';
 import { runStorageMigration } from './utils/storageMigration';
 import { StorePage } from './components/pages/StorePage';
@@ -24,6 +19,13 @@ const SuperAdminDashboard = lazy(() => import('./components/admin/SuperAdminDash
 const LiveOrderTracker = lazy(() => import('./components/logistics/LiveOrderTracker').then(m => ({ default: m.LiveOrderTracker })));
 const B2BPortal = lazy(() => import('./components/b2b/B2BPortal').then(m => ({ default: m.B2BPortal })));
 const WishlistPage = lazy(() => import('./components/pages/WishlistPage').then(m => ({ default: m.WishlistPage })));
+
+// Code-Split Lazy Loaded Global Modals & Drawers (Saves ~800 KiB on initial page load)
+const CartDrawer = lazy(() => import('./components/checkout/CartDrawer').then(m => ({ default: m.CartDrawer })));
+const CheckoutModal = lazy(() => import('./components/checkout/CheckoutModal').then(m => ({ default: m.CheckoutModal })));
+const AddressModal = lazy(() => import('./components/auth/AddressModal').then(m => ({ default: m.AddressModal })));
+const AuthModal = lazy(() => import('./components/auth/AuthModal').then(m => ({ default: m.AuthModal })));
+const CustomerAccountModal = lazy(() => import('./components/auth/CustomerAccountModal').then(m => ({ default: m.CustomerAccountModal })));
 
 const PageLoadingFallback: React.FC = () => (
   <div className="min-h-[50vh] flex flex-col items-center justify-center p-8 space-y-3">
@@ -56,7 +58,8 @@ export const App: React.FC = () => {
   const { 
     setActiveTab, selectedProduct, 
     setSelectedProduct, toastMessage, setAppMode,
-    isCheckoutOpen, isCartDrawerOpen
+    isCheckoutOpen, isCartDrawerOpen,
+    isAddressModalOpen, isAuthModalOpen, isAccountModalOpen
   } = useStore();
 
   const navigate = useNavigate();
@@ -235,12 +238,32 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Global Modals & Drawers */}
-      {!isAdminRoute && <CartDrawer />}
-      <CheckoutModal />
-      <AddressModal />
-      <AuthModal />
-      <CustomerAccountModal />
+      {/* Global Modals & Drawers - Loaded On-Demand via React.lazy to eliminate upfront bundle bloat */}
+      {!isAdminRoute && isCartDrawerOpen && (
+        <Suspense fallback={null}>
+          <CartDrawer />
+        </Suspense>
+      )}
+      {isCheckoutOpen && (
+        <Suspense fallback={null}>
+          <CheckoutModal />
+        </Suspense>
+      )}
+      {isAddressModalOpen && (
+        <Suspense fallback={null}>
+          <AddressModal />
+        </Suspense>
+      )}
+      {isAuthModalOpen && (
+        <Suspense fallback={null}>
+          <AuthModal />
+        </Suspense>
+      )}
+      {isAccountModalOpen && (
+        <Suspense fallback={null}>
+          <CustomerAccountModal />
+        </Suspense>
+      )}
 
       {/* Floating WhatsApp Assistance (Customer Storefront only) */}
       {!isAdminRoute && <WhatsAppButton />}

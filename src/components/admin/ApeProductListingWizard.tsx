@@ -646,7 +646,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
 
     const drainClips5Sizes: ProductVariant[] = [
       {
-        sku: 'EV-YMG0-GM29',
+        sku: 'APE-SC-28.00MM',
         title: 'Apollo SS304 Solar Drain Clip - 28mm Frame Size',
         attributes: { size: '28mm', material: 'AISI SS304', packSize: 'Pack of 50' },
         mrp: 35,
@@ -668,7 +668,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
         unitOfMeasure: 'PCS'
       },
       {
-        sku: 'DZ-K6JS-CCOO',
+        sku: 'APE-SC-30.00MM',
         title: 'Apollo SS304 Solar Drain Clip - 30mm Frame Size',
         attributes: { size: '30mm', material: 'AISI SS304', packSize: 'Pack of 50' },
         mrp: 35,
@@ -690,7 +690,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
         unitOfMeasure: 'PCS'
       },
       {
-        sku: 'GV-XPZG-63NS',
+        sku: 'APE-SC-33.00MM',
         title: 'Apollo SS304 Solar Drain Clip - 33mm Frame Size',
         attributes: { size: '33mm', material: 'AISI SS304', packSize: 'Pack of 50' },
         mrp: 35,
@@ -712,7 +712,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
         unitOfMeasure: 'PCS'
       },
       {
-        sku: 'J9-IJCH-26WX',
+        sku: 'APE-SC-35.00MM',
         title: 'Apollo SS304 Solar Drain Clip - 35mm Frame Size (Most Popular)',
         attributes: { size: '35mm', material: 'AISI SS304', packSize: 'Pack of 50' },
         mrp: 35,
@@ -734,7 +734,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
         unitOfMeasure: 'PCS'
       },
       {
-        sku: '3F-J2NT-6MGG',
+        sku: 'APE-SC-40.00MM',
         title: 'Apollo SS304 Solar Drain Clip - 40mm Frame Size',
         attributes: { size: '40mm', material: 'AISI SS304', packSize: 'Pack of 50' },
         mrp: 35,
@@ -1380,6 +1380,8 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                     <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer select-none">
                       <input
                         type="checkbox"
+                        id="gtin-exemption"
+                        name="hasGtinExemption"
                         checked={hasGtinExemption}
                         onChange={(e) => {
                           setHasGtinExemption(e.target.checked);
@@ -1688,6 +1690,8 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input 
                       type="checkbox" 
+                      id="include-aplus-comparison"
+                      name="includeAPlusComparison"
                       checked={includeAPlusComparison} 
                       onChange={(e) => setIncludeAPlusComparison(e.target.checked)} 
                       className="sr-only peer"
@@ -3427,14 +3431,14 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
               <div className="p-6 space-y-3 overflow-y-auto max-h-[50vh]">
                 {products
                   .filter(p => !catalogSearchTerm.trim() || p.title.toLowerCase().includes(catalogSearchTerm.toLowerCase()) || p.asin.toLowerCase().includes(catalogSearchTerm.toLowerCase()))
-                  .map(p => {
+                  .map((p, pIdx) => {
                     const isChecked = selectedCatalogAsins.includes(p.asin);
                     const thumb = p.variants[0]?.images?.[0] || '/logo.webp';
                     const minPrice = p.variants[0]?.b2cPrice || 20;
 
                     return (
                       <div
-                        key={p.asin}
+                        key={`${p.asin}-${pIdx}`}
                         onClick={() => {
                           setSelectedCatalogAsins(prev => 
                             isChecked ? prev.filter(id => id !== p.asin) : [...prev, p.asin]
@@ -3449,6 +3453,8 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                         <div className="flex items-center gap-3.5">
                           <input
                             type="checkbox"
+                            id={`media-thumb-${p.asin}`}
+                            name={`mediaThumb-${p.asin}`}
                             checked={isChecked}
                             onChange={() => {}}
                             className="w-4 h-4 accent-[#0054A6] rounded cursor-pointer"

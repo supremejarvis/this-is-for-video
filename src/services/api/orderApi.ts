@@ -1,0 +1,131 @@
+/**
+ * Apollo Engineering Orders Micro API Service
+ * 
+ * Endpoints:
+ * - POST  /api/v1/orders                     -> Create authoritative order in PostgreSQL
+ * - GET   /api/v1/orders                     -> List authenticated user / staff orders
+ * - GET   /api/v1/orders/{id_or_number}      -> Fetch specific order
+ * - PATCH /api/v1/orders/{id_or_number}/status -> Transition status via authoritative State Machine
+ */
+
+import { apiClient } from './client';
+
+export interface BackendOrderItem {
+  sku: string;
+  quantity: number;
+  variant_id?: string;
+}
+
+export interface BackendCustomerInfo {
+  name: string;
+  phone: string;
+  email?: string;
+}
+
+export interface BackendShippingAddress {
+  address_line1: string;
+  address_line2?: string;
+  city: string;
+  state: string;
+  pincode: string;
+  state_code?: string;
+}
+
+export interface CreateOrderPayload {
+  quote_id: string;
+  idempotency_key: string;
+  payment_method: 'PREPAID' | 'COD' | 'B2B_CREDIT' | 'RAZORPAY';
+  destination_pincode: string;
+  customer: BackendCustomerInfo;
+  shipping_address: BackendShippingAddress;
+  items: BackendOrderItem[];
+  claim_gst?: boolean;
+  gstin?: string;
+  company_name?: string;
+}
+
+export interface BackendOrderResponse {
+  id: string;
+  order_number: string;
+  quote_id?: string;
+  user_id?: string;
+  order_status: string;
+  payment_status: string;
+  fulfilment_status: string;
+  replacement_status?: string;
+  subtotal_taxable: number | string;
+  product_gst: number | string;
+  shipping_base: number | string;
+  shipping_gst: number | string;
+  cod_surcharge: number | string;
+  total_payable: number | string;
+  currency: string;
+  customer_name?: string;
+  customer_phone?: string;
+  customer_email?: string;
+  company_name?: string;
+  gstin?: string;
+  items?: any[];
+  address?: any;
+  created_at: string;
+}
+
+export interface UpdateOrderStatusPayload {
+  order_status?: string;
+  fulfilment_status?: string;
+  awb_number?: string;
+  carrier?: string;
+}
+
+export class OrderApi {
+  /**
+   * Create an authoritative order in the PostgreSQL database
+   */
+  public async createOrder(payload: CreateOrderPayload): Promise<BackendOrderResponse> {
+    const cleanPayload = {
+      ...payload,
+      items: (payload.items || []).map((i) => ({
+        sku: i.sku,
+        quantity: i.quantity,
+        ...(i.variant_id ? { variant_id: i.variant_id } : {}),
+      })),
+    };
+    return apiClient.post<BackendOrderResponse>('/orders', cleanPayload);
+  }
+
+  /**
+   * Retrieve order details by UUID or order number
+   */
+  public async getOrder(idOrNumber: string): Promise<BackendOrderResponse> {
+    return apiClient.get<BackendOrderResponse>(`/orders/${encodeURIComponent(idOrNumber)}`);
+  }
+
+  /**
+   * List orders for the current user or administrative staff
+   */
+  public async listOrders(limit: number = 50, offset: number = 0): Promise<BackendOrderResponse[]> {
+    return apiClient.get<BackendOrderResponse[]>(`/orders?limit=${limit}&offset=${offset}`);
+  }
+
+  /**
+   * Transition order or shipment status (Restricted to OWNER and ORDER_OPERATIONS)
+   */
+  public async updateOrderStatus(
+    idOrNumber: string,
+    payload: UpdateOrderStatusPayload
+  ): Promise<BackendOrderResponse> {
+    return apiClient.patch<BackendOrderResponse>(`/orders/${encodeURIComponent(idOrNumber)}/status`, payload);
+  }
+
+  /**
+   * Alias for status transition
+   */
+  public async transitionStatus(
+    idOrNumber: string,
+    payload: UpdateOrderStatusPayload
+  ): Promise<BackendOrderResponse> {
+    return this.updateOrderStatus(idOrNumber, payload);
+  }
+}
+
+export const orderApi = new OrderApi();

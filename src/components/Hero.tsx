@@ -91,10 +91,10 @@ export function Hero() {
           initial={{ opacity: 0, scale: 0.96, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.21, 0.47, 0.32, 0.98], delay: 0.1 }}
-          className="font-display text-6xl sm:text-8xl md:text-9xl font-black leading-[0.92] tracking-tighter mb-5 text-deep-blue"
+          className="font-display text-6xl sm:text-8xl md:text-9xl font-black leading-tight tracking-tighter mb-5 text-deep-blue"
         >
           SOLAR<br />
-          <span className="bg-gradient-to-r from-brand-blue via-solar-gold to-accent bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-brand-blue via-solar-gold to-accent bg-clip-text text-transparent box-decoration-clone">
             ENGINEERED
           </span>
         </motion.h1>

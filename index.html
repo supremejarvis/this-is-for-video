@@ -1,15 +1,30 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-M7QKJH4X37"></script>
+    <!-- Google tag (gtag.js) - only load in production to keep dev audits clean and cookie-free -->
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-M7QKJH4X37');
+      (function() {
+        var isLocal = Boolean(
+          window.location.hostname === 'localhost' ||
+          window.location.hostname === '[::1]' ||
+          window.location.hostname === '127.0.0.1' ||
+          window.location.hostname.indexOf('192.168.') === 0
+        );
+        if (!isLocal) {
+          var s = document.createElement('script');
+          s.async = true;
+          s.src = 'https://www.googletagmanager.com/gtag/js?id=G-M7QKJH4X37';
+          document.head.appendChild(s);
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-M7QKJH4X37');
+        }
+      })();
     </script>
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
 
     <Meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -437,7 +452,60 @@
     </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Instant First Contentful Paint (FCP) Shell - Replaced seamlessly upon React hydration -->
+      <div id="apollo-prerender-shell" style="min-height:100vh;display:flex;flex-direction:column;background:#ffffff;color:#0A0F1C;font-family:Inter,ui-sans-serif,system-ui,sans-serif;">
+        <!-- Header Shell -->
+        <header style="height:64px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;background:#ffffff;box-sizing:border-box;">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="width:36px;height:36px;border-radius:8px;background:#0054A6;display:flex;align-items:center;justify-content:center;color:#ffffff;font-weight:700;font-size:18px;">A</div>
+            <div>
+              <div style="font-weight:800;font-size:15px;color:#0054A6;letter-spacing:-0.02em;line-height:1.2;">APOLLO ENGINEERING</div>
+              <div style="font-size:10px;color:#64748B;font-weight:600;letter-spacing:0.05em;line-height:1.2;">SS304 SOLAR HARDWARE</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.75rem;align-items:center;">
+            <div style="width:80px;height:32px;background:#F1F5F9;border-radius:6px;"></div>
+            <div style="width:32px;height:32px;background:#F1F5F9;border-radius:6px;"></div>
+          </div>
+        </header>
+
+        <!-- Main Content Shell -->
+        <main style="flex:1;max-width:1280px;margin:0 auto;width:100%;padding:2rem 1.5rem;box-sizing:border-box;">
+          <div style="display:inline-block;padding:0.25rem 0.75rem;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:9999px;font-size:12px;font-weight:600;color:#0054A6;margin-bottom:1rem;">
+            ⚡ 100% Medical Grade SS304 Solar Maintenance Hardware
+          </div>
+          <h1 style="font-size:clamp(1.5rem, 3vw, 2.25rem);font-weight:800;color:#0A0F1C;margin:0 0 0.75rem 0;line-height:1.2;letter-spacing:-0.02em;">
+            Engineering Solar Efficiency Without Shading
+          </h1>
+          <p style="font-size:15px;color:#475569;margin:0 0 2rem 0;max-width:700px;line-height:1.5;">
+            India's premier manufacturer of Shadowless SS304 Solar Sprinklers, Auto Drain Clips, and Mounting Clamps. Guaranteed +15% to +20% energy yield.
+          </p>
+
+          <!-- Skeleton Product Grid -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;">
+            <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;height:340px;padding:1.25rem;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="background:#E2E8F0;height:170px;border-radius:8px;"></div>
+              <div style="height:18px;width:75%;background:#E2E8F0;border-radius:4px;"></div>
+              <div style="height:14px;width:45%;background:#E2E8F0;border-radius:4px;"></div>
+              <div style="height:40px;background:#0054A6;opacity:0.15;border-radius:8px;"></div>
+            </div>
+            <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;height:340px;padding:1.25rem;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="background:#E2E8F0;height:170px;border-radius:8px;"></div>
+              <div style="height:18px;width:75%;background:#E2E8F0;border-radius:4px;"></div>
+              <div style="height:14px;width:45%;background:#E2E8F0;border-radius:4px;"></div>
+              <div style="height:40px;background:#0054A6;opacity:0.15;border-radius:8px;"></div>
+            </div>
+            <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;height:340px;padding:1.25rem;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;">
+              <div style="background:#E2E8F0;height:170px;border-radius:8px;"></div>
+              <div style="height:18px;width:75%;background:#E2E8F0;border-radius:4px;"></div>
+              <div style="height:14px;width:45%;background:#E2E8F0;border-radius:4px;"></div>
+              <div style="height:40px;background:#0054A6;opacity:0.15;border-radius:8px;"></div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
     <noscript>
       <header>
         <nav aria-label="Main Navigation">
@@ -569,60 +637,29 @@
       </main>
     </noscript>
 
-    <!-- Official MSG91 SendOTP Widget & Live Verification SDK -->
-    <script type="text/javascript">
-      var configuration = {
-        widgetId: window.__MSG91_WIDGET_ID || "",
-        tokenAuth: window.__MSG91_TOKEN_AUTH || "",
-        identifier: "",
-        exposeMethods: true,
-        captchaRenderId: '',
-        success: (data) => {
-          console.log('[MSG91 Live OTP Success Response]:', data);
-          window.__lastMsg91Token = data;
-          window.dispatchEvent(new CustomEvent('msg91-otp-success', { detail: data }));
-        },
-        failure: (error) => {
-          console.log('[MSG91 Live OTP Failure Reason]:', error);
-          window.dispatchEvent(new CustomEvent('msg91-otp-failure', { detail: error }));
-        }
-      };
-      window.configuration = configuration;
-      window.msg91Configuration = configuration;
-    </script>
-    <script type="text/javascript">
-      (function loadOtpScript(urls) {
-        let i = 0;
-        function attempt() {
-          const s = document.createElement('script');
-          s.src = urls[i];
-          s.async = true;
-          s.onload = () => {
-            if (typeof window.initSendOTP === 'function' && configuration.widgetId && configuration.tokenAuth) {
-              window.initSendOTP(configuration);
-            }
-          };
-          s.onerror = () => {
-            i++;
-            if (i < urls.length) {
-              attempt();
-            }
-          };
-          document.head.appendChild(s);
-        }
-        attempt();
-      })([
-        'https://verify.msg91.com/otp-provider.js',
-        'https://verify.phone91.com/otp-provider.js'
-      ]);
-    </script>
 
-    <!-- PWA Service Worker Registration -->
+
+    <!-- PWA Service Worker Registration (Production Only - disabled on localhost to ensure clean dev server & Lighthouse audits) -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
-        });
+        var isLocal = Boolean(
+          window.location.hostname === 'localhost' ||
+          window.location.hostname === '[::1]' ||
+          window.location.hostname === '127.0.0.1' ||
+          window.location.hostname.indexOf('192.168.') === 0
+        );
+        if (!isLocal) {
+          window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {});
+          });
+        } else {
+          // Unregister any stale worker on localhost to avoid caching dev assets
+          navigator.serviceWorker.getRegistrations().then(function (registrations) {
+            registrations.forEach(function (registration) {
+              registration.unregister();
+            });
+          });
+        }
       }
     </script>
 

@@ -19,17 +19,9 @@ export function runStorageMigration(): void {
     const currentVersion = localStorage.getItem(STORAGE_VERSION_KEY);
 
     if (currentVersion !== CURRENT_STORAGE_VERSION) {
-      // List of legacy keys that held PII, mock sessions, or persistent customer state
+      // List of legacy mock keys to purge (never purge real customer accounts or addresses)
       const piiKeysToPurge = [
         'apollo_session_24h',
-        'apollo_users',
-        'apollo_addresses',
-        'apollo_billing_address',
-        'apollo_shipping_address',
-        'apollo_orders',
-        'apollo_coupons',
-        'apollo_returns',
-        'apollo_current_user',
         'apollo_user_session',
         'ape-store-storage',
       ];
@@ -40,6 +32,40 @@ export function runStorageMigration(): void {
 
       // Mark migration complete
       localStorage.setItem(STORAGE_VERSION_KEY, CURRENT_STORAGE_VERSION);
+    }
+
+    // Always purge legacy mock B2B organization from localStorage
+    const rawOrg = localStorage.getItem('apollo_org');
+    if (rawOrg) {
+      try {
+        const parsed = JSON.parse(rawOrg);
+        if (parsed && (parsed.gstin === '24AAACP9999P1Z2' || parsed.companyName === 'Apollo Engineering & Solar EPC Partners' || parsed.id === 'org_solar_epc')) {
+          localStorage.removeItem('apollo_org');
+        }
+      } catch {
+        // Safe ignore
+      }
+    }
+
+    // Always deduplicate stored products by ASIN to prevent duplicate React keys
+    const rawProds = localStorage.getItem('apollo_products');
+    if (rawProds) {
+      try {
+        const parsed = JSON.parse(rawProds);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const seen = new Set<string>();
+          const deduped = parsed.filter((p: any) => {
+            if (!p || !p.asin || seen.has(p.asin)) return false;
+            seen.add(p.asin);
+            return true;
+          });
+          if (deduped.length !== parsed.length) {
+            localStorage.setItem('apollo_products', JSON.stringify(deduped));
+          }
+        }
+      } catch {
+        // Safe ignore
+      }
     }
   } catch {
     // If localStorage is restricted or throws, safely ignore

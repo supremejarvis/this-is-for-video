@@ -57,7 +57,7 @@ def verify_csrf_token(client_token: str, expected_hash: str) -> bool:
     return verify_token_hash(client_token, expected_hash)
 
 
-def verify_totp_code(secret_b32: str, code: str, window: int = 1, time_step: int = 30) -> bool:
+def verify_totp_code(secret_b32: str, code: str, window: int = 2, time_step: int = 30) -> bool:
     """Verify RFC 6238 Time-based One-Time Password against Base32 secret key."""
     clean_code = str(code).strip().replace(" ", "")
     if len(clean_code) != 6 or not clean_code.isdigit():

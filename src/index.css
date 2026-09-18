@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+@source "./";
+@source "../index.html";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -41,6 +43,19 @@
 
   h1, h2, h3, h4 {
     @apply font-display tracking-tight text-deep-blue;
+  }
+
+  /* Typography & Gradient Clipping Prevention (Audit Remediation) */
+  h1.font-display {
+    line-height: 1.1 !important;
+  }
+
+  span.bg-clip-text {
+    display: inline-block;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
   }
 }
 
@@ -236,5 +251,27 @@
 
 ::-webkit-scrollbar-thumb {
   @apply bg-brand-blue/30 rounded-full hover:bg-brand-blue/50 transition-colors;
+}
+
+/* Gradient Text Rendering Fixes */
+@layer utilities {
+  .bg-clip-text {
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
+  .box-decoration-clone {
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+}
+
+@supports not (background-clip: text) {
+  .bg-clip-text {
+    color: var(--color-deep-blue);
+    background-image: none;
+  }
 }
 

@@ -88,13 +88,53 @@ class Order(Base):
     total_payable: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), default="INR", nullable=False)
 
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    customer_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    customer_phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    customer_email: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    company_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    gstin: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
 
     items: Mapped[list["OrderItem"]] = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    address: Mapped["OrderAddress | None"] = relationship(
+        "OrderAddress", back_populates="order", uselist=False, cascade="all, delete-orphan"
+    )
     payments: Mapped[list["Payment"]] = relationship("Payment", back_populates="order")
     shipments: Mapped[list["Shipment"]] = relationship("Shipment", back_populates="order")
     replacement_cases: Mapped[list["ReplacementCase"]] = relationship("ReplacementCase", back_populates="original_order")
+
+
+class OrderAddress(Base):
+    __tablename__ = "order_addresses"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    order_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
+    )
+    address_type: Mapped[str] = mapped_column(String(20), default="SHIPPING", nullable=False)
+    full_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    phone: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    email: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    address_line1: Mapped[str] = mapped_column(String(255), nullable=False)
+    address_line2: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    landmark: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    city: Mapped[str] = mapped_column(String(100), nullable=False)
+    state: Mapped[str] = mapped_column(String(100), nullable=False)
+    state_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    pincode: Mapped[str] = mapped_column(String(6), nullable=False, index=True)
+    country: Mapped[str] = mapped_column(String(50), default="India", nullable=False)
+    company_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    gstin: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    order: Mapped["Order"] = relationship("Order", back_populates="address")
 
 
 class OrderItem(Base):

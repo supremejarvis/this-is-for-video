@@ -25,7 +25,7 @@ from app.services.catalog_service import CatalogService
 from app.services.inventory import InsufficientStockError, InventoryService
 from app.services.pricing_service import PricingService
 
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5433/apollo_disposable_test"
+DATABASE_URL = "postgresql+asyncpg://postgres_test:postgres@localhost:5432/apollo_disposable_test"
 
 
 @pytest.fixture

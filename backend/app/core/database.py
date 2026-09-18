@@ -1,15 +1,18 @@
 """Database Connection & Session Configuration."""
 from collections.abc import AsyncGenerator
+from typing import Any
 
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 
+
 @compiles(JSONB, "sqlite")
-def compile_jsonb_sqlite(type_, compiler, **kw):
+def compile_jsonb_sqlite(type_: Any, compiler: Any, **kw: Any) -> str:
     return "JSON"
 
 class Base(DeclarativeBase):
@@ -18,12 +21,13 @@ class Base(DeclarativeBase):
 
 is_sqlite = "sqlite" in settings.DATABASE_URL.lower()
 
-engine_kwargs = {}
+engine_kwargs: dict[str, Any] = {}
 if is_sqlite:
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 else:
-    engine_kwargs["pool_size"] = 10
-    engine_kwargs["max_overflow"] = 20
+    # Serverless-safe PostgreSQL configuration
+    engine_kwargs["poolclass"] = NullPool
+    engine_kwargs["pool_pre_ping"] = True
 
 # Managed engine
 engine = create_async_engine(

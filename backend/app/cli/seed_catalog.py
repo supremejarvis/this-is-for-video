@@ -2,6 +2,7 @@
 import asyncio
 import uuid
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import select
 
@@ -10,6 +11,8 @@ from app.models.price import PriceVersion, TaxMode
 from app.models.product import FitMode, Product, ProductVariant
 from app.schemas.product import ProductCreate
 from app.services.catalog_service import CatalogService
+
+DEFAULT_GST_RATE = Decimal("0.1800")
 
 
 async def seed_catalog() -> None:
@@ -58,7 +61,7 @@ async def seed_catalog() -> None:
                     channel="B2C",
                     min_quantity=1,
                     unit_price=Decimal("20.00"),
-                    gst_rate=Decimal("0.1800"),
+                    gst_rate=DEFAULT_GST_RATE,
                     hsn_code=product.hsn_code,
                     tax_mode=TaxMode.GST_INCLUSIVE,
                     reason="Initial Catalog Seed Price",
@@ -81,7 +84,7 @@ async def seed_catalog() -> None:
                     channel="B2B",
                     min_quantity=100,
                     unit_price=Decimal("16.00"),
-                    gst_rate=Decimal("0.1800"),
+                    gst_rate=DEFAULT_GST_RATE,
                     hsn_code=product.hsn_code,
                     tax_mode=TaxMode.GST_EXCLUSIVE,
                     reason="Initial B2B Wholesale Seed Price",
@@ -160,7 +163,7 @@ async def seed_catalog() -> None:
                 channel="B2C",
                 min_quantity=1,
                 unit_price=Decimal("220.00"),
-                gst_rate=Decimal("0.1800"),
+                gst_rate=DEFAULT_GST_RATE,
                 hsn_code="84248990",
                 tax_mode=TaxMode.GST_INCLUSIVE,
                 reason="Initial Flagship Sprinkler B2C Price",
@@ -176,7 +179,7 @@ async def seed_catalog() -> None:
                 channel="B2B",
                 min_quantity=50,
                 unit_price=Decimal("185.00"),
-                gst_rate=Decimal("0.1800"),
+                gst_rate=DEFAULT_GST_RATE,
                 hsn_code="84248990",
                 tax_mode=TaxMode.GST_EXCLUSIVE,
                 reason="Initial Flagship Sprinkler B2B Wholesale Price",
@@ -221,7 +224,7 @@ async def seed_catalog() -> None:
                     channel="B2C",
                     min_quantity=1,
                     unit_price=Decimal("220.00"),
-                    gst_rate=Decimal("0.1800"),
+                    gst_rate=DEFAULT_GST_RATE,
                     hsn_code="84248990",
                     tax_mode=TaxMode.GST_INCLUSIVE,
                     reason="Initial Flagship Sprinkler B2C Price",
@@ -236,7 +239,7 @@ async def seed_catalog() -> None:
                     channel="B2B",
                     min_quantity=50,
                     unit_price=Decimal("185.00"),
-                    gst_rate=Decimal("0.1800"),
+                    gst_rate=DEFAULT_GST_RATE,
                     hsn_code="84248990",
                     tax_mode=TaxMode.GST_EXCLUSIVE,
                     reason="Initial Flagship Sprinkler B2B Wholesale Price",
@@ -245,7 +248,7 @@ async def seed_catalog() -> None:
                 await session.commit()
 
         # Seed other authentic Apollo Engineering catalog products
-        additional_products = [
+        additional_products: list[dict[str, Any]] = [
             {
                 "sku_prefix": "AE-CLAMP-GI",
                 "name": "GI Solar Pipe Clamp (Galvanized Iron · L-Shape Adjustable)",
@@ -371,7 +374,7 @@ async def seed_catalog() -> None:
                         channel="B2C",
                         min_quantity=1,
                         unit_price=Decimal(vdata["price"]),
-                        gst_rate=Decimal("0.1800"),
+                        gst_rate=DEFAULT_GST_RATE,
                         hsn_code=pdata["hsn_code"],
                         tax_mode=TaxMode.GST_INCLUSIVE,
                         reason="Standard Seed B2C Price",
@@ -379,7 +382,7 @@ async def seed_catalog() -> None:
                     session.add(pv_b2c)
 
         await session.commit()
-        print(f"Catalog seeding complete. All 7 authentic Apollo products ready in database.")
+        print("Catalog seeding complete. All 7 authentic Apollo products ready in database.")
 
 
 if __name__ == "__main__":

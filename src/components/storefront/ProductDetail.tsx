@@ -3,7 +3,7 @@ import {
   Star, Truck, Building2, Check, 
   ChevronRight, ShoppingCart, Eye, ShieldCheck, ArrowRight,
   Box, Sparkles, BadgeCheck, Scale, Layers, Info, Lock, Settings2,
-  X, Package, Ruler, Calculator, AlertTriangle, Droplets, ShieldAlert, Sun, ArrowDown, CheckCircle2
+  X, Package, Ruler, Calculator, AlertTriangle, Droplets, ShieldAlert, Sun, ArrowDown, CheckCircle2, RotateCw
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { calculateSpeedPostTariff } from '../../services/logisticsService';
@@ -19,6 +19,7 @@ export const ProductDetail: React.FC = () => {
   if (!selectedProduct) return null;
 
   const [selectedThickness, setSelectedThickness] = useState<number>(35);
+  const [panelMountOrientation, setPanelMountOrientation] = useState<'PORTRAIT' | 'LANDSCAPE'>('PORTRAIT');
   const [isKitBreakdownModalOpen, setIsKitBreakdownModalOpen] = useState(false);
   const [isFrameGuideModalOpen, setIsFrameGuideModalOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
@@ -297,7 +298,7 @@ export const ProductDetail: React.FC = () => {
                   />
                 </div>
                 <span className="text-xs text-[#0054A6] font-mono font-bold mt-4 flex items-center gap-1.5 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-                  <RotateIcon className="w-4 h-4 text-[#0054A6]" /> Drag left/right to spin 360° ({Math.abs(rotationAngle)}°)
+                  <RotateCw className="w-4 h-4 text-[#0054A6]" /> Drag left/right to spin 360° ({Math.abs(rotationAngle)}°)
                 </span>
               </div>
             )}
@@ -592,13 +593,13 @@ export const ProductDetail: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => {
-                              const newClips = calcClipsPerPanel === 2 ? 4 : 2;
+                              const newClips = calcClipsPerPanel === 2 ? 3 : 2;
                               setCalcClipsPerPanel(newClips);
                               setSelectedQty(calcPanelCount * newClips);
                             }}
-                            className="text-[10px] font-mono text-[#0054A6] hover:underline"
+                            className="text-[10px] font-mono text-[#0054A6] hover:underline font-bold"
                           >
-                            Mode: {calcClipsPerPanel} clips/panel ({calcClipsPerPanel === 2 ? 'Portrait' : 'Landscape/Heavy Dust'})
+                            Mounting Mode: {calcClipsPerPanel} Clips/Panel ({calcClipsPerPanel === 2 ? 'Portrait (2 Clips)' : 'Landscape (3 Clips)'})
                           </button>
                         </div>
                       </div>
@@ -1207,25 +1208,122 @@ export const ProductDetail: React.FC = () => {
                 </div>
               </div>
 
-              {/* Sizing Pills */}
-              <div className="flex flex-wrap items-center gap-2 p-3 bg-blue-50/80 rounded-2xl border border-blue-200 text-[11px] font-mono">
-                <span className="font-bold text-blue-950">Auto Plant Sizing:</span>
-                <span className="px-2.5 py-1 rounded-lg bg-white border border-blue-200 font-bold text-slate-900">
-                  ☀️ {currentVariant.solarKitConfig?.panelCount || (currentVariant.title.includes('5 kW') ? 10 : currentVariant.title.includes('10 kW') ? 20 : 6)} Solar Panels
-                </span>
-                <span className="px-2.5 py-1 rounded-lg bg-white border border-blue-200 font-bold text-emerald-700">
-                  ⚡ Motor: {currentVariant.solarKitConfig?.motorLpm || (currentVariant.title.includes('5 kW') ? 70 : currentVariant.title.includes('10 kW') ? 140 : 42)} LPM Flow
-                </span>
-                <span className="px-2.5 py-1 rounded-lg bg-white border border-blue-200 font-bold text-blue-700">
-                  ⚙️ {currentVariant.solarKitConfig?.motorHp || (currentVariant.title.includes('5 kW') ? '1.0 HP' : currentVariant.title.includes('10 kW') ? '2.0 HP' : '0.5 HP')}
-                </span>
-                <span className="px-2.5 py-1 rounded-lg bg-white border border-blue-200 font-bold text-amber-800">
-                  🔌 {currentVariant.solarKitConfig?.electricalPhase || 'Single Phase 220V AC'}
-                </span>
-                <span className="px-2.5 py-1 rounded-lg bg-white border border-blue-200 font-bold text-purple-700">
-                  📎 {currentVariant.solarKitConfig?.drainClipsPcs || (currentVariant.title.includes('5 kW') ? 20 : currentVariant.title.includes('10 kW') ? 40 : 12)} Drain Clips ({selectedThickness}mm)
-                </span>
-              </div>
+              {/* Sizing Pills & Panel Number Details (Horizontal & Vertical Panels) */}
+              {(() => {
+                const totalKitPanels = currentVariant.solarKitConfig?.panelCount || 
+                  (currentVariant.title.includes('5 kW') ? 10 : currentVariant.title.includes('10 kW') ? 20 : 6);
+                
+                // Calculate horizontal rows and vertical columns
+                const rowsHorizontal = panelMountOrientation === 'PORTRAIT'
+                  ? (totalKitPanels <= 6 ? 2 : totalKitPanels <= 12 ? 2 : 4)
+                  : (totalKitPanels <= 6 ? 3 : totalKitPanels <= 12 ? 5 : 5);
+                const colsVertical = Math.ceil(totalKitPanels / rowsHorizontal);
+
+                return (
+                  <div className="space-y-3">
+                    {/* Panel Count & Orientation Layout Matrix */}
+                    <div className="p-4 bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-white rounded-2xl border border-blue-200/90 space-y-3 shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-blue-200/60 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <Layers className="w-4 h-4 text-[#0054A6]" />
+                          <span className="font-bold text-slate-900 text-xs">
+                            Panel Numbers & Mounting Array Layout:
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                          <span className="text-slate-600 font-semibold">Mounting Style:</span>
+                          <div className="inline-flex rounded-lg border border-blue-300 p-0.5 bg-white shadow-xs">
+                            <button
+                              type="button"
+                              onClick={() => setPanelMountOrientation('PORTRAIT')}
+                              className={`px-2.5 py-0.5 rounded-md font-bold transition-all text-xs ${
+                                panelMountOrientation === 'PORTRAIT'
+                                  ? 'bg-[#0054A6] text-white shadow-xs'
+                                  : 'text-slate-700 hover:bg-slate-100'
+                              }`}
+                            >
+                              Portrait
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPanelMountOrientation('LANDSCAPE')}
+                              className={`px-2.5 py-0.5 rounded-md font-bold transition-all text-xs ${
+                                panelMountOrientation === 'LANDSCAPE'
+                                  ? 'bg-[#0054A6] text-white shadow-xs'
+                                  : 'text-slate-700 hover:bg-slate-100'
+                              }`}
+                            >
+                              Landscape
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Clean Breakdown: Total Panels, Required Sprinklers, Required Drain Clips */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
+                        <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-xs flex items-center justify-between">
+                          <div>
+                            <span className="text-slate-500 text-[10px] block font-bold uppercase tracking-wider">
+                              Total Solar Panels:
+                            </span>
+                            <span className="text-lg font-black text-slate-950">
+                              {totalKitPanels} <span className="text-xs font-normal text-slate-500">Nos.</span>
+                            </span>
+                          </div>
+                          <span className="px-2 py-1 rounded-lg bg-blue-50 text-[#0054A6] font-bold text-xs">
+                            ~550W Mono
+                          </span>
+                        </div>
+
+                        <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-xs flex items-center justify-between">
+                          <div>
+                            <span className="text-slate-500 text-[10px] block font-bold uppercase tracking-wider">
+                              Required Sprinklers ({panelMountOrientation === 'PORTRAIT' ? '1/Panel' : '2/Panel'}):
+                            </span>
+                            <span className="text-lg font-black text-blue-900">
+                              {panelMountOrientation === 'PORTRAIT' ? totalKitPanels * 1 : totalKitPanels * 2} <span className="text-xs font-normal text-slate-500">Pcs</span>
+                            </span>
+                          </div>
+                          <span className="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-xs">
+                            180° SS304
+                          </span>
+                        </div>
+
+                        <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-xs flex items-center justify-between">
+                          <div>
+                            <span className="text-slate-500 text-[10px] block font-bold uppercase tracking-wider">
+                              Required Drain Clips ({panelMountOrientation === 'PORTRAIT' ? '2/Panel' : '3/Panel'}):
+                            </span>
+                            <span className="text-lg font-black text-amber-900">
+                              {panelMountOrientation === 'PORTRAIT' ? totalKitPanels * 2 : totalKitPanels * 3} <span className="text-xs font-normal text-slate-500">Pcs</span>
+                            </span>
+                          </div>
+                          <span className="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 font-bold text-xs">
+                            SS304 Siphon
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Technical Sizing Pills */}
+                    <div className="flex flex-wrap items-center gap-2 p-3 bg-slate-50 rounded-2xl border border-slate-200 text-[11px] font-mono">
+                      <span className="font-bold text-slate-700">Auto Plant Equipment:</span>
+                      <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 font-bold text-emerald-700">
+                        ⚡ Motor: {currentVariant.solarKitConfig?.motorLpm || (totalKitPanels * 7)} LPM Flow
+                      </span>
+                      <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 font-bold text-blue-700">
+                        ⚙️ {currentVariant.solarKitConfig?.motorHp || (totalKitPanels <= 8 ? '0.5 HP' : totalKitPanels <= 15 ? '1.0 HP' : '2.0 HP')}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 font-bold text-amber-800">
+                        🔌 {currentVariant.solarKitConfig?.electricalPhase || 'Single Phase 220V AC'}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 font-bold text-purple-700">
+                        📎 {totalKitPanels * 2} Drain Clips ({selectedThickness}mm Frame · 2 per panel)
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* 6 Included Products Grid (Product Su Avse, Qty, and Price) */}
               <div className="space-y-2">
@@ -1237,17 +1335,17 @@ export const ProductDetail: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {currentVariant.comboComponents?.map((comp, idx) => {
                     let itemImg = comp.imageUrl || '/logo.webp';
-                    if (comp.asin === 'AP-SPRINKLER-180') itemImg = '/solar_sprinkler.webp';
-                    if (comp.asin === 'AP-CLIP-35MM') itemImg = '/Drain_clips.webp';
-                    if (comp.asin === 'AP-CLAMP-GI') itemImg = '/gi_pipe_clamp.webp';
+                    if (comp.asin === 'AP-SPRINKLER-01' || comp.asin === 'AP-SPRINKLER-180') itemImg = '/solar_sprinkler.webp';
+                    if (comp.asin === 'AP-DRAINCLIPS-02' || comp.asin === 'AP-CLIP-35MM') itemImg = '/Drain_clips.webp';
+                    if (comp.asin === 'AP-GICLAMP-03' || comp.asin === 'AP-CLAMP-GI') itemImg = '/gi_pipe_clamp.webp';
                     if (comp.asin === 'AP-TIMER-07') itemImg = '/auto_timer.webp';
                     if (comp.asin === 'AP-PUMP-06') itemImg = '/pump.webp';
-                    if (comp.asin === 'AP-TEE-UPVC') itemImg = '/cpvc_upvc.webp';
+                    if (comp.asin === 'AP-FITTINGTEE-04' || comp.asin === 'AP-TEE-UPVC') itemImg = '/cpvc_upvc.webp';
 
                     const unitPrice = comp.unitPrice || (
-                      comp.asin === 'AP-SPRINKLER-180' ? 60 :
-                      comp.asin === 'AP-CLIP-35MM' ? 20 :
-                      comp.asin === 'AP-CLAMP-GI' ? 25 :
+                      (comp.asin === 'AP-SPRINKLER-01' || comp.asin === 'AP-SPRINKLER-180') ? 60 :
+                      (comp.asin === 'AP-DRAINCLIPS-02' || comp.asin === 'AP-CLIP-35MM') ? 20 :
+                      (comp.asin === 'AP-GICLAMP-03' || comp.asin === 'AP-CLAMP-GI') ? 25 :
                       comp.asin === 'AP-TIMER-07' ? 850 :
                       comp.asin === 'AP-PUMP-06' ? (currentVariant.solarKitConfig?.panelCount && currentVariant.solarKitConfig.panelCount > 15 ? 4200 : currentVariant.solarKitConfig?.panelCount && currentVariant.solarKitConfig.panelCount > 8 ? 2400 : 1700) : 33
                     );
@@ -1601,10 +1699,3 @@ export const ProductDetail: React.FC = () => {
   );
 };
 
-function RotateIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-    </svg>
-  );
-}

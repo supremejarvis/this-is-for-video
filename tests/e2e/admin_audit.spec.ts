@@ -24,9 +24,23 @@ test.describe('Apollo Engineering Admin Page — Comprehensive Audit Suite', () 
 
   // 2. Authenticated Admin Desk & Core Pillars Audit
   test('Admin Desk loads all core pillars and functions without console errors', async ({ page }) => {
-    // Set authenticated session state in sessionStorage before navigation
+    // Mock verified backend admin session via /api/v1/auth/me
+    await page.route('**/api/v1/auth/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'u_apollo_admin_master',
+          email: 'admin@apolloengineering.co.in',
+          full_name: 'Apollo Engineering Administrator',
+          role: 'SUPER_ADMIN',
+          is_superuser: true,
+          phone: '8511626267',
+        }),
+      });
+    });
+
     await page.addInitScript(() => {
-      sessionStorage.setItem('apollo_admin_session', 'active');
       localStorage.setItem('apollo_google_auth_configured', 'true');
     });
 
@@ -88,8 +102,23 @@ test.describe('Apollo Engineering Admin Page — Comprehensive Audit Suite', () 
   // 3. Responsive Mobile Viewport Audit (390x844)
   test('Admin Desk renders responsively on mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
+    // Mock verified backend admin session via /api/v1/auth/me
+    await page.route('**/api/v1/auth/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'u_apollo_admin_master',
+          email: 'admin@apolloengineering.co.in',
+          full_name: 'Apollo Engineering Administrator',
+          role: 'SUPER_ADMIN',
+          is_superuser: true,
+          phone: '8511626267',
+        }),
+      });
+    });
+
     await page.addInitScript(() => {
-      sessionStorage.setItem('apollo_admin_session', 'active');
       localStorage.setItem('apollo_google_auth_configured', 'true');
     });
 

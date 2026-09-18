@@ -7,6 +7,14 @@ Allow: /*.vtt$
 Allow: /*.pdf$
 Allow: /*.json$
 
+# Security: Block sensitive/admin paths from search indexing
+Disallow: /admin
+Disallow: /super-admin
+Disallow: /checkout
+Disallow: /api/
+Disallow: /*.env$
+Disallow: /*.json$
+
 User-agent: Googlebot
 Allow: /
 

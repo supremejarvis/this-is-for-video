@@ -28,14 +28,14 @@ import {
 } from '../constants';
 import { calculateExclusiveGst } from '../utils/gstCalculations';
 
-export const CEPT_API_BASE_URL = CEPT_CONFIG.apiUrl || 'https://test.cept.gov.in/beextcustomer';
+export const CEPT_API_BASE_URL = 'https://test.cept.gov.in/beextcustomer';
 
 export const CEPT_DEFAULT_CONFIG = {
-  bulkCustomerId: parseInt(CEPT_CONFIG.customerId, 10) || 9999265476,
-  contractId: parseInt(CEPT_CONFIG.contractId, 10) || 41636817,
-  pickupOfficeId: parseInt(CEPT_CONFIG.dropoffOfficeId, 10) || 21260024,
-  username: CEPT_CONFIG.username || '',
-  password: CEPT_CONFIG.password || '',
+  bulkCustomerId: 9999265476,
+  contractId: 41636817,
+  pickupOfficeId: 21260024,
+  username: '',
+  password: '',
   senderName: 'Apollo Engineering',
   senderCompany: 'Apollo Engineering Pvt Ltd',
   senderAddressL1: '100 / Gopinath Industrial Landmark',

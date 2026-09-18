@@ -9,7 +9,7 @@ export const ProductGrid: React.FC = () => {
     searchQuery, selectedCategory, appMode, activeAddress 
   } = useStore();
 
-  const [selectedQty, setSelectedQty] = useState(1);
+  const [productQuantities, setProductQuantities] = useState<Record<string, number>>({});
 
   const filteredProducts = products.filter((p) => {
     const matchesCat = selectedCategory === 'ALL' || p.category === selectedCategory;
@@ -48,7 +48,7 @@ export const ProductGrid: React.FC = () => {
 
       {/* Products Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredProducts.map((product) => {
+        {filteredProducts.map((product, pIdx) => {
           const selectedVariant = 
             product.variants.find((v) => v.sku === product.selectedVariantSku) || 
             product.variants[0];
@@ -60,9 +60,23 @@ export const ProductGrid: React.FC = () => {
               price: selectedVariant.b2cPrice
             };
 
+          const itemQty = productQuantities[product.asin] || 1;
+          const setItemQty = (qty: number) => 
+            setProductQuantities((prev) => ({ ...prev, [product.asin]: qty }));
+
+          let effectiveUnitPrice = selectedVariant.b2cPrice;
+          if (appMode === 'B2B' && selectedVariant.b2bTierPricing && selectedVariant.b2bTierPricing.length > 0) {
+            const matchedTier = [...selectedVariant.b2bTierPricing]
+              .reverse()
+              .find((t) => itemQty >= t.minQty) || selectedVariant.b2bTierPricing[0];
+            if (matchedTier) {
+              effectiveUnitPrice = matchedTier.pricePerUnit;
+            }
+          }
+
           return (
             <div
-              key={product.asin}
+              key={`${product.asin}-${pIdx}`}
               className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-amber-500/50 hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-300 flex flex-col group"
             >
               {/* Image Container */}
@@ -73,6 +87,9 @@ export const ProductGrid: React.FC = () => {
                 <img
                   src={selectedVariant.images[0]}
                   alt={product.title}
+                  loading={pIdx < 2 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  fetchPriority={pIdx < 2 ? 'high' : 'low'}
                   className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
                 />
 
@@ -141,7 +158,7 @@ export const ProductGrid: React.FC = () => {
                   <div className="flex items-baseline justify-between">
                     <div>
                       <div className="text-lg font-black text-white font-mono">
-                        ₹{selectedVariant.b2cPrice.toLocaleString('en-IN')}
+                        ₹{effectiveUnitPrice.toLocaleString('en-IN')}
                       </div>
                       <span className="text-xs line-through text-slate-500 font-mono">
                         ₹{selectedVariant.mrp.toLocaleString('en-IN')}
@@ -158,27 +175,31 @@ export const ProductGrid: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 mt-3">
-                    <button
-                      onClick={() => setSelectedProduct(product)}
-                      className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl flex items-center justify-center gap-1 transition-colors"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      View Details
-                    </button>
+                  <div className="space-y-2 mt-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setSelectedProduct(product)}
+                        aria-label={`View details for ${product.title}`}
+                        className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl flex items-center justify-center gap-1 transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        View Details
+                      </button>
 
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs text-slate-300">Qty:</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={selectedVariant.inventory || 10}
-                        value={selectedQty}
-                        onChange={(e) => setSelectedQty(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-16 h-8 px-2 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono font-bold text-sm focus:ring-1 focus:ring-amber-500 focus:outline-none"
-                      />
-                      <span className="text-xs text-slate-400">units</span>
+                      <div className="flex items-center justify-end gap-1.5 bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800">
+                        <label className="text-[11px] text-slate-400 font-medium">Qty:</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={selectedVariant.inventory || 10}
+                          value={itemQty}
+                          onChange={(e) => setItemQty(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-12 h-6 px-1 bg-slate-900 border border-slate-700 rounded text-center text-white font-mono font-bold text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                        />
+                        <span className="text-[10px] text-slate-500">pcs</span>
+                      </div>
                     </div>
+
                     <button
                       onClick={() => {
                         addToCart({
@@ -188,7 +209,7 @@ export const ProductGrid: React.FC = () => {
                           variantTitle: selectedVariant.title,
                           attributes: selectedVariant.attributes as Record<string, string>,
                           imageUrl: selectedVariant.images[0],
-                          unitPrice: selectedVariant.b2cPrice,
+                          unitPrice: effectiveUnitPrice,
                           mrp: selectedVariant.mrp,
                           gstRate: selectedVariant.gstRatePercent,
                           hsnCode: selectedVariant.hsnCode,
@@ -197,8 +218,9 @@ export const ProductGrid: React.FC = () => {
                           fulfillmentType: bestSeller.fulfillmentType,
                           weightGrams: selectedVariant.weightGrams,
                           isB2BPricingApplied: appMode === 'B2B'
-                        }, selectedQty);
+                        }, itemQty);
                       }}
+                      aria-label={`Add ${product.title} to cart`}
                       className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-1 shadow-lg shadow-amber-500/20 transition-colors"
                     >
                       <ShoppingCart className="w-3.5 h-3.5" />

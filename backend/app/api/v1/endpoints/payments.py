@@ -2,24 +2,29 @@
 import hashlib
 import hmac
 import json
+import logging
 import uuid
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
+import httpx
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_optional_current_user, require_roles
+from app.api.deps import get_optional_current_user
 from app.core.config import settings
 from app.core.database import get_db
-from app.models import Order, OrderStatus, Payment, PaymentStatus, WebhookEvent
-from app.models.auth import User, UserRole
+from app.models import Order, OrderItem, OrderStatus, Payment, PaymentStatus, WebhookEvent
+from app.models.auth import User
+from app.services.inventory import InventoryService
 from app.schemas.order import (
     RazorpayCreateOrderRequest,
     RazorpayCreateOrderResponse,
     RazorpayVerifyPaymentRequest,
     RazorpayVerifyPaymentResponse,
 )
+
+logger = logging.getLogger("apollo.payments")
 
 router = APIRouter()
 
@@ -48,8 +53,57 @@ async def razorpay_create_order(
     # Calculate authoritative amount in paise
     amount_paise = int(order.total_payable * 100)
 
-    # Generate or request Razorpay Order ID
-    razorpay_order_id = f"order_{uuid.uuid4().hex[:14]}"
+    # In production or when valid Razorpay keys are configured, call official Razorpay API
+    is_live_or_valid_key = (
+        bool(settings.RAZORPAY_KEY_ID)
+        and not settings.RAZORPAY_KEY_ID.startswith("rzp_test_placeholder")
+    )
+    razorpay_order_id: str
+
+    if is_live_or_valid_key:
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                res = await client.post(
+                    "https://api.razorpay.com/v1/orders",
+                    auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET),
+                    json={
+                        "amount": amount_paise,
+                        "currency": "INR",
+                        "receipt": order.order_number,
+                        "notes": {
+                            "order_id": str(order.id),
+                            "order_number": order.order_number,
+                        },
+                    },
+                )
+                if res.status_code == 200:
+                    rp_data = res.json()
+                    razorpay_order_id = str(rp_data["id"])
+                else:
+                    logger.error(
+                        "Razorpay order creation failed: status=%s, response=%s",
+                        res.status_code,
+                        res.text,
+                    )
+                    if settings.ENVIRONMENT.lower() == "production":
+                        raise HTTPException(
+                            status_code=status.HTTP_502_BAD_GATEWAY,
+                            detail="Payment gateway service error. Unable to initialize checkout.",
+                        )
+                    razorpay_order_id = f"order_mock_{uuid.uuid4().hex[:14]}"
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("Exception communicating with Razorpay: %s", e, exc_info=True)
+            if settings.ENVIRONMENT.lower() == "production":
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Payment gateway currently unreachable. Please try again.",
+                ) from e
+            razorpay_order_id = f"order_mock_{uuid.uuid4().hex[:14]}"
+    else:
+        logger.info("Using simulated Razorpay order ID in non-production environment.")
+        razorpay_order_id = f"order_mock_{uuid.uuid4().hex[:14]}"
 
     # Update or add payment entry in PostgreSQL
     stmt_pmt = select(Payment).where(Payment.order_id == order.id, Payment.provider == "razorpay")
@@ -90,7 +144,7 @@ async def razorpay_verify_payment(
         )
 
     # Calculate expected HMAC-SHA256
-    message = f"{payload.razorpay_order_id}|{payload.razorpay_payment_id}".encode("utf-8")
+    message = f"{payload.razorpay_order_id}|{payload.razorpay_payment_id}".encode()
     expected_sig = hmac.new(
         settings.RAZORPAY_KEY_SECRET.encode("utf-8"),
         message,
@@ -127,8 +181,22 @@ async def razorpay_verify_payment(
         payment.provider_payment_id = payload.razorpay_payment_id
         payment.status = PaymentStatus.CAPTURED
 
-    order.payment_status = PaymentStatus.CAPTURED
-    order.order_status = OrderStatus.CONFIRMED
+    if order.payment_status != PaymentStatus.CAPTURED:
+        stmt_items = select(OrderItem).where(OrderItem.order_id == order.id)
+        order_items = (await db.execute(stmt_items)).scalars().all()
+        for item in order_items:
+            try:
+                await InventoryService.confirm_payment_and_commit_stock(
+                    session=db,
+                    order_id=order.id,
+                    sku=item.sku,
+                    quantity=item.quantity,
+                )
+            except Exception as exc:
+                logger.warning("Inventory commit notice for SKU %s on order %s: %s", item.sku, order.id, exc)
+
+        order.payment_status = PaymentStatus.CAPTURED
+        order.order_status = OrderStatus.CONFIRMED
 
     await db.commit()
 
@@ -140,6 +208,36 @@ async def razorpay_verify_payment(
     )
 
 
+@router.get("/status/{order_id}")
+async def get_payment_status(
+    order_id: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, Any]:
+    """Retrieve authoritative payment status for an order."""
+    order_uuid: uuid.UUID | None = None
+    try:
+        order_uuid = uuid.UUID(order_id)
+        stmt = select(Order).where(Order.id == order_uuid)
+    except ValueError:
+        stmt = select(Order).where(Order.order_number == order_id)
+
+    order = (await db.execute(stmt)).scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    stmt_pmt = select(Payment).where(Payment.order_id == order.id, Payment.provider == "razorpay")
+    pmt = (await db.execute(stmt_pmt)).scalar_one_or_none()
+
+    return {
+        "order_id": str(order.id),
+        "order_number": order.order_number,
+        "order_status": order.order_status.value if hasattr(order.order_status, "value") else str(order.order_status),
+        "payment_status": order.payment_status.value if hasattr(order.payment_status, "value") else str(order.payment_status),
+        "amount_paid": float(order.total_payable),
+        "transaction_id": pmt.provider_payment_id if pmt else None,
+    }
+
+
 @router.post("/razorpay/webhook")
 async def razorpay_webhook(
     request: Request,
@@ -148,16 +246,21 @@ async def razorpay_webhook(
 ) -> dict[str, str]:
     """Process incoming Razorpay webhooks idempotently with raw HMAC-SHA256 signature verification."""
     raw_body = await request.body()
-    secret = getattr(settings, "RAZORPAY_WEBHOOK_SECRET", None) or settings.RAZORPAY_KEY_SECRET
-
     if not x_razorpay_signature:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing mandatory X-Razorpay-Signature header",
         )
 
+    webhook_secret = getattr(settings, "RAZORPAY_WEBHOOK_SECRET", None)
+    if not webhook_secret:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Webhook secret not configured. Set RAZORPAY_WEBHOOK_SECRET in environment.",
+        )
+
     expected_sig = hmac.new(
-        secret.encode("utf-8"),
+        webhook_secret.encode("utf-8"),
         raw_body,
         hashlib.sha256,
     ).hexdigest()
@@ -205,7 +308,7 @@ async def razorpay_webhook(
                 order_uuid = uuid.UUID(order_id_str)
                 stmt = select(Order).where(Order.id == order_uuid)
                 order = (await db.execute(stmt)).scalar_one_or_none()
-                if order:
+                if order and order.payment_status != PaymentStatus.CAPTURED:
                     order.payment_status = PaymentStatus.CAPTURED
                     order.order_status = OrderStatus.CONFIRMED
 
@@ -214,9 +317,33 @@ async def razorpay_webhook(
                     if pmt:
                         pmt.status = PaymentStatus.CAPTURED
                         pmt.provider_payment_id = provider_payment_id
+
+                    stmt_items = select(OrderItem).where(OrderItem.order_id == order.id)
+                    order_items = (await db.execute(stmt_items)).scalars().all()
+                    for item in order_items:
+                        try:
+                            await InventoryService.confirm_payment_and_commit_stock(
+                                session=db,
+                                order_id=order.id,
+                                sku=item.sku,
+                                quantity=item.quantity,
+                            )
+                        except Exception as exc:
+                            logger.warning("Inventory commit notice for SKU %s on order %s: %s", item.sku, order.id, exc)
                     await db.commit()
-            except Exception:
+                elif order:
+                    stmt_pmt = select(Payment).where(Payment.order_id == order.id, Payment.provider == "razorpay")
+                    pmt = (await db.execute(stmt_pmt)).scalar_one_or_none()
+                    if pmt and not pmt.provider_payment_id:
+                        pmt.provider_payment_id = provider_payment_id
+                    await db.commit()
+            except Exception as e:
                 await db.rollback()
+                logger.error("Database error processing payment.captured webhook: %s", e, exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Database error processing webhook. Retry scheduled.",
+                ) from e
 
     elif event_type == "payment.failed":
         payment_entity = payload_data.get("payment", {}).get("entity", {})
@@ -233,7 +360,15 @@ async def razorpay_webhook(
                     if pmt:
                         pmt.status = PaymentStatus.FAILED
                     await db.commit()
-            except Exception:
+            except Exception as e:
                 await db.rollback()
+                logger.error("Database error processing payment.failed webhook: %s", e, exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Database error processing webhook. Retry scheduled.",
+                ) from e
+    else:
+        # For other events, commit the WebhookEvent idempotency record
+        await db.commit()
 
     return {"status": "processed", "event": event_type or "unknown"}

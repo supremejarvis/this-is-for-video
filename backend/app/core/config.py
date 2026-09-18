@@ -1,7 +1,7 @@
 """Application Configuration Module."""
 from decimal import Decimal
 
-from pydantic import Field
+from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,25 +30,62 @@ class Settings(BaseSettings):
     DOCS_ENABLED: bool = Field(default=True, description="Enable Swagger UI & ReDoc docs (disable in production)")
     RAZORPAY_KEY_ID: str = Field(default="rzp_test_placeholder", description="Razorpay Key ID")
     RAZORPAY_KEY_SECRET: str = Field(default="rzp_test_secret_placeholder", description="Razorpay Key Secret")
+    RAZORPAY_WEBHOOK_SECRET: str | None = Field(default=None, description="Razorpay Webhook Secret")
+
+    # JWT Authentication
+    JWT_SECRET: str = Field(
+        default="apollo_super_secret_jwt_key_default_minimum_32_chars",
+        description="Authoritative secret for signing and verifying JWT tokens"
+    )
+
+    # MSG91 Official OTP, SMS & WhatsApp Integration (Server-Side Only)
+    MSG91_AUTH_KEY: str = Field(default="", description="MSG91 Private Auth Key")
+    MSG91_TEMPLATE_ID: str = Field(default="", description="MSG91 SMS Template ID")
+    MSG91_WHATSAPP_NUMBER: str = Field(default="919714710854", description="MSG91 Integrated WhatsApp Number")
+    MSG91_WHATSAPP_TEMPLATE_NAME: str = Field(default="apollo_engineering", description="MSG91 WhatsApp Template Name")
+
+    # India Post CEPT Integration (Server-Side Only)
+    INDIA_POST_API_URL: str = Field(default="https://test.cept.gov.in/beextcustomer", description="CEPT Base URL")
+    INDIA_POST_USERNAME: str = Field(default="", description="CEPT Account Username")
+    INDIA_POST_PASSWORD: str = Field(default="", description="CEPT Account Password")
+    INDIA_POST_CUSTOMER_ID: str = Field(default="9999265476", description="CEPT Customer ID")
+    INDIA_POST_CONTRACT_ID: str = Field(default="41636817", description="CEPT Contract ID")
+    INDIA_POST_DROPOFF_OFFICE_ID: str = Field(default="21260024", description="CEPT Dropoff Office ID")
 
     # Admin Authentication & 2FA (RFC 6238 TOTP)
-    ADMIN_PASSWORD_HASH: str = Field(
-        default="$argon2id$v=19$m=65536,t=2,p=2$tvVWPhXdV7l5DuO6FG96nw$xcwFwsaD++YDU4eY4POqDBPXiEbRLOZ+/uwoGnOgb30",
-        description="Argon2id or bcrypt hash of Super Admin master password (NIL@apl321)"
+    ADMIN_INIT_EMAIL: str = Field(
+        default="admin@apolloengineering.co.in",
+        description="Initial administrator email address for secure bootstrap"
     )
-    ADMIN_TOTP_SECRET: str = Field(
-        default="JBSWY3DPEHPK3PXP",
-        description="Protected Base32 secret for Admin 2FA TOTP (RFC 6238)"
+    ADMIN_INIT_PASSWORD: str | None = Field(
+        default=None,
+        description="Initial bootstrap password for initial owner creation; ignored if owner exists"
     )
-    ADMIN_DEV_BYPASS_TOTP: bool = Field(
-        default=True,
-        description="Allow development bypass TOTP codes (123456 / 000000) when ENVIRONMENT != production"
+    ADMIN_PASSWORD_HASH: str | None = Field(
+        default=None,
+        description="Authoritative Argon2id hash of Super Admin master password from secure environment"
+    )
+    ADMIN_TOTP_SECRET: str | None = Field(
+        default=None,
+        description="Protected Base32 secret for Admin 2FA TOTP (RFC 6238) from secure environment"
     )
 
     # Statutory Defaults
     DEFAULT_SHIPPING_GST_RATE: Decimal = Decimal("0.1800")
     DEFAULT_COD_SURCHARGE_RATE: Decimal = Decimal("0.0250")
     ORIGIN_PINCODE: str = "382430"  # Kathwada GIDC, Ahmedabad
+
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def validate_database_url(cls, v: str, info: ValidationInfo) -> str:
+        """Fail closed in production if using SQLite or localhost."""
+        env = info.data.get("ENVIRONMENT", "development").lower()
+        if env == "production":
+            if v.startswith("sqlite"):
+                raise ValueError("SQLite is not allowed in production. Set DATABASE_URL to a managed PostgreSQL connection string.")
+            if "localhost" in v or "127.0.0.1" in v:
+                raise ValueError("Localhost database is not allowed in production. Set DATABASE_URL to a managed PostgreSQL connection string.")
+        return v
 
 
 settings = Settings()

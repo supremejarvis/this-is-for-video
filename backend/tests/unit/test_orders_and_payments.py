@@ -2,8 +2,18 @@
 import hashlib
 import hmac
 import json
+import os
+import sys
 import uuid
 from decimal import Decimal
+
+# Set test environment variables BEFORE ANY IMPORTS
+os.environ.setdefault("ENVIRONMENT", "development")
+os.environ.setdefault("RAZORPAY_WEBHOOK_SECRET", "test_webhook_secret_for_testing_only")
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+# Add backend to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -26,6 +36,11 @@ async_engine = create_async_engine(
     "sqlite+aiosqlite:///:memory:",
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
+)
+TestingAsyncSessionLocal = async_sessionmaker(
+    bind=async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
 )
 TestingAsyncSessionLocal = async_sessionmaker(
     bind=async_engine,
@@ -98,6 +113,21 @@ async def seeded_catalog(db_session: AsyncSession):
     return {"product": product, "variant": variant, "sku": "APE-DC-35MM"}
 
 
+VALID_CUSTOMER = {
+    "name": "Pravin Patel",
+    "phone": "9825012345",
+    "email": "pravin@apolloengineering.co.in",
+}
+
+VALID_SHIPPING_ADDRESS = {
+    "address_line1": "Plot 42, GIDC Industrial Estate, Kathwada",
+    "city": "Ahmedabad",
+    "state": "Gujarat",
+    "pincode": "382430",
+    "country": "India",
+}
+
+
 @pytest.mark.asyncio
 async def test_order_creation_persists_authoritatively(client: AsyncClient, seeded_catalog: dict):
     """Test creating an order persists in DB and authoritatively calculates prices."""
@@ -106,7 +136,8 @@ async def test_order_creation_persists_authoritatively(client: AsyncClient, seed
         "idempotency_key": "idemp-order-test-001",
         "items": [{"sku": sku, "quantity": 10}],
         "destination_pincode": "382430",
-        "customer": {"name": "Pravin Patel", "phone": "9825012345"},
+        "customer": VALID_CUSTOMER,
+        "shipping_address": VALID_SHIPPING_ADDRESS,
         "payment_method": "RAZORPAY",
     }
 
@@ -133,7 +164,8 @@ async def test_order_idempotency_prevents_duplicate_orders(client: AsyncClient, 
         "idempotency_key": idemp_key,
         "items": [{"sku": sku, "quantity": 5}],
         "destination_pincode": "382430",
-        "customer": {"name": "Test User", "phone": "9825012345"},
+        "customer": VALID_CUSTOMER,
+        "shipping_address": VALID_SHIPPING_ADDRESS,
     }
 
     res1 = await client.post("/api/v1/orders", json=payload)
@@ -156,6 +188,8 @@ async def test_order_creation_rejects_insufficient_stock(client: AsyncClient, se
     payload = {
         "items": [{"sku": sku, "quantity": 99999}],  # Stock is only 500
         "destination_pincode": "382430",
+        "customer": VALID_CUSTOMER,
+        "shipping_address": VALID_SHIPPING_ADDRESS,
     }
 
     res = await client.post("/api/v1/orders", json=payload)
@@ -169,7 +203,12 @@ async def test_razorpay_create_order_and_signature_verification(client: AsyncCli
     sku = seeded_catalog["sku"]
     order_res = await client.post(
         "/api/v1/orders",
-        json={"items": [{"sku": sku, "quantity": 2}], "destination_pincode": "382430"},
+        json={
+            "items": [{"sku": sku, "quantity": 2}],
+            "destination_pincode": "382430",
+            "customer": VALID_CUSTOMER,
+            "shipping_address": VALID_SHIPPING_ADDRESS,
+        },
     )
     assert order_res.status_code == 201
     order_data = order_res.json()
@@ -223,7 +262,12 @@ async def test_razorpay_webhook_idempotency(client: AsyncClient, seeded_catalog:
     sku = seeded_catalog["sku"]
     order_res = await client.post(
         "/api/v1/orders",
-        json={"items": [{"sku": sku, "quantity": 1}], "destination_pincode": "382430"},
+        json={
+            "items": [{"sku": sku, "quantity": 1}],
+            "destination_pincode": "382430",
+            "customer": VALID_CUSTOMER,
+            "shipping_address": VALID_SHIPPING_ADDRESS,
+        },
     )
     order_id = order_res.json()["id"]
 
@@ -240,7 +284,7 @@ async def test_razorpay_webhook_idempotency(client: AsyncClient, seeded_catalog:
         },
     }
     raw_body = json.dumps(event_payload).encode("utf-8")
-    sig = hmac.new(settings.RAZORPAY_KEY_SECRET.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+    sig = hmac.new(settings.RAZORPAY_WEBHOOK_SECRET.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
 
     # First call
     wh1 = await client.post(
@@ -305,6 +349,7 @@ async def test_price_tampering_prevented_backend_authoritative(client: AsyncClie
         "total_payable": 10.00,
         "destination_pincode": "382430",
         "customer": {"name": "Tamper Test", "phone": "9825012345"},
+        "shipping_address": VALID_SHIPPING_ADDRESS,
     }
 
     res = await client.post("/api/v1/orders", json=tampered_payload)
@@ -353,7 +398,12 @@ async def test_order_status_state_machine_transitions(client: AsyncClient, db_se
     sku = seeded_catalog["sku"]
     order_res = await client.post(
         "/api/v1/orders",
-        json={"items": [{"sku": sku, "quantity": 1}], "destination_pincode": "382430"},
+        json={
+            "items": [{"sku": sku, "quantity": 1}],
+            "destination_pincode": "382430",
+            "customer": VALID_CUSTOMER,
+            "shipping_address": VALID_SHIPPING_ADDRESS,
+        },
     )
     assert order_res.status_code == 201
     order_id = order_res.json()["id"]
@@ -405,7 +455,12 @@ async def test_webhook_event_persisted_in_database(client: AsyncClient, db_sessi
     sku = seeded_catalog["sku"]
     order_res = await client.post(
         "/api/v1/orders",
-        json={"items": [{"sku": sku, "quantity": 1}], "destination_pincode": "382430"},
+        json={
+            "items": [{"sku": sku, "quantity": 1}],
+            "destination_pincode": "382430",
+            "customer": VALID_CUSTOMER,
+            "shipping_address": VALID_SHIPPING_ADDRESS,
+        },
     )
     order_id = order_res.json()["id"]
     evt_id = f"evt_db_test_{uuid.uuid4().hex[:8]}"
@@ -423,7 +478,7 @@ async def test_webhook_event_persisted_in_database(client: AsyncClient, db_sessi
         },
     }
     raw_body = json.dumps(event_payload).encode("utf-8")
-    sig = hmac.new(settings.RAZORPAY_KEY_SECRET.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+    sig = hmac.new(settings.RAZORPAY_WEBHOOK_SECRET.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
 
     # Dispatch webhook
     res1 = await client.post(
@@ -463,7 +518,12 @@ async def test_inventory_reservation_on_order_creation(client: AsyncClient, db_s
 
     res = await client.post(
         "/api/v1/orders",
-        json={"items": [{"sku": sku, "quantity": 7}], "destination_pincode": "382430"},
+        json={
+            "items": [{"sku": sku, "quantity": 7}],
+            "destination_pincode": "382430",
+            "customer": VALID_CUSTOMER,
+            "shipping_address": VALID_SHIPPING_ADDRESS,
+        },
     )
     assert res.status_code == 201
     order_id = uuid.UUID(res.json()["id"])

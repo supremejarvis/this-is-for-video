@@ -162,7 +162,7 @@ describe('Frontend Quality & E-Commerce Business Logic Test Suite', () => {
 
     const items = [{
       asin: 'AP-DRAINCLIPS-02',
-      sku: 'EV-YMG0-GM29',
+      sku: 'APE-SC-28.00MM',
       title: 'Apollo SS304 Solar Drain Clip - 28mm Frame Size',
       quantity: 50,
       unitPrice: 750,

@@ -24,6 +24,7 @@ class UserRole(enum.StrEnum):
     FINANCE = "FINANCE"
     SUPPORT = "SUPPORT"
     AUDITOR = "AUDITOR"
+    CUSTOMER = "CUSTOMER"
 
 
 class User(Base):

@@ -27,41 +27,31 @@ export const SPEED_POST_SLA_DAYS = {
 } as const;
 
 // ─────────────────────────────────────────────────────────────
-// OFFICIAL CEPT INDIA POST CREDENTIALS & PRODUCTION CONFIG
+// OFFICIAL CEPT INDIA POST LOGISTICS CONSTANTS (Client-Safe)
+// (All private carrier authentication credentials execute strictly on FastAPI backend)
 // ─────────────────────────────────────────────────────────────
 export const CEPT_CONFIG = {
-  apiUrl: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_INDIA_POST_API_URL) || 'https://test.cept.gov.in/beextcustomer',
-  username: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_INDIA_POST_USERNAME) || '1812232688',
-  password: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_INDIA_POST_PASSWORD) || 'Dop@1234',
-  customerId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_INDIA_POST_CUSTOMER_ID) || '9999265476',
-  contractId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_INDIA_POST_CONTRACT_ID) || '41636817',
-  dropoffOfficeId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_INDIA_POST_DROPOFF_OFFICE_ID) || '21260024',
-  originPincode: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_INDIA_POST_ORIGIN_PINCODE) || '382430',
+  originPincode: ORIGIN_HUB_PINCODE,
+  originHubName: ORIGIN_HUB_NAME,
 };
 
 // ─────────────────────────────────────────────────────────────
-// OFFICIAL MSG91 OTP & WHATSAPP CONFIGURATION
+// MSG91 OTP & WHATSAPP CONFIGURATION (Client-Safe)
+// (Private MSG91 Auth Keys reside strictly on FastAPI backend; OTP flows route through /api/v1/auth/otp)
 // ─────────────────────────────────────────────────────────────
 export const MSG91_CONFIG = {
-  authKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MSG91_AUTH_KEY) || '561266ADmXXclWZ6a81f661P1',
-  widgetId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MSG91_WIDGET_ID) || '366870717636393531363136',
-  widgetToken: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MSG91_WIDGET_TOKEN) || '561266TAI7tBdjX5u6a897391P1',
-  templateId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MSG91_TEMPLATE_ID) || '6a986d4effc61fd8910a4952',
-  whatsappTemplateName: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MSG91_WHATSAPP_TEMPLATE_NAME) || 'apollo_engineering',
-  whatsappTemplateId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MSG91_WHATSAPP_TEMPLATE_ID) || '518153',
-  whatsappNamespace: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MSG91_WHATSAPP_NAMESPACE) || 'a225b704_bbce_431d_88b8_eb274ab72abf',
-  wabaId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MSG91_WABA_ID) || '101033892701102',
-  senderId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MSG91_SENDER_ID) || 'APLENG',
-  whatsappNumber: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MSG91_WHATSAPP_NUMBER) || '918511626267',
-  otpUrl: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MSG91_OTP_URL) || 'https://control.msg91.com/api/v5/otp',
+  widgetId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MSG91_WIDGET_ID) || '',
+  senderId: 'APLENG',
+  whatsappNumber: '918511626267',
+  whatsappTemplateName: 'apollo_engineering',
 };
 
 // ─────────────────────────────────────────────────────────────
-// OFFICIAL RAZORPAY LIVE PRODUCTION PAYMENT GATEWAY CONFIG
-// (Public Key ID only; private secrets belong strictly on backend)
+// OFFICIAL RAZORPAY PAYMENT GATEWAY CONFIG (Client-Safe)
+// (Public Key ID only for modal checkout; orders, signatures & webhooks on backend)
 // ─────────────────────────────────────────────────────────────
 export const RAZORPAY_CONFIG = {
-  keyId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RAZORPAY_KEY_ID) || 'rzp_live_TPhyOgY7jM1yqR',
+  keyId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RAZORPAY_KEY_ID) || '',
   merchantName: 'Apollo Engineering',
   themeColor: '#0054A6'
 };

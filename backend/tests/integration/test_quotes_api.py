@@ -3,8 +3,40 @@ from decimal import Decimal
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
+from app.core.database import get_db
 from app.main import app
+from app.models import Base
+
+DATABASE_URL = "postgresql+asyncpg://postgres_test:postgres@localhost:5432/apollo_disposable_test"
+
+@pytest.fixture(scope="module")
+async def session_factory():
+    engine = create_async_engine(DATABASE_URL, echo=False, poolclass=NullPool)
+    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    yield factory
+    await engine.dispose()
+
+
+@pytest.fixture
+async def db(session_factory):
+    async with session_factory() as session:
+        yield session
+
+
+@pytest.fixture
+async def client(session_factory):
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
+        yield ac
+    app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio
@@ -20,41 +52,39 @@ async def test_health_check_endpoint():
 
 
 @pytest.mark.asyncio
-async def test_create_quote_tc01_endpoint():
+async def test_create_quote_tc01_endpoint(db: AsyncSession, client: AsyncClient):
     """Verify POST /api/v1/quotes calculates TC-01 with 15m TTL."""
-    from app.core.database import AsyncSessionLocal
     from app.models import PriceVersion, Product, ProductVariant, TaxMode
+    from sqlalchemy import select
 
     # Seed APE-DC-35MM in catalog
-    async with AsyncSessionLocal() as session:
-        from sqlalchemy import select
-        v = (await session.execute(select(ProductVariant).where(ProductVariant.sku == "APE-DC-35MM"))).scalar_one_or_none()
-        if not v:
-            p = Product(sku_prefix="APE-DC-35MM", name="Drain Clip 35mm", hsn_code="73269099", is_active=True)
-            session.add(p)
-            await session.flush()
-            v = ProductVariant(product_id=p.id, sku="APE-DC-35MM", frame_thickness="35mm", is_active=True)
-            session.add(v)
-            await session.flush()
+    v = (await db.execute(select(ProductVariant).where(ProductVariant.sku == "APE-DC-35MM"))).scalar_one_or_none()
+    if not v:
+        p = Product(sku_prefix="APE-DC-35MM", name="Drain Clip 35mm", hsn_code="73269099", is_active=True)
+        db.add(p)
+        await db.flush()
+        v = ProductVariant(product_id=p.id, sku="APE-DC-35MM", frame_thickness="35mm", is_active=True)
+        db.add(v)
+        await db.flush()
 
-        pv_stmt = select(PriceVersion).where(
-            (PriceVersion.variant_id == v.id) | (PriceVersion.product_id == v.product_id),
-            PriceVersion.valid_to.is_(None),
+    pv_stmt = select(PriceVersion).where(
+        (PriceVersion.variant_id == v.id) | (PriceVersion.product_id == v.product_id),
+        PriceVersion.valid_to.is_(None),
+    )
+    existing_pv = (await db.execute(pv_stmt)).scalar_one_or_none()
+    if not existing_pv:
+        pv = PriceVersion(
+            variant_id=v.id,
+            product_id=v.product_id,
+            channel="B2C",
+            min_quantity=1,
+            unit_price=Decimal("20.00"),
+            gst_rate=Decimal("0.1800"),
+            hsn_code="73269099",
+            tax_mode=TaxMode.GST_INCLUSIVE,
         )
-        existing_pv = (await session.execute(pv_stmt)).scalar_one_or_none()
-        if not existing_pv:
-            pv = PriceVersion(
-                variant_id=v.id,
-                product_id=v.product_id,
-                channel="B2C",
-                min_quantity=1,
-                unit_price=Decimal("20.00"),
-                gst_rate=Decimal("0.1800"),
-                hsn_code="73269099",
-                tax_mode=TaxMode.GST_INCLUSIVE,
-            )
-            session.add(pv)
-            await session.commit()
+        db.add(pv)
+        await db.commit()
 
 
     payload = {

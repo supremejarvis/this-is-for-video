@@ -1,13 +1,15 @@
-"""Pydantic schemas for 4-Digit Mobile OTP Authentication."""
-from pydantic import BaseModel, Field, field_validator
 import re
+
+from pydantic import BaseModel, Field, field_validator
+
+from app.schemas.auth import UserResponse
 
 
 def normalize_phone(v: str) -> str:
     clean = re.sub(r"\D", "", v)
     if len(clean) == 12 and clean.startswith("91"):
         clean = clean[2:]
-    if len(clean) != 10 or not clean[0] in "6789":
+    if len(clean) != 10 or clean[0] not in "6789":
         raise ValueError("Phone number must be a valid 10-digit Indian mobile number")
     return clean
 
@@ -26,6 +28,7 @@ class SendOtpResponse(BaseModel):
     message: str
     masked_phone: str
     cooldown_seconds: int = 30
+    dev_code: str | None = None
 
 
 class VerifyOtpRequest(BaseModel):
@@ -44,9 +47,6 @@ class VerifyOtpRequest(BaseModel):
         if not re.match(r"^\d{4}$", clean):
             raise ValueError("OTP must be exactly 4 numeric digits")
         return clean
-
-
-from app.schemas.auth import UserResponse
 
 
 class VerifyOtpResponse(BaseModel):

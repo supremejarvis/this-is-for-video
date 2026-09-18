@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { 
-  AppMode, UserProfile, B2BOrganization, DeliveryAddress, Product, 
+  AppMode, UserProfile, UserRole, B2BOrganization, DeliveryAddress, Product, 
   CartItem, Order, SplitShipmentPackage, ProductVariant, PostOfficeInfo, OrderStatus,
   SellerListing, WishlistItem, ProductReview, Coupon, ReturnRequest, ReturnReason, ReturnStatus,
   AuthStatus, QuoteStatus, AdminRole, AdminAuditLog, SolarContractorInquiry
@@ -17,9 +17,30 @@ import { ApiProduct, CatalogService } from '../services/catalogService';
 import { SupportedLanguage } from '../utils/i18n';
 import { runStorageMigration } from '../utils/storageMigration';
 import { apiService } from '../services/apiService';
+import { authApi, catalogApi, quoteApi, orderApi, paymentApi } from '../services/api';
 
 // Run storage migration immediately
 runStorageMigration();
+
+export type AuthDestination = 'HEADER' | 'CART' | 'CHECKOUT' | null;
+export type { CartItem };
+
+export const EMPTY_B2B_ORG: B2BOrganization = {
+  id: '',
+  companyName: '',
+  tradeName: '',
+  gstin: '',
+  pan: '',
+  cin: '',
+  stateCode: '',
+  isGstVerified: false,
+  creditLimit: 0,
+  creditUsed: 0,
+  creditTerms: 'PREPAID',
+  kycStatus: 'PENDING',
+  spendingThresholdForApproval: 0,
+  members: []
+};
 
 export interface AppStore {
   // Navigation & Mode
@@ -30,14 +51,15 @@ export interface AppStore {
 
   // Users & Organizations & Backend Session
   authStatus: AuthStatus;
-  authDestination: 'HEADER' | 'CHECKOUT';
-  setAuthDestination: (dest: 'HEADER' | 'CHECKOUT') => void;
+  authDestination: AuthDestination;
+  setAuthDestination: (dest: AuthDestination) => void;
   checkAuthSession: () => Promise<void>;
   currentUser: UserProfile;
   setCurrentUser: (user: UserProfile) => void;
   updateUserProfile: (updates: Partial<UserProfile>) => void;
   currentOrg: B2BOrganization;
   updateOrgDetails: (org: Partial<B2BOrganization>) => void;
+  clearOrgDetails: () => void;
   allUsers: UserProfile[];
   logout: () => Promise<void>;
 
@@ -116,7 +138,23 @@ export interface AppStore {
 
   // Orders & Logistics
   orders: Order[];
-  createOrder: (paymentMethod: Order['paymentDetail']['method'], gstinClaim: boolean, paymentMeta?: { transactionId?: string; razorpayPaymentId?: string; razorpayOrderId?: string; razorpaySignature?: string }) => Order;
+  createOrder: (
+    paymentMethod: Order['paymentDetail']['method'],
+    gstinClaim: boolean,
+    paymentMeta?: {
+      id?: string;
+      orderNumber?: string;
+      order_number?: string;
+      invoiceNumber?: string;
+      invoice_number?: string;
+      transactionId?: string;
+      razorpayPaymentId?: string;
+      razorpayOrderId?: string;
+      razorpaySignature?: string;
+      total_payable?: number;
+      [key: string]: any;
+    }
+  ) => Order;
   decrementInventory: (items: { sku: string; quantity: number }[]) => void;
   updateOrderStatus: (orderId: string, packageId: string, status: OrderStatus, milestoneDesc: string, location: string) => void;
   schedulePickupForOrder: (orderId: string, packageId: string, slot: string, courier: string, date: string) => void;
@@ -190,7 +228,7 @@ export interface AppStore {
 // In-Memory Storage Fallback for Private Browsing / Quota Exceeded Modes
 const memoryStore: Record<string, string> = {};
 
-const loadStored = <T>(key: string, fallback: T): T => {
+export const loadStored = <T>(key: string, fallback: T): T => {
   try {
     let raw: string | null = null;
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -207,7 +245,7 @@ const loadStored = <T>(key: string, fallback: T): T => {
   }
 };
 
-const saveStored = <T>(key: string, value: T): void => {
+export const saveStored = <T>(key: string, value: T): void => {
   try {
     const serialized = JSON.stringify(value);
     memoryStore[key] = serialized;
@@ -224,6 +262,29 @@ const saveStored = <T>(key: string, value: T): void => {
       }
     }
   }
+};
+
+export const loadSessionCart = (): CartItem[] => {
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      const raw = sessionStorage.getItem('apollo_cart') || sessionStorage.getItem('cart');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    }
+  } catch {}
+  return [];
+};
+
+export const saveSessionCart = (cart: CartItem[]): void => {
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      const serialized = JSON.stringify(cart);
+      sessionStorage.setItem('apollo_cart', serialized);
+      sessionStorage.setItem('cart', serialized);
+    }
+  } catch {}
 };
 
 export const GUEST_USER: UserProfile = {
@@ -801,26 +862,52 @@ const DEFAULT_SAMPLE_ORDERS: Order[] = [
   }
 ];
 
-// Strict Zero PII & Zero Mock State for Guest Sessions
-const initialUsers: UserProfile[] = [];
-const initialAddresses: DeliveryAddress[] = [];
-const initialBillingAddress: DeliveryAddress | null = null;
-const initialShippingAddress: DeliveryAddress | null = null;
+// Strict Session & PII State Loading from LocalStorage
+const initialUsers: UserProfile[] = loadStored<UserProfile[]>('apollo_users', []);
+const initialCurrentUser: UserProfile = loadStored<UserProfile | null>('apollo_current_user', null) || GUEST_USER;
+const initialAddresses: DeliveryAddress[] = loadStored<DeliveryAddress[]>('apollo_addresses', []);
+const initialShippingAddress: DeliveryAddress | null = loadStored<DeliveryAddress | null>('apollo_shipping_address', null) || initialAddresses[0] || null;
+const initialBillingAddress: DeliveryAddress | null = loadStored<DeliveryAddress | null>('apollo_billing_address', null) || initialShippingAddress;
+const initialActiveAddress: DeliveryAddress | null = initialShippingAddress;
 const initialOrders: Order[] = loadStored<Order[]>('apollo_orders', DEFAULT_SAMPLE_ORDERS);
+
+// Track explicitly deleted product ASINs
+const initialDeletedProductAsins: string[] = loadStored<string[]>('apollo_deleted_products', []);
+export const deletedProductAsinsSet = new Set<string>(initialDeletedProductAsins);
+
+// Strictly enforce the authentic products present in Admin & DB, filtering out deleted items
 const rawStoredProducts = loadStored<Product[]>('apollo_products', MOCK_PRODUCTS);
-const initialProducts = rawStoredProducts.map((p) => {
-  const freshMock = MOCK_PRODUCTS.find((m) => m.asin === p.asin);
-  if (freshMock && (freshMock.isComboBundle || freshMock.asin === 'AP-FULLKIT-05')) {
+const storedProductList = Array.isArray(rawStoredProducts) && rawStoredProducts.length > 0 ? rawStoredProducts : MOCK_PRODUCTS;
+
+// Merge stored products with mock defaults, strictly deduplicating by ASIN, honoring edits and new products, excluding deleted products
+const seenProductAsins = new Set<string>();
+const deduplicatedStoredList: Product[] = [];
+for (const p of storedProductList) {
+  if (p && p.asin && !deletedProductAsinsSet.has(p.asin) && !seenProductAsins.has(p.asin)) {
+    seenProductAsins.add(p.asin);
+    deduplicatedStoredList.push(p);
+  }
+}
+
+const initialProducts: Product[] = deduplicatedStoredList.map((p) => {
+  const mockMatch = MOCK_PRODUCTS.find((m) => m.asin === p.asin);
+  if (mockMatch) {
     return {
-      ...freshMock,
+      ...mockMatch,
       ...p,
-      isComboBundle: freshMock.isComboBundle,
-      comboFormulaEnabled: freshMock.comboFormulaEnabled,
-      variants: freshMock.variants
+      isComboBundle: p.isComboBundle ?? mockMatch.isComboBundle,
+      comboFormulaEnabled: p.comboFormulaEnabled ?? mockMatch.comboFormulaEnabled,
+      variants: (p.variants && p.variants.length > 0 ? p.variants : mockMatch.variants).map((sv) => {
+        const mv = mockMatch.variants.find((v) => v.sku === sv.sku);
+        return mv ? { ...mv, ...sv, inventory: sv.inventory ?? mv.inventory } : sv;
+      })
     };
   }
   return p;
 });
+
+// Save purified catalog back to localStorage immediately
+saveStored('apollo_products', initialProducts);
 const initialWishlist = loadStored<WishlistItem[]>('apollo_wishlist', []);
 const initialReviews = loadStored<ProductReview[]>('apollo_reviews', [
   {
@@ -1008,156 +1095,12 @@ const initialContractorInquiries = loadStored<SolarContractorInquiry[]>('apollo_
   }
 ]);
 
-export const DEFAULT_API_CATALOG_PRODUCTS: ApiProduct[] = [
-  {
-    id: 'b5a0f671-55fa-4f96-857e-e5adfa7f1396',
-    sku_prefix: 'APE-SC',
-    name: 'Apollo SS304 Solar Panel Clamps & Water Drain Clips',
-    description: 'Precision engineered AISI SS304 solar mounting clamps and sludge drain clips with structured thickness fits.',
-    hsn_code: '73269099',
-    is_active: true,
-    is_archived: false,
-    version: 1,
-    created_at: '2026-09-05T12:00:00Z',
-    updated_at: '2026-09-05T12:00:00Z',
-    variants: [
-      {
-        id: 'v-28mm',
-        product_id: 'b5a0f671-55fa-4f96-857e-e5adfa7f1396',
-        sku: 'APE-SC-28.00MM',
-        fit_mode: 'EXACT',
-        frame_thickness_mm: 28,
-        min_thickness_mm: null,
-        max_thickness_mm: null,
-        display_label: '28 mm Standard Clamp',
-        frame_thickness: '28mm',
-        pack_size: 1,
-        is_active: true,
-        is_archived: false,
-        version: 1,
-        available_stock: 500,
-        unit_price: 20,
-        tax_mode: 'INCLUSIVE',
-        created_at: '2026-09-05T12:00:00Z',
-      },
-      {
-        id: 'v-30mm',
-        product_id: 'b5a0f671-55fa-4f96-857e-e5adfa7f1396',
-        sku: 'APE-SC-30.00MM',
-        fit_mode: 'EXACT',
-        frame_thickness_mm: 30,
-        min_thickness_mm: null,
-        max_thickness_mm: null,
-        display_label: '30 mm Standard Clamp',
-        frame_thickness: '30mm',
-        pack_size: 1,
-        is_active: true,
-        is_archived: false,
-        version: 1,
-        available_stock: 500,
-        unit_price: 20,
-        tax_mode: 'INCLUSIVE',
-        created_at: '2026-09-05T12:00:00Z',
-      },
-      {
-        id: 'v-33mm',
-        product_id: 'b5a0f671-55fa-4f96-857e-e5adfa7f1396',
-        sku: 'APE-SC-33.00MM',
-        fit_mode: 'EXACT',
-        frame_thickness_mm: 33,
-        min_thickness_mm: null,
-        max_thickness_mm: null,
-        display_label: '33 mm Standard Clamp',
-        frame_thickness: '33mm',
-        pack_size: 1,
-        is_active: true,
-        is_archived: false,
-        version: 1,
-        available_stock: 500,
-        unit_price: 20,
-        tax_mode: 'INCLUSIVE',
-        created_at: '2026-09-05T12:00:00Z',
-      },
-      {
-        id: 'v-35mm',
-        product_id: 'b5a0f671-55fa-4f96-857e-e5adfa7f1396',
-        sku: 'APE-SC-35.00MM',
-        fit_mode: 'EXACT',
-        frame_thickness_mm: 35,
-        min_thickness_mm: null,
-        max_thickness_mm: null,
-        display_label: '35 mm Standard Clamp',
-        frame_thickness: '35mm',
-        pack_size: 1,
-        is_active: true,
-        is_archived: false,
-        version: 1,
-        available_stock: 500,
-        unit_price: 20,
-        tax_mode: 'INCLUSIVE',
-        created_at: '2026-09-05T12:00:00Z',
-      },
-      {
-        id: 'v-40mm',
-        product_id: 'b5a0f671-55fa-4f96-857e-e5adfa7f1396',
-        sku: 'APE-SC-40.00MM',
-        fit_mode: 'EXACT',
-        frame_thickness_mm: 40,
-        min_thickness_mm: null,
-        max_thickness_mm: null,
-        display_label: '40 mm Standard Clamp',
-        frame_thickness: '40mm',
-        pack_size: 1,
-        is_active: true,
-        is_archived: false,
-        version: 1,
-        available_stock: 500,
-        unit_price: 20,
-        tax_mode: 'INCLUSIVE',
-        created_at: '2026-09-05T12:00:00Z',
-      },
-    ],
-  },
-  {
-    id: 'a1c0e822-44ed-4e85-946d-d4adfa7f2485',
-    sku_prefix: 'APE-SS304-SPK',
-    name: 'Apollo SS304 Solar Panel Cleaning Sprinkler',
-    description: 'High-efficiency 180° water curtain solar cleaning sprinkler engineered in AISI SS304.',
-    hsn_code: '84248990',
-    is_active: true,
-    is_archived: false,
-    version: 1,
-    created_at: '2026-09-05T12:00:00Z',
-    updated_at: '2026-09-05T12:00:00Z',
-    variants: [
-      {
-        id: 'v-spk-01',
-        product_id: 'a1c0e822-44ed-4e85-946d-d4adfa7f2485',
-        sku: 'APE-SS304-SPK-01',
-        fit_mode: 'UNIVERSAL',
-        frame_thickness_mm: null,
-        min_thickness_mm: null,
-        max_thickness_mm: null,
-        display_label: '180° Water Curtain Sprinkler',
-        frame_thickness: 'UNIVERSAL',
-        pack_size: 1,
-        is_active: true,
-        is_archived: false,
-        version: 1,
-        available_stock: 250,
-        unit_price: 220,
-        tax_mode: 'INCLUSIVE',
-        created_at: '2026-09-05T12:00:00Z',
-      },
-    ],
-  },
-];
-
 export function syncCatalogProducts(products: Product[], existingApi: ApiProduct[] = []): ApiProduct[] {
   const apiMap = new Map<string, ApiProduct>();
 
-  // 1. Populate map from store's rich products first
+  // 1. Strictly populate map from authentic products, respecting admin edits and skipping deleted products
   products.forEach(p => {
+    if (!p || !p.asin || deletedProductAsinsSet.has(p.asin)) return;
     const primaryVariant = p.variants?.[0];
     const converted: ApiProduct = {
       id: p.asin,
@@ -1209,127 +1152,58 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
 
   // 2. Merge backend API products or test mocks (e.g. from Playwright page.route)
   existingApi.forEach(ap => {
-    // Check if matching product exists by sku_prefix or name
-    const existingEntry = Array.from(apiMap.values()).find(
-      ep => ep.sku_prefix === ap.sku_prefix || 
-            (ap.name && ep.name.toLowerCase().includes(ap.name.toLowerCase())) ||
-            (ap.name && ap.name.toLowerCase().includes(ep.name.toLowerCase())) ||
-            (ep.id === 'AP-DRAINCLIPS-02' && (ap.sku_prefix === 'APE-SC' || (ap.name && ap.name.toLowerCase().includes('clamp')))) ||
-            (ep.id === 'AP-SPRINKLER-01' && (ap.sku_prefix === 'AE-SPRINKLER' || ap.sku_prefix === 'APE-SS304-SPK' || (ap.name && ap.name.toLowerCase().includes('sprinkler'))))
-    );
+    let matchedAsin: string | undefined;
 
-    if (existingEntry) {
-      // Retain test compatibility: if mock sets specific name like "Apollo SS304 Solar Panel Clamp", keep it
-      if (ap.name) {
-        existingEntry.name = ap.name;
+    for (const [asin, ep] of apiMap.entries()) {
+      if (
+        ep.id === ap.id ||
+        asin === ap.id ||
+        ep.sku_prefix === ap.sku_prefix ||
+        (asin === 'AP-DRAINCLIPS-02' && (ap.sku_prefix === 'APE-SC' || (ap.name && (ap.name.toLowerCase().includes('clamp') || ap.name.toLowerCase().includes('drain'))))) ||
+        (asin === 'AP-SPRINKLER-01' && (ap.sku_prefix === 'AE-SPRINKLER' || ap.sku_prefix === 'APE-SS304-SPK' || (ap.name && ap.name.toLowerCase().includes('sprinkler')))) ||
+        (asin === 'AP-GICLAMP-03' && (ap.sku_prefix === 'AE-CLAMP-GI' || (ap.name && ap.name.toLowerCase().includes('gi ')))) ||
+        (asin === 'AP-FITTINGTEE-04' && (ap.sku_prefix === 'AE-PIPE-FITTING' || (ap.name && (ap.name.toLowerCase().includes('fitting') || ap.name.toLowerCase().includes('tee'))))) ||
+        (asin === 'AP-FULLKIT-05' && (ap.sku_prefix === 'AE-KIT-FULL' || (ap.name && (ap.name.toLowerCase().includes('kit') || ap.name.toLowerCase().includes('full set'))))) ||
+        (asin === 'AP-PUMP-06' && (ap.sku_prefix === 'AE-PUMP-DC' || (ap.name && ap.name.toLowerCase().includes('pump')))) ||
+        (asin === 'AP-TIMER-07' && (ap.sku_prefix === 'AE-TIMER-AUTO' || (ap.name && ap.name.toLowerCase().includes('timer'))))
+      ) {
+        matchedAsin = asin;
+        break;
       }
-      if (ap.id) {
-        existingEntry.id = ap.id;
-      }
+    }
+
+    if (matchedAsin && !deletedProductAsinsSet.has(matchedAsin)) {
+      const existingEntry = apiMap.get(matchedAsin)!;
+      // Do NOT overwrite existingEntry.name with stale ap.name — existingEntry.name comes from admin-edited p.title
+      if (ap.id) existingEntry.id = ap.id;
+      if (ap.description && !existingEntry.description) existingEntry.description = ap.description;
       if (ap.variants && ap.variants.length > 0) {
         existingEntry.variants = ap.variants.map(av => {
           const matchingV = existingEntry.variants.find(ev => ev.sku === av.sku || (av.frame_thickness_mm && ev.frame_thickness_mm === av.frame_thickness_mm));
           return {
             ...av,
+            display_label: av.display_label || matchingV?.display_label,
             images: matchingV?.images || existingEntry.images,
-            unit_price: typeof av.unit_price === 'number' ? av.unit_price : (matchingV?.unit_price ?? 20),
+            available_stock: matchingV?.available_stock ?? av.available_stock,
+            unit_price: matchingV?.unit_price ?? (typeof av.unit_price === 'number' ? av.unit_price : 20),
             mrp: matchingV?.mrp || (av.unit_price ? Math.round(Number(av.unit_price) * 1.5) : 350),
+            b2bTierPricing: matchingV?.b2bTierPricing || [],
           };
         });
       }
-      apiMap.set(existingEntry.id, existingEntry);
-    } else {
-      // New product from backend that wasn't in local store
-      apiMap.set(ap.id, ap);
+      apiMap.set(matchedAsin, existingEntry);
     }
   });
 
   return Array.from(apiMap.values());
 }
 
-export function calculateStatutoryQuoteFallback(
-  cart: CartItem[],
-  destinationPincode: string,
-  paymentMethod: 'PREPAID' | 'COD'
-): AuthoritativeQuote {
-  let subtotalGross = 0;
-  let subtotalTaxable = 0;
-  let totalProductGst = 0;
-
-  const quoteItems: QuoteLineItem[] = cart.map(item => {
-    const lineGross = item.unitPrice * item.quantity;
-    const r = (item.gstRate || 18) / 100;
-    const taxableBase = Math.round((lineGross / (1 + r)) * 100) / 100;
-    const productGst = Math.round((lineGross - taxableBase) * 100) / 100;
-
-    subtotalGross += lineGross;
-    subtotalTaxable += taxableBase;
-    totalProductGst += productGst;
-
-    return {
-      sku: item.sku,
-      quantity: item.quantity,
-      unit_price: item.unitPrice.toFixed(2),
-      line_gross: lineGross.toFixed(2),
-      taxable_base: taxableBase.toFixed(2),
-      product_gst: productGst.toFixed(2),
-      tax_mode: 'GST_INCLUSIVE',
-      gst_rate: r.toFixed(4),
-      hsn_code: item.hsnCode || '73269099',
-    };
-  });
-
-  const baseShipping = 50.00;
-  const shippingGst = 9.00;
-  const shippingTotal = 59.00;
-
-  const prepaidTotal = subtotalGross + shippingTotal;
-  const codSurcharge = paymentMethod === 'COD' ? Math.round((prepaidTotal * 0.025) * 100) / 100 : 0;
-  const codRawTotal = prepaidTotal + codSurcharge;
-  const codTotal = Math.ceil(codRawTotal / 5) * 5;
-
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + 15 * 60 * 1000);
-
-  return {
-    quote_id: `q_stat_${Date.now()}`,
-    quote_number: `QT-${Date.now().toString().slice(-6)}`,
-    idempotency_key: null,
-    calculation_version: 'statutory-v1',
-    catalog_version: 'cat-v1',
-    destination_pincode: destinationPincode,
-    items: quoteItems,
-    subtotal_taxable: subtotalTaxable.toFixed(2),
-    total_product_gst: totalProductGst.toFixed(2),
-    total_product_gross: subtotalGross.toFixed(2),
-    base_shipping: baseShipping.toFixed(2),
-    shipping_gst: shippingGst.toFixed(2),
-    shipping_total: shippingTotal.toFixed(2),
-    shipping_gst_rate: '0.1800',
-    prepaid_total: prepaidTotal.toFixed(2),
-    cod_surcharge: codSurcharge.toFixed(2),
-    cod_raw_total: codRawTotal.toFixed(2),
-    cod_total: (paymentMethod === 'COD' ? codTotal : prepaidTotal).toFixed(2),
-    rounding_multiple: 5,
-    cod_charge_rate: '0.0250',
-    cod_charge_raw: codSurcharge.toFixed(2),
-    cod_rounding_adjustment: (codTotal - codRawTotal).toFixed(2),
-    cod_payable_total: codTotal.toFixed(2),
-    shipping_provider: 'INDIA_POST',
-    service_code: 'SPEED_POST',
-    rate_source: 'KATHWADA_ORIGIN_SPEEDPOST',
-    rate_version: '2026.1',
-    is_live_rate: true,
-    calculated_at: now.toISOString(),
-    server_time: now.toISOString(),
-    expires_at: expiresAt.toISOString(),
-    created_at: now.toISOString(),
-  };
-}
+export const DEFAULT_API_CATALOG_PRODUCTS: ApiProduct[] = syncCatalogProducts(initialProducts);
 
 export const useStore = create<AppStore>((set, get) => ({
-  appMode: 'B2C',
+  appMode: loadStored<AppMode>('apollo_app_mode', 'B2C'),
   setAppMode: (mode) => {
+    saveStored('apollo_app_mode', mode);
     set({ appMode: mode });
     get().showToast(`Switched storefront mode to ${mode === 'B2B' ? '🏢 B2B Wholesale' : '🛒 B2C Retail'}`, 'info');
   },
@@ -1338,60 +1212,105 @@ export const useStore = create<AppStore>((set, get) => ({
 
   // ── Session & Auth State (Gate 2C - Backend Authoritative) ──
   authStatus: 'GUEST' as AuthStatus,
-  authDestination: 'HEADER' as const,
+  authDestination: null as AuthDestination,
   setAuthDestination: (dest) => set({ authDestination: dest }),
   checkAuthSession: async () => {
     set({ authStatus: 'AUTH_CHECKING' });
     try {
-      const res = await fetch('/api/v1/auth/me', {
-        credentials: 'include'
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.id) {
-          const role = data.role === 'ADMIN' ? 'SUPER_ADMIN' : 'B2C_CUSTOMER';
-          const userPhone = data.phone || '';
-          const mappedUser: UserProfile = {
-            id: data.id,
-            name: data.full_name || (userPhone ? `Customer (${userPhone.slice(-4)})` : 'Valued Customer'),
-            email: data.email || '',
-            phone: userPhone,
-            role,
-            isPrime: false,
-            createdAt: data.created_at || new Date().toISOString()
-          };
-          set({ 
-            authStatus: 'AUTHENTICATED', 
-            currentUser: mappedUser,
-            appMode: role === 'SUPER_ADMIN' ? 'ADMIN' : get().appMode
-          });
-          return;
+      const sessionResult = await authApi.getSession().catch(() => null);
+      const data: any = sessionResult?.authenticated ? sessionResult.user : null;
+      if (data && data.id) {
+        const role = data.role === 'ADMIN' ? 'SUPER_ADMIN' : 'B2C_CUSTOMER';
+        const userPhone = data.phone || (data.email?.includes('@ape-store.com') ? data.email.split('@')[0] : '');
+
+        // Check if we have a saved profile for this user/phone in persistent storage
+        const savedUser = loadStored<UserProfile | null>('apollo_current_user', null);
+        const allUsersList = get().allUsers || [];
+        const matchedLocal = allUsersList.find(u => (u.id === data.id) || (userPhone && u.phone && u.phone.endsWith(userPhone.slice(-10))));
+
+        // Resolved authentic full name: preserve local customized name if backend returns generic Customer name
+        let resolvedName = data.full_name;
+        if (!resolvedName || resolvedName.startsWith('Customer ') || resolvedName === 'Valued Customer') {
+          if (matchedLocal?.name && !matchedLocal.name.startsWith('Customer ')) {
+            resolvedName = matchedLocal.name;
+          } else if (savedUser?.name && !savedUser.name.startsWith('Customer ')) {
+            resolvedName = savedUser.name;
+          } else {
+            resolvedName = data.full_name || (userPhone ? `Customer (${userPhone.slice(-4)})` : 'Valued Customer');
+          }
         }
+
+        let resolvedEmail = data.email || '';
+        if (resolvedEmail.includes('@ape-store.com') && matchedLocal?.email && !matchedLocal.email.includes('@ape-store.com')) {
+          resolvedEmail = matchedLocal.email;
+        }
+
+        const resolvedRole: UserRole = (matchedLocal?.role && matchedLocal.role.includes('B2B')) 
+          ? 'B2B_BUYER' 
+          : role;
+
+        const mappedUser: UserProfile = {
+          id: data.id,
+          name: resolvedName,
+          email: resolvedEmail,
+          phone: userPhone || matchedLocal?.phone || '',
+          role: resolvedRole,
+          isPrime: false,
+          createdAt: data.created_at || matchedLocal?.createdAt || new Date().toISOString()
+        };
+
+        // If local profile had a customized name that backend doesn't have yet, sync to PostgreSQL backend!
+        if (resolvedName && !resolvedName.startsWith('Customer ') && data.full_name?.startsWith('Customer ')) {
+          authApi.updateProfile({ full_name: resolvedName }).catch(() => {});
+        }
+
+        saveStored('apollo_current_user', mappedUser);
+        set({ 
+          authStatus: 'AUTHENTICATED', 
+          currentUser: mappedUser,
+          appMode: resolvedRole === 'SUPER_ADMIN' ? 'ADMIN' : (resolvedRole === 'B2B_BUYER' ? 'B2B' : get().appMode)
+        });
+        return;
       }
     } catch {
       // Backend unreachable or network error
     }
-    // Default to clean guest state
+
+    // Default to clean guest state ONLY if no active authenticated user is saved in localStorage
+    const existingSession = loadStored<UserProfile | null>('apollo_current_user', null);
+    if (existingSession && existingSession.id && existingSession.id !== 'usr_guest') {
+      set({
+        authStatus: 'AUTHENTICATED',
+        currentUser: existingSession,
+        appMode: existingSession.role.includes('B2B') ? 'B2B' : get().appMode
+      });
+      return;
+    }
+
     set({ 
       authStatus: 'GUEST', 
       currentUser: GUEST_USER, 
-      addresses: [], 
       activeAddress: null, 
       billingAddress: null, 
       shippingAddress: null 
     });
   },
-  currentUser: GUEST_USER,
+  currentUser: initialCurrentUser,
   setCurrentUser: (user) => {
+    saveStored('apollo_current_user', user);
     const existingUsers = get().allUsers;
-    const index = existingUsers.findIndex(u => u.id === user.id || (u.phone && user.phone && u.phone === user.phone));
+    const index = existingUsers.findIndex(u => u.id === user.id || (u.phone && user.phone && u.phone.slice(-10) === user.phone.slice(-10)));
     let updatedUsers: UserProfile[];
     if (index >= 0) {
       updatedUsers = existingUsers.map((u, i) => i === index ? user : u);
     } else {
       updatedUsers = [user, ...existingUsers];
     }
-    const newMode: AppMode = (user.role && user.role.includes('B2B')) ? 'B2B' : user.role === 'SUPER_ADMIN' ? 'ADMIN' : 'B2C';
+    saveStored('apollo_users', updatedUsers);
+    const newMode: AppMode = (user.role && user.role.includes('B2B')) ? 'B2B' : user.role === 'SUPER_ADMIN' ? 'ADMIN' : get().appMode;
+    if (newMode === 'B2B') {
+      saveStored('apollo_app_mode', 'B2B');
+    }
     set({ 
       currentUser: user, 
       allUsers: updatedUsers, 
@@ -1401,32 +1320,107 @@ export const useStore = create<AppStore>((set, get) => ({
   },
   updateUserProfile: (updates) => {
     const user = { ...get().currentUser, ...updates };
-    set({ currentUser: user });
+    saveStored('apollo_current_user', user);
+    const existingUsers = get().allUsers;
+    const index = existingUsers.findIndex(u => u.id === user.id || (u.phone && user.phone && u.phone.slice(-10) === user.phone.slice(-10)));
+    let updatedUsers: UserProfile[];
+    if (index >= 0) {
+      updatedUsers = existingUsers.map((u, i) => i === index ? user : u);
+    } else {
+      updatedUsers = [user, ...existingUsers];
+    }
+    saveStored('apollo_users', updatedUsers);
+    set({ currentUser: user, allUsers: updatedUsers });
+
+    // Sync authoritative profile update to backend
+    if (updates.name || updates.email) {
+      authApi.updateProfile({
+        ...(updates.name ? { full_name: updates.name } : {}),
+        ...(updates.email && !updates.email.includes('@ape-store.com') ? { email: updates.email } : {})
+      }).catch(() => {});
+    }
     get().showToast('Profile details updated successfully', 'success');
   },
-  currentOrg: MOCK_B2B_ORGANIZATIONS[0],
-  updateOrgDetails: (orgUpdates) => set((state) => ({
-    currentOrg: { ...state.currentOrg, ...orgUpdates }
-  })),
+  currentOrg: (() => {
+    const loaded = loadStored<B2BOrganization>('apollo_org', EMPTY_B2B_ORG);
+    if (loaded && (loaded.gstin === '24AAACP9999P1Z2' || loaded.id === 'org_solar_epc' || loaded.companyName === 'Apollo Engineering & Solar EPC Partners')) {
+      saveStored('apollo_org', EMPTY_B2B_ORG);
+      return EMPTY_B2B_ORG;
+    }
+    return loaded || EMPTY_B2B_ORG;
+  })(),
+  updateOrgDetails: (orgUpdates) => set((state) => {
+    const updatedOrg = { ...state.currentOrg, ...orgUpdates };
+    saveStored('apollo_org', updatedOrg);
+
+    const hasB2bCredentials = Boolean((updatedOrg.gstin && updatedOrg.gstin.trim()) || (updatedOrg.companyName && updatedOrg.companyName.trim()));
+    if (hasB2bCredentials) {
+      saveStored('apollo_app_mode', 'B2B');
+      const updatedUser: UserProfile = {
+        ...state.currentUser,
+        role: 'B2B_BUYER'
+      };
+      saveStored('apollo_current_user', updatedUser);
+      const updatedUsers = state.allUsers.map(u => (u.id === updatedUser.id || (u.phone && updatedUser.phone && u.phone.slice(-10) === updatedUser.phone.slice(-10))) ? updatedUser : u);
+      saveStored('apollo_users', updatedUsers);
+      return {
+        currentOrg: updatedOrg,
+        appMode: 'B2B',
+        currentUser: updatedUser,
+        allUsers: updatedUsers
+      };
+    } else {
+      // B2B credentials removed or cleared -> Revert to B2C retail customer mode
+      saveStored('apollo_app_mode', 'B2C');
+      const updatedUser: UserProfile = {
+        ...state.currentUser,
+        role: state.currentUser.role === 'B2B_BUYER' ? 'B2C_CUSTOMER' : state.currentUser.role
+      };
+      saveStored('apollo_current_user', updatedUser);
+      const updatedUsers = state.allUsers.map(u => (u.id === updatedUser.id || (u.phone && updatedUser.phone && u.phone.slice(-10) === updatedUser.phone.slice(-10))) ? updatedUser : u);
+      saveStored('apollo_users', updatedUsers);
+      return {
+        currentOrg: updatedOrg,
+        appMode: 'B2C',
+        currentUser: updatedUser,
+        allUsers: updatedUsers
+      };
+    }
+  }),
+  clearOrgDetails: () => {
+    saveStored('apollo_org', EMPTY_B2B_ORG);
+    saveStored('apollo_app_mode', 'B2C');
+    const updatedUser: UserProfile = {
+      ...get().currentUser,
+      role: get().currentUser.role === 'B2B_BUYER' ? 'B2C_CUSTOMER' : get().currentUser.role
+    };
+    saveStored('apollo_current_user', updatedUser);
+    set({
+      currentOrg: EMPTY_B2B_ORG,
+      appMode: 'B2C',
+      currentUser: updatedUser
+    });
+    get().showToast('B2B organization details removed. Switched to Retail (B2C).', 'info');
+  },
   allUsers: initialUsers,
   logout: async () => {
     try {
-      await fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include' });
+      await authApi.logout();
     } catch {}
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.removeItem('apollo_session_24h');
-      localStorage.removeItem('apollo_addresses');
-      localStorage.removeItem('apollo_shipping_address');
-      localStorage.removeItem('apollo_billing_address');
-      localStorage.removeItem('apollo_users');
+      localStorage.removeItem('apollo_current_user');
+      localStorage.removeItem('apollo_org');
+      localStorage.setItem('apollo_app_mode', 'B2C');
+      // DO NOT delete apollo_users or apollo_addresses! Customer profile and address book are retained!
     }
     set({ 
       authStatus: 'GUEST',
       currentUser: GUEST_USER, 
-      addresses: [],
-      activeAddress: null,
-      billingAddress: null,
-      shippingAddress: null,
+      currentOrg: EMPTY_B2B_ORG,
+      activeAddress: null, 
+      billingAddress: null, 
+      shippingAddress: null, 
       orders: [],
       appMode: 'B2C', 
       isAccountModalOpen: false, 
@@ -1437,10 +1431,10 @@ export const useStore = create<AppStore>((set, get) => ({
     get().showToast('Logged out successfully. Session terminated.', 'info');
   },
 
-  addresses: [],
-  activeAddress: null,
-  billingAddress: null,
-  shippingAddress: null,
+  addresses: initialAddresses,
+  activeAddress: initialActiveAddress,
+  billingAddress: initialBillingAddress,
+  shippingAddress: initialShippingAddress,
   isShippingSameAsBilling: true,
   setIsShippingSameAsBilling: (same) => {
     saveStored('apollo_same_as_billing', same);
@@ -1562,11 +1556,22 @@ export const useStore = create<AppStore>((set, get) => ({
     get().showToast('Address removed successfully', 'info');
   },
   setActiveAddress: (addrId) => {
-    const found = get().addresses.find((a) => a.id === addrId);
+    const state = get();
+    const allKnown = [
+      ...(state.billingAddress ? [state.billingAddress] : []),
+      ...(state.shippingAddress ? [state.shippingAddress] : []),
+      ...state.addresses,
+    ];
+    const found = allKnown.find((a) => a.id === addrId);
     if (found) {
       saveStored('apollo_shipping_address', found);
-      set({ activeAddress: found, shippingAddress: found });
-      get().showToast(`Delivery location set to ${found.postOffice.name} (${found.pincode})`, 'info');
+      set({ 
+        activeAddress: found, 
+        shippingAddress: found,
+        destinationPincode: found.pincode 
+      });
+      get().showToast(`Delivery location set to ${found.postOffice?.name || found.city} (${found.pincode})`, 'info');
+      get().fetchAuthoritativeQuote();
     }
   },
 
@@ -1625,7 +1630,8 @@ selectProductVariant: (asin, sku) => {
     });
   },
   addNewProduct: (newProd) => {
-    const updated = [newProd, ...get().products];
+    const existing = get().products.filter(p => p.asin !== newProd.asin);
+    const updated = [newProd, ...existing];
     saveStored('apollo_products', updated);
     const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
     set({ products: updated, apiCatalogProducts: updatedApi });
@@ -1643,11 +1649,30 @@ selectProductVariant: (asin, sku) => {
     get().showToast(`Product ${asin} updated successfully`, 'success');
   },
   deleteProduct: (asin) => {
+    // 1. Record deleted ASIN to persistent set & storage
+    deletedProductAsinsSet.add(asin);
+    const deletedList = loadStored<string[]>('apollo_deleted_products', []);
+    if (!deletedList.includes(asin)) {
+      deletedList.push(asin);
+      saveStored('apollo_deleted_products', deletedList);
+    }
+
+    // 2. Remove from products
     const updated = get().products.filter((p) => p.asin !== asin);
     saveStored('apollo_products', updated);
+
+    // 3. Clear selected product if it was deleted
     const currSelected = get().selectedProduct;
-    const updatedSelected = (currSelected && currSelected.asin === asin) ? null : currSelected;
-    const updatedApi = get().apiCatalogProducts.filter(p => p.id !== asin);
+    const updatedSelected = (currSelected && (currSelected.asin === asin || (currSelected as any).id === asin)) ? null : currSelected;
+
+    // 4. Remove comprehensively from apiCatalogProducts
+    const updatedApi = get().apiCatalogProducts.filter(p => 
+      p.id !== asin && 
+      p.rawProduct?.asin !== asin && 
+      p.sku_prefix !== asin &&
+      !p.variants?.some(v => v.product_id === asin || v.sku?.startsWith(asin))
+    );
+
     set({ products: updated, selectedProduct: updatedSelected, apiCatalogProducts: updatedApi });
     get().showToast(`Product ASIN ${asin} deleted from catalog`, 'info');
   },
@@ -1674,7 +1699,8 @@ selectProductVariant: (asin, sku) => {
     const updatedSelected = (currSelected && currSelected.asin === asin)
       ? updated.find(p => p.asin === asin) || null
       : currSelected;
-    set({ products: updated, selectedProduct: updatedSelected });
+    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
+    set({ products: updated, selectedProduct: updatedSelected, apiCatalogProducts: updatedApi });
     get().showToast(`Variant ${sku} updated successfully`, 'success');
   },
   addNewVariantToProduct: (asin, newVariant) => {
@@ -1688,7 +1714,8 @@ selectProductVariant: (asin, sku) => {
       return p;
     });
     saveStored('apollo_products', updated);
-    set({ products: updated });
+    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
+    set({ products: updated, apiCatalogProducts: updatedApi });
     get().showToast(`New variant SKU ${newVariant.sku} added to ASIN ${asin}`, 'success');
   },
   deleteVariantFromProduct: (asin, sku) => {
@@ -1707,7 +1734,8 @@ selectProductVariant: (asin, sku) => {
       return p;
     });
     saveStored('apollo_products', updated);
-    set({ products: updated });
+    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
+    set({ products: updated, apiCatalogProducts: updatedApi });
     get().showToast(`Variant ${sku} removed from product`, 'info');
   },
   combineProductsIntoParentListing: (asins, parentTitle) => {
@@ -1786,7 +1814,8 @@ selectProductVariant: (asin, sku) => {
     };
     const updated = [newProduct, ...get().products];
     saveStored('apollo_products', updated);
-    set({ products: updated });
+    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
+    set({ products: updated, apiCatalogProducts: updatedApi });
     get().showToast(`Product published with ASIN ${asin}`, 'success');
     return asin;
   },
@@ -1799,15 +1828,13 @@ selectProductVariant: (asin, sku) => {
       return p;
     });
     saveStored('apollo_products', updated);
-    set({ products: updated });
+    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
+    set({ products: updated, apiCatalogProducts: updatedApi });
     get().showToast(`Product ${asin} updated successfully`, 'success');
   },
   
   deleteProductListing: (asin) => {
-    const updated = get().products.filter((p) => p.asin !== asin);
-    saveStored('apollo_products', updated);
-    set({ products: updated });
-    get().showToast(`Product ASIN ${asin} deleted from catalog`, 'info');
+    get().deleteProduct(asin);
   },
   
   updateVariantPricing: (asin, sku, price, quantity) => {
@@ -1903,7 +1930,7 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
   },
 
   // Cart logic with B2B wholesale pricing rules
-  cart: [],
+  cart: loadSessionCart(),
   addToCart: (itemData, qty = 1) => {
     const { cart, appMode } = get();
     const existingIndex = cart.findIndex((i) => 
@@ -1969,13 +1996,14 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       });
     }
 
+    saveSessionCart(updatedCart);
     set({ 
       cart: updatedCart, 
-      isCartDrawerOpen: true, 
       quoteStatus: 'QUOTE_REQUIRED',
       currentQuote: null,
       quoteError: null
     });
+    get().setIsCartDrawerOpen(true);
     get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle} to cart`, 'success');
   },
   updateCartQuantity: (sku, qty) => {
@@ -1996,15 +2024,18 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
         }
       }
     }
-    set((state) => ({
-      cart: state.cart.map((item) => item.sku === sku ? { ...item, quantity: qty } : item),
+    const updatedCart = get().cart.map((item) => item.sku === sku ? { ...item, quantity: qty } : item);
+    saveSessionCart(updatedCart);
+    set({
+      cart: updatedCart,
       quoteStatus: 'QUOTE_REQUIRED',
       currentQuote: null,
       quoteError: null
-    }));
+    });
   },
   removeFromCart: (sku) => {
     const remaining = get().cart.filter((item) => item.sku !== sku);
+    saveSessionCart(remaining);
     set({
       cart: remaining,
       quoteStatus: remaining.length === 0 ? 'EMPTY_CART' : 'QUOTE_REQUIRED',
@@ -2013,17 +2044,17 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
     });
     get().showToast('Item removed from cart', 'info');
   },
-  clearCart: () => set({ cart: [], currentQuote: null, quoteStatus: 'EMPTY_CART', quoteError: null }),
+  clearCart: () => {
+    saveSessionCart([]);
+    set({ cart: [], currentQuote: null, quoteStatus: 'EMPTY_CART', quoteError: null });
+  },
   isCartDrawerOpen: false,
   setIsCartDrawerOpen: (open) => {
     set({ isCartDrawerOpen: open });
-    // If cart is opened and not empty, ensure quote required if no valid quote
-    const { cart, currentQuote } = get();
     if (open) {
+      const { cart } = get();
       if (cart.length === 0) {
         set({ quoteStatus: 'EMPTY_CART', currentQuote: null });
-      } else if (!currentQuote) {
-        set({ quoteStatus: 'QUOTE_REQUIRED' });
       }
     }
   },
@@ -2033,21 +2064,16 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
   quoteStatus: 'EMPTY_CART' as QuoteStatus,
   quoteError: null,
   quotePaymentMethod: 'PREPAID',
-  setQuotePaymentMethod: (method) => set((state) => ({
-    quotePaymentMethod: method,
-    quoteStatus: state.cart.length > 0 ? 'QUOTE_REQUIRED' : 'EMPTY_CART',
-    currentQuote: null,
-    quoteError: null
-  })),
+  setQuotePaymentMethod: (method) => {
+    set({ quotePaymentMethod: method, quoteStatus: 'QUOTE_REQUIRED', currentQuote: null });
+  },
   destinationPincode: '382430',
-  setDestinationPincode: (pincode) => set((state) => ({
-    destinationPincode: pincode,
-    quoteStatus: state.cart.length > 0 ? 'QUOTE_REQUIRED' : 'EMPTY_CART',
-    currentQuote: null,
-    quoteError: null
-  })),
+  setDestinationPincode: (pincode) => {
+    set({ destinationPincode: pincode, quoteStatus: 'QUOTE_REQUIRED', currentQuote: null });
+  },
   fetchAuthoritativeQuote: async () => {
     const { cart, destinationPincode, quotePaymentMethod } = get();
+    saveSessionCart(cart);
     if (cart.length === 0) {
       set({ currentQuote: null, quoteStatus: 'EMPTY_CART', quoteError: null });
       return null;
@@ -2060,13 +2086,16 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
 
     set({ quoteStatus: 'QUOTE_LOADING', quoteError: null });
     try {
+      const isUuid = (val?: string): boolean =>
+        Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val));
+
       const items = cart.map((i) => ({
-        ...(i.variantId ? { variant_id: i.variantId } : {}),
+        ...(isUuid(i.variantId) ? { variant_id: i.variantId } : {}),
         ...(i.sku ? { sku: i.sku } : {}),
         quantity: i.quantity,
       }));
 
-      const quote = await QuoteService.requestQuote({
+      const quote = await quoteApi.requestQuote({
         items,
         destination_pincode: cleanPin,
         payment_method: quotePaymentMethod,
@@ -2075,15 +2104,9 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       set({ currentQuote: quote, quoteStatus: 'QUOTE_VALID', quoteError: null });
       return quote;
     } catch (err: unknown) {
-      try {
-        const fallbackQuote = calculateStatutoryQuoteFallback(cart, cleanPin, quotePaymentMethod);
-        set({ currentQuote: fallbackQuote, quoteStatus: 'QUOTE_VALID', quoteError: null });
-        return fallbackQuote;
-      } catch {
-        const errorMsg = err instanceof Error ? err.message : 'Failed to calculate total quote.';
-        set({ quoteStatus: 'QUOTE_ERROR', quoteError: errorMsg });
-        return null;
-      }
+      const errorMsg = err instanceof Error ? err.message : 'Failed to calculate total quote. Backend quote service unreachable.';
+      set({ quoteStatus: 'QUOTE_ERROR', quoteError: errorMsg, currentQuote: null });
+      return null;
     }
   },
 
@@ -2094,7 +2117,7 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
   fetchApiCatalog: async () => {
     set({ apiCatalogLoading: true, apiCatalogError: null });
     try {
-      const prods = await CatalogService.getCatalog();
+      const prods = await catalogApi.getCatalog();
       if (prods && prods.length > 0) {
         const merged = syncCatalogProducts(get().products, prods);
         set({ apiCatalogProducts: merged, apiCatalogLoading: false, apiCatalogError: null });
@@ -2110,7 +2133,7 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
   },
 
   // ── Multi-Lingual Architecture ───────────────────────────────
-  selectedLanguage: loadStored<SupportedLanguage>('apollo_lang', 'en'),
+  selectedLanguage: 'en',
   setSelectedLanguage: (lang) => {
     saveStored('apollo_lang', lang);
     set({ selectedLanguage: lang });
@@ -2170,23 +2193,69 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
 
   orders: initialOrders,
   createOrder: (paymentMethod, gstinClaim, paymentMeta) => {
-    const { cart, activeAddress, currentUser, appMode, currentOrg, getSplitShipments, destinationPincode } = get();
+    const { cart, activeAddress, currentUser, appMode, currentOrg, getSplitShipments, destinationPincode, currentQuote } = get();
     const splitShipments = getSplitShipments();
-    const orderNum = `ORD-AE-2026-${Math.floor(10000 + Math.random() * 90000)}`;
-    const invNum = `INV-AE-2026-08-${Math.floor(10000 + Math.random() * 90000)}`;
+    const orderNum = paymentMeta?.order_number || paymentMeta?.orderNumber || `ORD-AE-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+    const invNum = paymentMeta?.invoice_number || paymentMeta?.invoiceNumber || `INV-AE-2026-08-${Math.floor(10000 + Math.random() * 90000)}`;
+    const orderId = paymentMeta?.id ? String(paymentMeta.id) : `ord_${Date.now()}`;
 
-    const itemsTotal = cart.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
-    const taxableValue = Math.round((itemsTotal / 1.18) * 100) / 100;
-    const totalTax = Math.round((itemsTotal - taxableValue) * 100) / 100;
+    let itemsTotal = 0;
+    let taxableValue = 0;
+    let totalTax = 0;
+
+    if (currentQuote && currentQuote.items && currentQuote.items.length > 0) {
+      itemsTotal = Number(currentQuote.total_product_gross || 0);
+      taxableValue = Number(currentQuote.subtotal_taxable || 0);
+      totalTax = Number(currentQuote.total_product_gst || 0);
+    } else {
+      cart.forEach((i) => {
+        const lineGross = i.unitPrice * i.quantity;
+        const r = (i.gstRate || 18) / 100;
+        const lineTaxable = Math.round((lineGross / (1 + r)) * 100) / 100;
+        const lineGst = Math.round((lineGross - lineTaxable) * 100) / 100;
+
+        itemsTotal += lineGross;
+        taxableValue += lineTaxable;
+        totalTax += lineGst;
+      });
+
+      itemsTotal = Math.round(itemsTotal * 100) / 100;
+      taxableValue = Math.round(taxableValue * 100) / 100;
+      totalTax = Math.round(totalTax * 100) / 100;
+    }
     
     const isIntrastate = (activeAddress?.stateCode || '24') === '24';
     const cgstAmount = isIntrastate ? Math.round((totalTax / 2) * 100) / 100 : 0;
-    const sgstAmount = isIntrastate ? Math.round((totalTax / 2) * 100) / 100 : 0;
+    const sgstAmount = isIntrastate ? Math.round((totalTax - cgstAmount) * 100) / 100 : 0;
     const igstAmount = !isIntrastate ? totalTax : 0;
 
-    const shippingTotal = splitShipments.reduce((sum, p) => sum + p.shippingFee, 0);
-    const codFee = paymentMethod === 'COD' ? Math.round(itemsTotal * 0.025) : 0;
-    const grandTotal = itemsTotal + shippingTotal + codFee;
+    let shippingTotal = splitShipments.reduce((sum, p) => sum + p.shippingFee, 0);
+    if (currentQuote?.shipping_total) {
+      shippingTotal = Number(currentQuote.shipping_total);
+    }
+
+    const prepaidTotal = itemsTotal + shippingTotal;
+    
+    // Strict AGENTS.md Rule 3C: COD adds 2.5% surcharge to the complete prepaid total
+    let codFee = paymentMethod === 'COD' ? Math.round((prepaidTotal * 0.025) * 100) / 100 : 0;
+    let grandTotal = prepaidTotal;
+    if (paymentMethod === 'COD') {
+      if (currentQuote?.cod_payable_total || currentQuote?.cod_total) {
+        codFee = Number(currentQuote.cod_charge_raw || currentQuote.cod_surcharge || codFee);
+        grandTotal = Number(currentQuote.cod_payable_total || currentQuote.cod_total);
+      } else {
+        const codRawTotal = prepaidTotal + codFee;
+        const roundingMultiple = 5;
+        grandTotal = Math.ceil(codRawTotal / roundingMultiple) * roundingMultiple;
+      }
+    } else {
+      if (currentQuote?.prepaid_total) {
+        grandTotal = Number(currentQuote.prepaid_total);
+      }
+    }
+    if (paymentMeta?.total_payable) {
+      grandTotal = Number(paymentMeta.total_payable);
+    }
 
     const effectiveAddress: DeliveryAddress = activeAddress || {
       id: 'addr_checkout_active',
@@ -2233,13 +2302,13 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
     });
 
     const newOrder: Order = {
-      id: `ord_${Date.now()}`,
+      id: orderId,
       orderNumber: orderNum,
       invoiceNumber: invNum,
       userId: currentUser.id,
-      customerName: currentUser.name,
+      customerName: activeAddress?.fullName || currentUser.name || 'Valued Customer',
       customerEmail: currentUser.email,
-      customerPhone: currentUser.phone,
+      customerPhone: activeAddress?.phone || currentUser.phone,
       orderType: appMode === 'B2B' ? 'B2B' : 'B2C',
       b2bOrgId: appMode === 'B2B' ? currentOrg.id : undefined,
       gstin: gstinClaim ? (activeAddress?.gstin || currentOrg.gstin) : undefined,

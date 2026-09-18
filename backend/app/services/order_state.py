@@ -6,6 +6,7 @@ Enforces:
 3. Immutability of original delivered orders during replacement cases.
 4. Structured transition audit logging.
 """
+import uuid
 from datetime import UTC, datetime
 from typing import Any, ClassVar
 
@@ -147,11 +148,23 @@ class OrderStateMachine:
         # 1. Transition order status
         audit_logs.append(cls.transition_order_status(order, OrderStatus.CANCELLED, actor_id, reason))
 
-        # 2. Transition payment status based on prior payment state
+        # 2. Also update fulfilment status to prevent warehouse dispatch of cancelled orders
+        # Only transition if not already UNFULFILLED
+        if order.fulfilment_status in (FulfilmentStatus.PROCESSING, FulfilmentStatus.READY_TO_SHIP):
+            audit_logs.append(
+                cls.transition_fulfilment_status(order, FulfilmentStatus.UNFULFILLED, actor_id, "Order cancelled")
+            )
+
+        # 3. Transition payment status based on prior payment state
         if order.payment_status == PaymentStatus.CAPTURED:
             # Prepaid captured -> initiates refund workflow
             audit_logs.append(
                 cls.transition_payment_status(order, PaymentStatus.REFUND_PENDING, actor_id, "Order cancelled post-capture")
+            )
+        elif order.payment_status == PaymentStatus.AUTHORIZED:
+            # Authorized but not captured -> void authorization
+            audit_logs.append(
+                cls.transition_payment_status(order, PaymentStatus.FAILED, actor_id, "Authorization voided due to cancellation")
             )
         elif is_cod:
             # COD order cancelled before delivery -> no money refund
@@ -196,7 +209,10 @@ class OrderStateMachine:
         original_order.replacement_status = ReplacementStatus.REQUESTED
         original_order.version += 1
 
+        # Generate UUID upfront to avoid None case.id before flush/commit
+        case_id = uuid.uuid4()
         case = ReplacementCase(
+            id=case_id,
             original_order_id=original_order.id,
             caliper_photo_url=caliper_photo_url,
             verified_frame_thickness=verified_thickness,
@@ -204,14 +220,14 @@ class OrderStateMachine:
         )
 
         replacement_shipment = ReplacementShipment(
-            case_id=case.id,
+            case_id=case_id,
             status=FulfilmentStatus.READY_TO_SHIP,
         )
 
         audit_log = {
             "entity": "replacement_case",
             "order_id": str(original_order.id),
-            "case_id": str(case.id),
+            "case_id": str(case_id),
             "status": ReplacementStatus.REQUESTED.value,
             "actor_id": actor_id,
             "timestamp": datetime.now(UTC).isoformat(),

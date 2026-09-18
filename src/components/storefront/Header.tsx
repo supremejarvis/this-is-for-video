@@ -59,6 +59,8 @@ export const Header: React.FC = () => {
             src="/logo.webp" 
             alt="Apollo Engineering Logo" 
             className="h-10 md:h-12 w-auto object-contain group-hover:scale-105 transition-transform duration-300 pointer-events-none select-none"
+            fetchPriority="high"
+            decoding="async"
           />
         </div>
 
@@ -254,6 +256,7 @@ export const Header: React.FC = () => {
               {/* APE Store (Products) */}
               <button
                 onClick={() => navigateTo('store', '/store')}
+                aria-label="Navigate to APE Store products catalog"
                 className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === 'store' ? 'bg-[#0054A6] text-white shadow-sm' : 'text-slate-700 hover:text-slate-900 hover:bg-white'
                 }`}
@@ -265,6 +268,7 @@ export const Header: React.FC = () => {
               {/* About Company */}
               <button
                 onClick={() => navigateTo('about', '/about')}
+                aria-label="Navigate to About Apollo Engineering"
                 className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === 'about' ? 'bg-[#0054A6] text-white shadow-sm' : 'text-slate-700 hover:text-[#0054A6] hover:bg-white'
                 }`}
@@ -276,6 +280,7 @@ export const Header: React.FC = () => {
               {/* Installation & Why Us */}
               <button
                 onClick={() => navigateTo('installation', '/installation')}
+                aria-label="Navigate to Installation guide and why choose us"
                 className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === 'installation' ? 'bg-[#0054A6] text-white shadow-sm' : 'text-slate-700 hover:text-[#0054A6] hover:bg-white'
                 }`}
@@ -287,6 +292,7 @@ export const Header: React.FC = () => {
               {/* Contact & Map */}
               <button
                 onClick={() => navigateTo('contact', '/contact')}
+                aria-label="Navigate to Contact and Kathwada GIDC Location"
                 className={`px-3.5 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === 'contact' ? 'bg-[#0054A6] text-white shadow-sm' : 'text-slate-700 hover:text-[#0054A6] hover:bg-white'
                 }`}

@@ -23,7 +23,7 @@ from app.core.security import hash_password, hash_token
 from app.main import app
 from app.models.auth import User, UserRole, UserSession
 
-DATABASE_URL = "postgresql+asyncpg://postgres@localhost:5433/apollo_disposable_test"
+DATABASE_URL = "postgresql+asyncpg://postgres_test:postgres@localhost:5432/apollo_disposable_test"
 
 
 def utcnow() -> datetime:

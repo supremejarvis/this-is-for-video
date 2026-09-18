@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.models import (
     FulfilmentStatus,
     Order,
+    OrderAddress,
     OrderItem,
     OrderStatus,
     PaymentStatus,
@@ -22,6 +23,7 @@ from app.models import (
     QuoteItem,
     ReplacementStatus,
 )
+from app.schemas.order import AddressInput, CustomerInfoInput
 from app.schemas.pricing import (
     OrderCalculationRequest,
     PricingItemInput,
@@ -119,6 +121,37 @@ class QuoteService:
                 .order_by(PriceVersion.min_quantity.desc(), PriceVersion.valid_from.desc())
             )
             result = (await session.execute(stmt)).first()
+            if result is None and item.sku:
+                # Try fallback matching normalized SKU (e.g. with/without .00 or standard formats)
+                alt_skus: list[str] = []
+                if ".00MM" in item.sku:
+                    alt_skus.append(item.sku.replace(".00MM", "MM"))
+                elif "MM" in item.sku and ".00" not in item.sku:
+                    alt_skus.append(item.sku.replace("MM", ".00MM"))
+                
+                for alt_sku in alt_skus:
+                    stmt_alt = (
+                        select(ProductVariant, PriceVersion, Product)
+                        .join(Product, ProductVariant.product_id == Product.id)
+                        .join(
+                            PriceVersion,
+                            (PriceVersion.variant_id == ProductVariant.id)
+                            | ((PriceVersion.product_id == Product.id) & (PriceVersion.variant_id.is_(None))),
+                        )
+                        .where(
+                            ProductVariant.sku == alt_sku,
+                            ProductVariant.is_active.is_(True),
+                            Product.is_active.is_(True),
+                            PriceVersion.valid_to.is_(None),
+                            PriceVersion.min_quantity <= item.quantity,
+                        )
+                        .order_by(PriceVersion.min_quantity.desc(), PriceVersion.valid_from.desc())
+                    )
+                    alt_res = (await session.execute(stmt_alt)).first()
+                    if alt_res is not None:
+                        result = alt_res
+                        break
+
             if result is None:
                 ident = str(item.variant_id) if item.variant_id else item.sku
                 raise InvalidSkuError(f"SKU/Variant '{ident}' is invalid, inactive, or has no active price version in catalog.")
@@ -282,8 +315,13 @@ class QuoteService:
         quote_id: uuid.UUID,
         clock: Clock = default_clock,
         payment_method: str | None = None,
+        customer_info: CustomerInfoInput | None = None,
+        shipping_address: AddressInput | None = None,
+        user_id: uuid.UUID | None = None,
+        company_name: str | None = None,
+        gstin: str | None = None,
     ) -> Order:
-        """Create an order from a persisted quote, enforcing expiry and catalog price freshness."""
+        """Create an order from a persisted quote, enforcing expiry, catalog price freshness, and address snapshot."""
         stmt = select(Quote).where(Quote.id == quote_id).options(selectinload(Quote.items))
         quote = (await session.execute(stmt)).scalar_one_or_none()
         if quote is None:
@@ -313,9 +351,11 @@ class QuoteService:
                 .where(
                     ProductVariant.sku == item.sku,
                     PriceVersion.valid_to.is_(None),
+                    PriceVersion.min_quantity <= item.quantity,
                 )
+                .order_by(PriceVersion.min_quantity.desc(), PriceVersion.valid_from.desc())
             )
-            current_price_ver = (await session.execute(stmt_price)).scalar_one_or_none()
+            current_price_ver = (await session.execute(stmt_price)).scalars().first()
             if current_price_ver is None or current_price_ver.unit_price != item.unit_price:
                 raise PriceChangedError(
                     f"Catalog price for SKU {item.sku} has changed from ₹{item.unit_price} to ₹{getattr(current_price_ver, 'unit_price', 'N/A')}. A new quote is required."
@@ -327,6 +367,12 @@ class QuoteService:
         order = Order(
             order_number=order_no,
             quote_id=quote.id,
+            user_id=user_id,
+            customer_name=customer_info.name if customer_info else None,
+            customer_phone=customer_info.phone if customer_info else None,
+            customer_email=customer_info.email if customer_info else None,
+            company_name=company_name,
+            gstin=gstin,
             order_status=OrderStatus.CONFIRMED,
             payment_status=PaymentStatus.PENDING,
             fulfilment_status=FulfilmentStatus.UNFULFILLED,
@@ -340,6 +386,27 @@ class QuoteService:
         )
         session.add(order)
         await session.flush()
+
+        # 4. Create immutable OrderAddress snapshot if shipping address provided
+        if shipping_address:
+            order_address = OrderAddress(
+                order_id=order.id,
+                address_type="SHIPPING",
+                full_name=customer_info.name if customer_info else "Valued Customer",
+                phone=customer_info.phone if customer_info else "",
+                email=customer_info.email if customer_info else None,
+                address_line1=shipping_address.address_line1,
+                address_line2=shipping_address.address_line2,
+                landmark=shipping_address.landmark,
+                city=shipping_address.city,
+                state=shipping_address.state,
+                state_code=shipping_address.state_code,
+                pincode=shipping_address.pincode,
+                country=shipping_address.country or "India",
+                company_name=company_name,
+                gstin=gstin,
+            )
+            session.add(order_address)
 
         for q_item in quote.items:
             o_item = OrderItem(

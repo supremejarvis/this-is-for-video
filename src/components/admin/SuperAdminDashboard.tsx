@@ -28,6 +28,7 @@ import { CustomerManagementPanel } from './CustomerManagementPanel';
 import { PaymentReconciliationPanel } from './PaymentReconciliationPanel';
 import { CiCdPipelineAuditPanel } from './CiCdPipelineAuditPanel';
 import { totpService } from '../../services/totpService';
+import { authApi } from '../../services/api';
 import { ComboVariantBuilderModal } from './ComboVariantBuilderModal';
 import { EnterpriseDispatchConsole } from './EnterpriseDispatchConsole';
 import { 
@@ -294,44 +295,33 @@ export const SuperAdminDashboard: React.FC = () => {
     let isMounted = true;
     const verifyExistingAdminSession = async () => {
       try {
-        // Purge legacy persistent localStorage session to enforce tab/window boundary
+        // Purge legacy storage session artifacts
         try {
           localStorage.removeItem('apollo_admin_session');
+          localStorage.removeItem('apollo_admin_password');
+          sessionStorage.removeItem('apollo_admin_session');
         } catch {}
 
-        // Tab/Window-scoped session: active as long as this window/tab is open
-        const isSessionActive = sessionStorage.getItem('apollo_admin_session') === 'active';
-        if (isSessionActive && isMounted) {
-          setIsAdminAuthenticated(true);
-          setAdminUser({
-            id: 'u_apollo_admin_master',
-            email: DEFAULT_ADMIN_EMAIL,
-            full_name: 'Apollo Engineering Administrator',
-            role: 'SUPER_ADMIN',
-            is_superuser: true,
-            phone: DEFAULT_ADMIN_PHONE,
-          });
-          setIsCheckingSession(false);
-          return;
-        }
-
-        const res = await fetch('/api/v1/auth/me', {
-          credentials: 'include',
-        });
-        if (res.ok && isMounted) {
-          const user = await res.json();
-          const roles = user.roles || (user.role ? [user.role] : []);
-          const isPrivileged = roles.some((r: string) => ['SUPER_ADMIN', 'ADMIN', 'OWNER', 'ORDER_OPERATIONS', 'CATALOG_MANAGER'].includes(r)) || user.is_superuser;
+        const user = await authApi.getCurrentUser();
+        if (user && isMounted) {
+          const roles = (user as any).roles || (user.role ? [user.role] : []);
+          const isPrivileged = roles.some((r: string) => ['SUPER_ADMIN', 'ADMIN', 'OWNER', 'ORDER_OPERATIONS', 'CATALOG_MANAGER'].includes(r)) || (user as any).is_superuser;
           if (isPrivileged) {
-            sessionStorage.setItem('apollo_admin_session', 'active');
             setIsAdminAuthenticated(true);
-            setAdminUser(user);
+            setAdminUser(user as any);
           } else {
             setIsAdminAuthenticated(false);
+            setAdminUser(null);
           }
+        } else if (isMounted) {
+          setIsAdminAuthenticated(false);
+          setAdminUser(null);
         }
-      } catch (err) {
-        if (isMounted) setIsAdminAuthenticated(false);
+      } catch {
+        if (isMounted) {
+          setIsAdminAuthenticated(false);
+          setAdminUser(null);
+        }
       } finally {
         if (isMounted) setIsCheckingSession(false);
       }
@@ -400,43 +390,27 @@ export const SuperAdminDashboard: React.FC = () => {
     const cleanPass = adminPasswordInput;
 
     try {
-      const res = await fetch('/api/v1/auth/admin-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          email: cleanEmail,
-          password: cleanPass,
-          totp_code: cleanCode,
-        }),
+      const data = await authApi.adminLogin({
+        email: cleanEmail,
+        password: cleanPass,
+        totp_code: cleanCode,
       });
 
-      if (res.ok) {
-        const data = await res.json();
+      if (data && data.user) {
         completeAdminLogin(data.user);
-        return;
+      } else {
+        setIsAdminVerifying(false);
+        setAuthError('Authentication succeeded but server did not return user profile.');
+        showToast('Authentication failed', 'error');
       }
-
-      const errData = await res.json().catch(() => ({}));
-      const detail = errData.detail || 'Invalid administrator password or 6-digit authenticator code.';
+    } catch (err: any) {
       setIsAdminVerifying(false);
+      const isOffline = err?.statusCode === 0 || err?.message?.toLowerCase().includes('network') || err?.message?.toLowerCase().includes('failed to fetch');
+      const detail = isOffline
+        ? 'Backend authentication service offline. Please ensure the backend is running.'
+        : (err?.message || 'Invalid administrator password or 6-digit authenticator code.');
       setAuthError(detail);
       showToast(detail, 'error');
-    } catch {
-      if (cleanPass === 'NIL@apl321' && cleanCode.length === 6) {
-        completeAdminLogin({
-          id: 'u_apollo_admin_master',
-          email: DEFAULT_ADMIN_EMAIL,
-          full_name: 'Apollo Engineering Administrator',
-          role: 'SUPER_ADMIN',
-          is_superuser: true,
-          phone: DEFAULT_ADMIN_PHONE,
-        });
-        return;
-      }
-      setIsAdminVerifying(false);
-      setAuthError('Backend authentication service offline. Please ensure the backend is running.');
-      showToast('Backend authentication service offline', 'error');
     }
   };
 
@@ -457,22 +431,14 @@ export const SuperAdminDashboard: React.FC = () => {
     }
   };
 
-  const completeAdminLogin = (user?: any) => {
+  const completeAdminLogin = (user: any) => {
     try {
-      // Store session in sessionStorage so it ends when the window/tab is closed
-      sessionStorage.setItem('apollo_admin_session', 'active');
+      sessionStorage.removeItem('apollo_admin_session');
       localStorage.removeItem('apollo_admin_session');
       localStorage.removeItem('apollo_admin_password');
     } catch {}
     setIsAdminAuthenticated(true);
-    setAdminUser(user || {
-      id: 'u_apollo_admin_master',
-      email: DEFAULT_ADMIN_EMAIL,
-      full_name: 'Apollo Engineering Administrator',
-      role: 'SUPER_ADMIN',
-      is_superuser: true,
-      phone: DEFAULT_ADMIN_PHONE,
-    });
+    setAdminUser(user);
     setIsAdminVerifying(false);
     setAdminPasswordInput('');
     setAdminEnteredOtp('');
@@ -498,20 +464,8 @@ export const SuperAdminDashboard: React.FC = () => {
     try {
       sessionStorage.removeItem('apollo_admin_session');
       localStorage.removeItem('apollo_admin_session');
-      const csrfCookie = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('ape_csrf='))
-        ?.split('=')[1];
-
-      await fetch('/api/v1/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(csrfCookie ? { 'X-CSRF-Token': csrfCookie } : {})
-        },
-        credentials: 'include'
-      });
-    } catch (e) {
+      await authApi.logout();
+    } catch {
       // Ignore logout errors
     }
     setIsAdminAuthenticated(false);
@@ -1986,7 +1940,7 @@ export const SuperAdminDashboard: React.FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    filteredProductsList.map((p) => {
+                    filteredProductsList.map((p, pIdx) => {
                       const selectedVariant = p.variants.find((v) => v.sku === p.selectedVariantSku) || p.variants[0];
                       const isSelected = selectedAsins.includes(p.asin);
                       const b2cPrice = selectedVariant.b2cPrice || 0;
@@ -1998,7 +1952,7 @@ export const SuperAdminDashboard: React.FC = () => {
 
                       return (
                         <tr
-                          key={p.asin}
+                          key={`${p.asin}-${pIdx}`}
                           className={`transition-colors ${
                             isSelected ? 'bg-amber-50/50 hover:bg-amber-50/70' : 'hover:bg-slate-50/80'
                           }`}

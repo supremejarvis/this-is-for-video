@@ -1,6 +1,4 @@
 import { useState, useRef } from "react";
-import { jsPDF } from "jspdf";
-import { toJpeg } from "html-to-image";
 import { CheckCircle2, Star, ShieldCheck, Sun } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 
@@ -197,6 +195,10 @@ export function PdfCatalog() {
     await new Promise((r) => setTimeout(r, 500));
 
     try {
+      const [{ jsPDF }, { toJpeg }] = await Promise.all([
+        import("jspdf"),
+        import("html-to-image")
+      ]);
       const pdf = new jsPDF({ format: "a4", unit: "pt", orientation: "portrait" });
       const A4_WIDTH = 595.28;
       const A4_HEIGHT = 841.89;

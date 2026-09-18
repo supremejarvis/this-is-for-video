@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Truck, MapPin, CheckCircle2, Search, ArrowRight, ShieldCheck, Clock } from 'lucide-react';
-import { calculateSpeedPostTariff, ORIGIN_HUB_PINCODE, ORIGIN_HUB_NAME } from '../../services/logisticsService';
+import { ORIGIN_HUB_PINCODE, ORIGIN_HUB_NAME } from '../../services/logisticsService';
 
 export const PincodeDeliveryChecker: React.FC = () => {
   const [pincode, setPincode] = useState('380015');

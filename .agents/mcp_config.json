@@ -1,5 +1,8 @@
 {
   "mcpServers": {
+    "windsor": {
+      "httpUrl": "https://mcp.windsor.ai/"
+    },
     "playwright": {
       "command": "npx",
       "args": [

@@ -3,12 +3,13 @@ import {
   X, Phone, ShieldCheck, Building2, 
   CheckCircle2, Lock, ArrowRight, MapPin, 
   CheckSquare, Square, ChevronDown, Clock, AlertCircle, 
-  FileText, RefreshCw, MessageCircle, ArrowLeft, Truck
+  FileText, RefreshCw, MessageCircle, ArrowLeft, Truck, Sparkles
 } from 'lucide-react';
-import { useStore } from '../../store/useStore';
+import { useStore, saveStored } from '../../store/useStore';
 import { UserRole, PostOfficeInfo, UserProfile, AppMode, DeliveryAddress } from '../../types';
 import { lookupPincode, ORIGIN_HUB_PINCODE } from '../../services/logisticsService';
 import { msg91OtpService } from '../../services/msg91OtpService';
+import { authApi } from '../../services/api';
 
 export const AuthModal: React.FC = () => {
   const { 
@@ -30,6 +31,7 @@ export const AuthModal: React.FC = () => {
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '']);
   const [countdown, setCountdown] = useState(30);
   const [attempts, setAttempts] = useState(0);
+  const [devOtpCode, setDevOtpCode] = useState<string | null>(null);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Policy Modals View
@@ -173,28 +175,25 @@ export const AuthModal: React.FC = () => {
 
     setIsSendingOtp(true);
     try {
-      const res = await fetch('/api/v1/auth/otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: mobileNumber }),
-      });
-      const data = await res.json();
+      const data = await authApi.sendOtp(mobileNumber);
       setIsSendingOtp(false);
 
-      if (res.ok && data.success) {
+      if (data && (data.success || data.type === 'success')) {
         setOtpStep(true);
         setCountdown(30);
         setOtpDigits(['', '', '', '']);
+        setDevOtpCode(data.dev_code || null);
         showToast('Secure 4-digit OTP dispatched to your mobile number.', 'info');
       } else {
-        const msg = data.detail || data.message || 'We couldn’t send the OTP. Please try again.';
+        const msg = data?.detail || data?.message || 'We couldn’t send the OTP. Please try again.';
         setErrorMessage(msg);
         showToast(msg, 'error');
       }
-    } catch {
+    } catch (err: any) {
       setIsSendingOtp(false);
-      setErrorMessage('We couldn’t send the OTP. Please check your connection.');
-      showToast('We couldn’t send the OTP. Please check your connection.', 'error');
+      const msg = err.message || 'We couldn’t send the OTP. Please check your connection.';
+      setErrorMessage(msg);
+      showToast(msg, 'error');
     }
   };
 
@@ -205,9 +204,45 @@ export const AuthModal: React.FC = () => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!isMobileValid) {
-      setErrorMessage('Please enter a valid 10-digit mobile number.');
+    if (!signupMobile || !/^[6-9]\d{9}$/.test(signupMobile)) {
+      setErrorMessage('Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.');
       showToast('Please enter a valid 10-digit mobile number.', 'warning');
+      return;
+    }
+
+    if (!fullName.trim() || fullName.trim().length < 2) {
+      setErrorMessage('Please enter your full name (minimum 2 characters).');
+      showToast('Please enter your full name.', 'warning');
+      return;
+    }
+
+    if (!emailId.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailId.trim())) {
+      setErrorMessage('Please enter a valid email address.');
+      showToast('Please enter a valid email address.', 'warning');
+      return;
+    }
+
+    if (accountType === 'B2B' && !companyName.trim()) {
+      setErrorMessage('Please enter your company or firm name for B2B registration.');
+      showToast('Please enter your company name.', 'warning');
+      return;
+    }
+
+    if (accountType === 'B2B' && gstin.trim() && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin.trim().toUpperCase())) {
+      setErrorMessage('Invalid GSTIN format. Please enter a valid 15-character GSTIN or leave blank.');
+      showToast('Invalid GSTIN format.', 'warning');
+      return;
+    }
+
+    if (!addressLine1.trim() || !addressLine2.trim()) {
+      setErrorMessage('Please enter complete delivery address details.');
+      showToast('Please enter complete delivery address.', 'warning');
+      return;
+    }
+
+    if (!pincode.trim() || !/^\d{6}$/.test(pincode.trim())) {
+      setErrorMessage('Please enter a valid 6-digit postal pincode.');
+      showToast('Please enter a valid 6-digit pincode.', 'warning');
       return;
     }
 
@@ -219,28 +254,25 @@ export const AuthModal: React.FC = () => {
 
     setIsSendingOtp(true);
     try {
-      const res = await fetch('/api/v1/auth/otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: signupMobile }),
-      });
-      const data = await res.json();
+      const data = await authApi.sendOtp(signupMobile);
       setIsSendingOtp(false);
 
-      if (res.ok && data.success) {
+      if (data && (data.success || data.type === 'success')) {
         setOtpStep(true);
         setCountdown(30);
         setOtpDigits(['', '', '', '']);
+        setDevOtpCode(data.dev_code || null);
         showToast('Secure 4-digit OTP dispatched to your mobile number.', 'info');
       } else {
-        const msg = data.detail || data.message || 'We couldn’t send the OTP. Please try again.';
+        const msg = data?.detail || data?.message || 'We couldn’t send the OTP. Please try again.';
         setErrorMessage(msg);
         showToast(msg, 'error');
       }
-    } catch {
+    } catch (err: any) {
       setIsSendingOtp(false);
-      setErrorMessage('We couldn’t send the OTP. Please check your connection.');
-      showToast('We couldn’t send the OTP. Please check your connection.', 'error');
+      const msg = err.message || 'We couldn’t send the OTP. Please check your connection.';
+      setErrorMessage(msg);
+      showToast(msg, 'error');
     }
   };
 
@@ -251,21 +283,17 @@ export const AuthModal: React.FC = () => {
     if (countdown > 0) return;
     const targetPhone = authMode === 'SIGNUP' ? signupMobile : mobileNumber;
     try {
-      const res = await fetch('/api/v1/auth/otp/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: targetPhone }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = await authApi.sendOtp(targetPhone);
+      if (data && (data.success || data.type === 'success')) {
         setCountdown(30);
         setErrorMessage(null);
+        setDevOtpCode(data.dev_code || null);
         showToast('New 4-digit OTP sent to your mobile', 'info');
       } else {
-        setErrorMessage(data.detail || data.message || 'Failed to resend OTP.');
+        setErrorMessage(data?.detail || data?.message || 'Failed to resend OTP.');
       }
-    } catch {
-      setErrorMessage('Failed to resend OTP.');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to resend OTP.');
     }
   };
 
@@ -285,18 +313,12 @@ export const AuthModal: React.FC = () => {
     setAttempts((prev) => prev + 1);
 
     try {
-      const res = await fetch('/api/v1/auth/otp/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ phone: targetPhone, otp: enteredCode }),
-      });
-
-      const result = await res.json();
+      const result = await authApi.verifyOtp(targetPhone, enteredCode);
       setIsVerifyingOtp(false);
 
-      if (!res.ok || !result.is_verified) {
-        const msg = result.detail || result.message || 'Incorrect OTP. Please check and enter again.';
+      const isSuccess = Boolean(result && (result.is_verified || result.success || result.isVerified));
+      if (!isSuccess) {
+        const msg = result?.detail || result?.message || 'Incorrect OTP. Please check and enter again.';
         setErrorMessage(msg);
         showToast(msg, 'error');
         return;
@@ -304,63 +326,134 @@ export const AuthModal: React.FC = () => {
 
       // Backend session verified!
       const user = result.user;
-      const role: UserRole = user?.role === 'ADMIN' ? 'SUPER_ADMIN' : 'B2C_CUSTOMER';
+      const cleanPhone10 = targetPhone.replace(/\D/g, '').slice(-10);
+
+      // Check if user exists in allUsers or apollo_users or stored current user
+      const savedUsers: UserProfile[] = (typeof window !== 'undefined' && window.localStorage)
+        ? JSON.parse(localStorage.getItem('apollo_users') || '[]')
+        : [];
+      const matchedUser = allUsers.find(u => u.phone && u.phone.replace(/\D/g, '').endsWith(cleanPhone10))
+        || savedUsers.find(u => u.phone && u.phone.replace(/\D/g, '').endsWith(cleanPhone10));
+
+      const role: UserRole = (authMode === 'SIGNUP' && accountType === 'B2B')
+        ? 'B2B_BUYER'
+        : (matchedUser?.role && matchedUser.role.includes('B2B')
+          ? 'B2B_BUYER'
+          : (user?.role === 'ADMIN' ? 'SUPER_ADMIN' : 'B2C_CUSTOMER'));
+
+      // Authentic Name Resolution:
+      let resolvedName = '';
+      if (authMode === 'SIGNUP' && fullName.trim()) {
+        resolvedName = fullName.trim();
+      } else if (matchedUser?.name && !matchedUser.name.startsWith('Customer ')) {
+        resolvedName = matchedUser.name;
+      } else if (user?.full_name && !user.full_name.startsWith('Customer ')) {
+        resolvedName = user.full_name;
+      } else {
+        resolvedName = `Customer (${cleanPhone10.slice(-4)})`;
+      }
+
+      let resolvedEmail = '';
+      if (authMode === 'SIGNUP' && emailId.trim()) {
+        resolvedEmail = emailId.trim();
+      } else if (matchedUser?.email && !matchedUser.email.includes('@ape-store.com')) {
+        resolvedEmail = matchedUser.email;
+      } else if (user?.email && !user.email.includes('@ape-store.com')) {
+        resolvedEmail = user.email;
+      } else {
+        resolvedEmail = user?.email || `${cleanPhone10}@ape-store.com`;
+      }
+
       const authenticatedUser: UserProfile = {
-        id: user?.id || `usr_${Date.now()}`,
-        name: user?.full_name || fullName || (targetPhone ? `Customer (${targetPhone.slice(-4)})` : 'Valued Customer'),
-        email: user?.email || emailId || '',
+        id: user?.id || matchedUser?.id || `usr_${Date.now()}`,
+        name: resolvedName,
+        email: resolvedEmail,
         phone: targetPhone,
         role: role,
         isPrime: false,
-        createdAt: user?.created_at || new Date().toISOString()
+        createdAt: user?.created_at || matchedUser?.createdAt || new Date().toISOString()
       };
 
       setCurrentUser(authenticatedUser);
       useStore.setState({ authStatus: 'AUTHENTICATED' });
 
+      // If user is B2B, ensure appMode is B2B
+      if (role === 'B2B_BUYER') {
+        setAppMode('B2B');
+      }
+
+      // If resolved authentic name exists and backend still had generic Customer name, sync to PostgreSQL!
+      if (resolvedName && !resolvedName.startsWith('Customer ') && user?.full_name?.startsWith('Customer ')) {
+        authApi.updateProfile({ full_name: resolvedName }).catch(() => {});
+      }
+
+      if (authMode === 'SIGNUP' && accountType === 'B2B') {
+        setAppMode('B2B');
+        if (companyName.trim()) {
+          useStore.getState().updateOrgDetails({
+            companyName: companyName.trim(),
+            tradeName: companyName.trim(),
+            gstin: gstin.trim().toUpperCase(),
+            stateCode: stateCode,
+          });
+        }
+      }
+
       // If user filled registration address during signup
       if (authMode === 'SIGNUP' && pincode) {
         const postOfficeToSave = selectedPostOffice || availablePostOffices[0] || {
-          name: 'KATHWADA GIDC S.O.',
+          name: `${city} S.O.`,
           branchType: 'Sub Hub Facility',
           deliveryStatus: 'Delivery',
-          circle: 'Gujarat',
-          district: 'Ahmedabad',
-          state: 'Gujarat',
-          facilityId: 'PO382430'
+          circle: state,
+          district: city,
+          state: state,
+          facilityId: `PO${pincode}`
         };
 
         const regAddress: DeliveryAddress = {
           id: `addr_${Date.now()}`,
           userId: authenticatedUser.id,
-          fullName: accountType === 'B2B' && companyName ? `${companyName} (${fullName})` : fullName,
+          fullName: accountType === 'B2B' && companyName.trim() ? `${companyName.trim()} (${fullName.trim()})` : fullName.trim(),
           phone: signupMobile,
           addressType: accountType === 'B2B' ? 'OFFICE' : 'HOME',
-          flatBuilding: addressLine1,
-          streetArea: addressLine2,
-          pincode: pincode,
+          flatBuilding: addressLine1.trim(),
+          streetArea: addressLine2.trim(),
+          pincode: pincode.trim(),
           postOffice: postOfficeToSave,
           city: city,
           state: state,
           stateCode: stateCode,
           isDefault: true,
-          gstin: accountType === 'B2B' ? gstin : undefined
+          gstin: accountType === 'B2B' && gstin ? gstin.trim().toUpperCase() : undefined
         };
 
         addAddress(regAddress);
-        useStore.setState({ activeAddress: regAddress, shippingAddress: regAddress });
+        useStore.setState({ 
+          activeAddress: regAddress, 
+          shippingAddress: regAddress,
+          billingAddress: regAddress,
+          destinationPincode: regAddress.pincode
+        });
+        saveStored('apollo_shipping_address', regAddress);
+        saveStored('apollo_billing_address', regAddress);
+        saveStored('apollo_addresses', [regAddress, ...useStore.getState().addresses.filter(a => a.id !== regAddress.id)]);
       }
 
       setIsAuthModalOpen(false);
 
       // Check destination gate
-      const { authDestination, setIsCheckoutOpen } = useStore.getState();
+      const { authDestination, setIsCheckoutOpen, setIsCartDrawerOpen } = useStore.getState();
       if (authDestination === 'CHECKOUT') {
         setIsCheckoutOpen(true);
         showToast('Identity verified. Proceeding to checkout.', 'success');
+      } else if (authDestination === 'CART') {
+        setIsCartDrawerOpen(true);
+        showToast('Signed in successfully! Your cart is ready.', 'success');
       } else {
         showToast(`Welcome! You are now signed in.`, 'success');
       }
+      useStore.setState({ authDestination: null });
     } catch {
       setIsVerifyingOtp(false);
       setErrorMessage('Verification failed. Please check network connection.');
@@ -478,9 +571,7 @@ export const AuthModal: React.FC = () => {
             <h2 id="auth-modal-title" className="text-xl sm:text-2xl font-black text-[#0A0F1C] tracking-tight">
               {otpStep 
                 ? 'Verify Your Mobile Number' 
-                : authMode === 'SIGNUP' 
-                  ? 'Create Your Account' 
-                  : 'Welcome to APE Store'}
+                : 'Mobile OTP Instant Sign-In'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
               {otpStep ? (
@@ -490,10 +581,8 @@ export const AuthModal: React.FC = () => {
                     {getMaskedPhone(activePhoneDigits)}
                   </strong>
                 </span>
-              ) : authMode === 'SIGNUP' ? (
-                'Register to access retail & commercial solar hardware.'
               ) : (
-                'Sign in to view your orders, invoices and dispatch updates.'
+                'Instant access via 10-digit mobile number. No registration or password required!'
               )}
             </p>
           </div>
@@ -650,19 +739,15 @@ export const AuthModal: React.FC = () => {
                 )}
               </button>
 
-              {/* Customer Signup Link */}
-              <div className="text-center text-xs text-slate-600 pt-2">
-                New to APE Store?{' '}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode('SIGNUP');
-                    setErrorMessage(null);
-                  }}
-                  className="text-[#0054A6] hover:text-[#003d7a] font-bold underline underline-offset-2 transition-colors cursor-pointer"
-                >
-                  Create Account
-                </button>
+              {/* Frictionless Login Notice */}
+              <div className="text-center text-xs text-slate-600 pt-2 bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-1">
+                <div className="font-bold text-slate-800 flex items-center justify-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span>No Upfront Registration Required</span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Just enter your mobile to log in. You can add your delivery name, address, and B2B GST details during checkout or in your profile.
+                </p>
               </div>
 
               {/* Compact Trust Indicators */}
@@ -907,6 +992,8 @@ export const AuthModal: React.FC = () => {
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input
                     type="checkbox"
+                    id="accept-warranty"
+                    name="acceptWarranty"
                     checked={acceptWarranty}
                     onChange={(e) => setAcceptWarranty(e.target.checked)}
                     className="mt-0.5 rounded text-[#F58220] focus:ring-[#F58220]"
@@ -916,6 +1003,8 @@ export const AuthModal: React.FC = () => {
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input
                     type="checkbox"
+                    id="accept-return-policy"
+                    name="acceptReturnPolicy"
                     checked={acceptReturnPolicy}
                     onChange={(e) => setAcceptReturnPolicy(e.target.checked)}
                     className="mt-0.5 rounded text-[#F58220] focus:ring-[#F58220]"
@@ -925,6 +1014,8 @@ export const AuthModal: React.FC = () => {
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input
                     type="checkbox"
+                    id="accept-cancel-policy"
+                    name="acceptCancelPolicy"
                     checked={acceptCancelPolicy}
                     onChange={(e) => setAcceptCancelPolicy(e.target.checked)}
                     className="mt-0.5 rounded text-[#F58220] focus:ring-[#F58220]"
@@ -934,6 +1025,8 @@ export const AuthModal: React.FC = () => {
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input
                     type="checkbox"
+                    id="accept-delivery-timeline"
+                    name="acceptDeliveryTimeline"
                     checked={acceptDeliveryTimeline}
                     onChange={(e) => setAcceptDeliveryTimeline(e.target.checked)}
                     className="mt-0.5 rounded text-[#F58220] focus:ring-[#F58220]"

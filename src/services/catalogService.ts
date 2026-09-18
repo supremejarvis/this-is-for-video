@@ -53,44 +53,20 @@ export interface ApiProduct {
   rawProduct?: any;
 }
 
-const API_BASE = '/api/v1';
+import { catalogApi } from './api/catalogApi';
 
 export class CatalogService {
   /**
    * Fetches active buyer catalog products and their variants from PostgreSQL.
    */
   static async getCatalog(includeArchived = false): Promise<ApiProduct[]> {
-    const response = await fetch(`${API_BASE}/products/?include_archived=${includeArchived}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to load catalog products (HTTP ${response.status})`);
-    }
-
-    const data: ApiProduct[] = await response.json();
-    return data;
+    return catalogApi.getProducts(includeArchived);
   }
 
   /**
    * Fetches a single product by ID with all active variants and current stock status.
    */
   static async getProduct(productId: string): Promise<ApiProduct> {
-    const response = await fetch(`${API_BASE}/products/${productId}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch product '${productId}' (HTTP ${response.status})`);
-    }
-
-    const data: ApiProduct = await response.json();
-    return data;
+    return catalogApi.getProduct(productId);
   }
 }

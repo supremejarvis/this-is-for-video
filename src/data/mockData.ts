@@ -226,10 +226,10 @@ export const MOCK_PRODUCTS: Product[] = [
     isLive: true,
     badges: ['BEST_SELLER', 'PRIME', 'B2B_BULK'],
     createdAt: '2025-01-01T00:00:00Z',
-    selectedVariantSku: 'J9-IJCH-26WX',
+    selectedVariantSku: 'APE-SC-35.00MM',
     variants: [
       {
-        sku: 'EV-YMG0-GM29',
+        sku: 'APE-SC-28.00MM',
         title: 'Apollo SS304 Solar Drain Clip - 28mm Frame Size (Pack of 50 pcs)',
         attributes: { material: 'AISI SS304', size: '28mm', packSize: 'Pack of 50' },
         mrp: 1250,
@@ -250,7 +250,7 @@ export const MOCK_PRODUCTS: Product[] = [
         unitOfMeasure: 'PCS'
       },
       {
-        sku: 'DZ-K6JS-CCOO',
+        sku: 'APE-SC-30.00MM',
         title: 'Apollo SS304 Solar Drain Clip - 30mm Frame Size (Pack of 50 pcs)',
         attributes: { material: 'AISI SS304', size: '30mm', packSize: 'Pack of 50' },
         mrp: 1250,
@@ -271,7 +271,7 @@ export const MOCK_PRODUCTS: Product[] = [
         unitOfMeasure: 'PCS'
       },
       {
-        sku: 'GV-XPZG-63NS',
+        sku: 'APE-SC-33.00MM',
         title: 'Apollo SS304 Solar Drain Clip - 33mm Frame Size (Pack of 50 pcs)',
         attributes: { material: 'AISI SS304', size: '33mm', packSize: 'Pack of 50' },
         mrp: 1250,
@@ -292,7 +292,7 @@ export const MOCK_PRODUCTS: Product[] = [
         unitOfMeasure: 'PCS'
       },
       {
-        sku: 'J9-IJCH-26WX',
+        sku: 'APE-SC-35.00MM',
         title: 'Apollo SS304 Solar Drain Clip - 35mm Frame Size (Pack of 50 pcs)',
         attributes: { material: 'AISI SS304', size: '35mm', packSize: 'Pack of 50' },
         mrp: 1250,
@@ -313,7 +313,7 @@ export const MOCK_PRODUCTS: Product[] = [
         unitOfMeasure: 'PCS'
       },
       {
-        sku: '3F-J2NT-6MGG',
+        sku: 'APE-SC-40.00MM',
         title: 'Apollo SS304 Solar Drain Clip - 40mm Frame Size (Pack of 50 pcs)',
         attributes: { material: 'AISI SS304', size: '40mm', packSize: 'Pack of 50' },
         mrp: 1350,
@@ -335,7 +335,7 @@ export const MOCK_PRODUCTS: Product[] = [
       }
     ],
     sellerListings: {
-      'EV-YMG0-GM29': [
+      'APE-SC-28.00MM': [
         {
           sellerId: 'seller_apollo_mfg',
           sellerName: 'Apollo Engineering (Direct Factory Hub 382430)',
@@ -350,7 +350,7 @@ export const MOCK_PRODUCTS: Product[] = [
           buyBoxScore: 99.0
         }
       ],
-      'DZ-K6JS-CCOO': [
+      'APE-SC-30.00MM': [
         {
           sellerId: 'seller_apollo_mfg',
           sellerName: 'Apollo Engineering (Direct Factory Hub 382430)',
@@ -365,7 +365,7 @@ export const MOCK_PRODUCTS: Product[] = [
           buyBoxScore: 99.0
         }
       ],
-      'GV-XPZG-63NS': [
+      'APE-SC-33.00MM': [
         {
           sellerId: 'seller_apollo_mfg',
           sellerName: 'Apollo Engineering (Direct Factory Hub 382430)',
@@ -380,7 +380,7 @@ export const MOCK_PRODUCTS: Product[] = [
           buyBoxScore: 99.0
         }
       ],
-      'J9-IJCH-26WX': [
+      'APE-SC-35.00MM': [
         {
           sellerId: 'seller_apollo_mfg',
           sellerName: 'Apollo Engineering (Direct Factory Hub 382430)',
@@ -395,7 +395,7 @@ export const MOCK_PRODUCTS: Product[] = [
           buyBoxScore: 99.5
         }
       ],
-      '3F-J2NT-6MGG': [
+      'APE-SC-40.00MM': [
         {
           sellerId: 'seller_apollo_mfg',
           sellerName: 'Apollo Engineering (Direct Factory Hub 382430)',
@@ -592,8 +592,8 @@ export const MOCK_PRODUCTS: Product[] = [
         },
         comboComponents: [
           {
-            asin: 'AP-SPRINKLER-180',
-            sku: 'AE-SPRINKLER-180',
+            asin: 'AP-SPRINKLER-01',
+            sku: 'AE-SPRINKLER-SS304',
             productTitle: 'Apollo SS304 Shadowless Sprinkler (180° Curtain)',
             imageUrl: '/solar_sprinkler.webp',
             quantity: 6,
@@ -608,8 +608,8 @@ export const MOCK_PRODUCTS: Product[] = [
             }
           },
           {
-            asin: 'AP-CLIP-35MM',
-            sku: 'AE-CLIP-35MM-SS',
+            asin: 'AP-DRAINCLIPS-02',
+            sku: 'J9-IJCH-26WX',
             productTitle: 'Apollo SS304 Auto Drain Clips (Frame Thickness: 35mm)',
             imageUrl: '/Drain_clips.webp',
             quantity: 12,
@@ -623,8 +623,8 @@ export const MOCK_PRODUCTS: Product[] = [
             }
           },
           {
-            asin: 'AP-CLAMP-GI',
-            sku: 'AE-CLAMP-GI-20MM',
+            asin: 'AP-GICLAMP-03',
+            sku: 'AE-CLAMP-GI-HALF',
             productTitle: 'Heavy Galvanized GI Piping Support Clamps',
             imageUrl: '/gi_pipe_clamp.webp',
             quantity: 6,
@@ -639,7 +639,7 @@ export const MOCK_PRODUCTS: Product[] = [
           },
           {
             asin: 'AP-TIMER-07',
-            sku: 'AE-TIMER-PROG',
+            sku: 'AE-TIMER-DIGITAL',
             productTitle: 'Apollo Digital Programmable Solar Cleaning Automation Controller',
             imageUrl: '/auto_timer.webp',
             quantity: 1,
@@ -653,7 +653,7 @@ export const MOCK_PRODUCTS: Product[] = [
           },
           {
             asin: 'AP-PUMP-06',
-            sku: 'AE-PUMP-42LPM',
+            sku: 'AE-PUMP-05HP',
             productTitle: 'High-Pressure Booster Motor (42 LPM · 0.5 HP · Single Phase)',
             imageUrl: '/pump.webp',
             quantity: 1,
@@ -668,8 +668,8 @@ export const MOCK_PRODUCTS: Product[] = [
             }
           },
           {
-            asin: 'AP-TEE-UPVC',
-            sku: 'AE-TEE-UPVC-15MM',
+            asin: 'AP-FITTINGTEE-04',
+            sku: 'AE-TEE-UPVC-HALF',
             productTitle: 'UPVC Threaded Brass Insert Tees (Matches Sprinkler Count)',
             imageUrl: '/cpvc_upvc.webp',
             quantity: 6,
@@ -719,8 +719,8 @@ export const MOCK_PRODUCTS: Product[] = [
         },
         comboComponents: [
           {
-            asin: 'AP-SPRINKLER-180',
-            sku: 'AE-SPRINKLER-180',
+            asin: 'AP-SPRINKLER-01',
+            sku: 'AE-SPRINKLER-SS304',
             productTitle: 'Apollo SS304 Shadowless Sprinkler (180° Curtain)',
             imageUrl: '/solar_sprinkler.webp',
             quantity: 10,
@@ -734,8 +734,8 @@ export const MOCK_PRODUCTS: Product[] = [
             }
           },
           {
-            asin: 'AP-CLIP-35MM',
-            sku: 'AE-CLIP-35MM-SS',
+            asin: 'AP-DRAINCLIPS-02',
+            sku: 'J9-IJCH-26WX',
             productTitle: 'Apollo SS304 Auto Drain Clips (Frame Thickness: 35mm)',
             imageUrl: '/Drain_clips.webp',
             quantity: 20,
@@ -748,8 +748,8 @@ export const MOCK_PRODUCTS: Product[] = [
             }
           },
           {
-            asin: 'AP-CLAMP-GI',
-            sku: 'AE-CLAMP-GI-20MM',
+            asin: 'AP-GICLAMP-03',
+            sku: 'AE-CLAMP-GI-HALF',
             productTitle: 'Heavy Galvanized GI Piping Support Clamps',
             imageUrl: '/gi_pipe_clamp.webp',
             quantity: 10,
@@ -762,7 +762,7 @@ export const MOCK_PRODUCTS: Product[] = [
           },
           {
             asin: 'AP-TIMER-07',
-            sku: 'AE-TIMER-PROG',
+            sku: 'AE-TIMER-DIGITAL',
             productTitle: 'Apollo Digital Programmable Solar Cleaning Automation Controller',
             imageUrl: '/auto_timer.webp',
             quantity: 1,
@@ -776,7 +776,7 @@ export const MOCK_PRODUCTS: Product[] = [
           },
           {
             asin: 'AP-PUMP-06',
-            sku: 'AE-PUMP-70LPM',
+            sku: 'AE-PUMP-05HP',
             productTitle: 'High-Pressure Booster Motor (70 LPM · 1.0 HP · Single Phase)',
             imageUrl: '/pump.webp',
             quantity: 1,
@@ -790,8 +790,8 @@ export const MOCK_PRODUCTS: Product[] = [
             }
           },
           {
-            asin: 'AP-TEE-UPVC',
-            sku: 'AE-TEE-UPVC-15MM',
+            asin: 'AP-FITTINGTEE-04',
+            sku: 'AE-TEE-UPVC-HALF',
             productTitle: 'UPVC Threaded Brass Insert Tees (Matches Sprinkler Count)',
             imageUrl: '/cpvc_upvc.webp',
             quantity: 10,
@@ -839,8 +839,8 @@ export const MOCK_PRODUCTS: Product[] = [
         },
         comboComponents: [
           {
-            asin: 'AP-SPRINKLER-180',
-            sku: 'AE-SPRINKLER-180',
+            asin: 'AP-SPRINKLER-01',
+            sku: 'AE-SPRINKLER-SS304',
             productTitle: 'Apollo SS304 Shadowless Sprinkler (180° Curtain)',
             imageUrl: '/solar_sprinkler.webp',
             quantity: 20,
@@ -853,8 +853,8 @@ export const MOCK_PRODUCTS: Product[] = [
             }
           },
           {
-            asin: 'AP-CLIP-35MM',
-            sku: 'AE-CLIP-35MM-SS',
+            asin: 'AP-DRAINCLIPS-02',
+            sku: 'J9-IJCH-26WX',
             productTitle: 'Apollo SS304 Auto Drain Clips (Frame Thickness: 35mm)',
             imageUrl: '/Drain_clips.webp',
             quantity: 40,
@@ -866,8 +866,8 @@ export const MOCK_PRODUCTS: Product[] = [
             }
           },
           {
-            asin: 'AP-CLAMP-GI',
-            sku: 'AE-CLAMP-GI-20MM',
+            asin: 'AP-GICLAMP-03',
+            sku: 'AE-CLAMP-GI-HALF',
             productTitle: 'Heavy Galvanized GI Piping Support Clamps',
             imageUrl: '/gi_pipe_clamp.webp',
             quantity: 20,
@@ -879,7 +879,7 @@ export const MOCK_PRODUCTS: Product[] = [
           },
           {
             asin: 'AP-TIMER-07',
-            sku: 'AE-TIMER-PROG',
+            sku: 'AE-TIMER-DIGITAL',
             productTitle: 'Apollo Digital Programmable Solar Cleaning Automation Controller',
             imageUrl: '/auto_timer.webp',
             quantity: 1,
@@ -893,7 +893,7 @@ export const MOCK_PRODUCTS: Product[] = [
           },
           {
             asin: 'AP-PUMP-06',
-            sku: 'AE-PUMP-140LPM',
+            sku: 'AE-PUMP-05HP',
             productTitle: 'High-Pressure Booster Motor (140 LPM · 2.0 HP · Single/3-Phase)',
             imageUrl: '/pump.webp',
             quantity: 1,
@@ -907,8 +907,8 @@ export const MOCK_PRODUCTS: Product[] = [
             }
           },
           {
-            asin: 'AP-TEE-UPVC',
-            sku: 'AE-TEE-UPVC-15MM',
+            asin: 'AP-FITTINGTEE-04',
+            sku: 'AE-TEE-UPVC-HALF',
             productTitle: 'UPVC Threaded Brass Insert Tees (Matches Sprinkler Count)',
             imageUrl: '/cpvc_upvc.webp',
             quantity: 20,

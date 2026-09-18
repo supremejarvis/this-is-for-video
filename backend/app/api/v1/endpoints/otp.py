@@ -1,11 +1,14 @@
-from datetime import UTC, datetime, timedelta
+import logging
 import secrets
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CSRF_COOKIE_NAME, SESSION_COOKIE_NAME
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import generate_secure_token, hash_password, hash_token
 from app.models.auth import User, UserRole, UserSession
@@ -18,6 +21,8 @@ from app.schemas.otp import (
 )
 from app.services.otp_service import otp_service
 
+logger = logging.getLogger("apollo.otp")
+
 router = APIRouter()
 
 
@@ -25,7 +30,7 @@ router = APIRouter()
 async def send_otp(request: Request, payload: SendOtpRequest) -> SendOtpResponse:
     """Dispatches a secure 4-digit OTP to the verified 10-digit Indian mobile number."""
     ip_address = request.client.host if request.client else None
-    success, message, masked = otp_service.send_otp(payload.phone, ip_address)
+    success, message, masked, code = otp_service.send_otp(payload.phone, ip_address)
 
     if not success:
         raise HTTPException(
@@ -33,11 +38,14 @@ async def send_otp(request: Request, payload: SendOtpRequest) -> SendOtpResponse
             detail=message,
         )
 
+    dev_code = code if settings.ENVIRONMENT != "production" else None
+
     return SendOtpResponse(
         success=True,
         message=message,
         masked_phone=masked,
         cooldown_seconds=30,
+        dev_code=dev_code,
     )
 
 
@@ -71,7 +79,7 @@ async def verify_otp(
                 email=phone_email,
                 password_hash=hash_password(secrets.token_urlsafe(32)),
                 full_name=f"Customer {masked}",
-                role=UserRole.SUPPORT,
+                role=UserRole.CUSTOMER,
                 is_active=True,
             )
             db.add(user)
@@ -119,9 +127,10 @@ async def verify_otp(
             max_age=86400,
             path="/",
         )
-    except Exception:
-        # If DB is unavailable, verification itself succeeded
-        pass
+    except Exception as exc:
+        # If DB is unavailable, verification itself succeeded but log the error
+        logger.warning("DB session recording failed during OTP verify: %s", exc)
+        await db.rollback()
 
     return VerifyOtpResponse(
         success=True,
@@ -132,7 +141,6 @@ async def verify_otp(
     )
 
 
-from app.core.config import settings
 
 if settings.ENVIRONMENT in ("development", "test", "automated_test"):
     @router.get("/dev-code")

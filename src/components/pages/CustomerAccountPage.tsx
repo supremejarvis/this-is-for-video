@@ -11,6 +11,7 @@ import { useStore } from '../../store/useStore';
 import { DeliveryAddress, PostOfficeInfo, Order } from '../../types';
 import { lookupPincode } from '../../services/logisticsService';
 import { ORIGIN_HUB_PINCODE } from '../../constants';
+import { GstInvoice } from '../logistics/GstInvoice';
 
 export const CustomerAccountPage: React.FC = () => {
   const { 
@@ -238,18 +239,45 @@ export const CustomerAccountPage: React.FC = () => {
       showToast('Name cannot be empty', 'error');
       return;
     }
+    const trimmedName = profileName.trim();
+    const trimmedPhone = profilePhone.trim();
+    const trimmedEmail = profileEmail.trim();
+
     updateUserProfile({
-      name: profileName.trim(),
-      phone: profilePhone.trim(),
-      email: profileEmail.trim(),
+      name: trimmedName,
+      phone: trimmedPhone,
+      email: trimmedEmail,
     });
-    if (currentUser.role.includes('B2B')) {
+
+    const trimmedCompanyName = profileCompanyName.trim();
+    const trimmedGstin = profileGstin.trim().toUpperCase();
+    const trimmedPan = profilePan.trim().toUpperCase();
+    const hasB2bData = Boolean(trimmedGstin || trimmedCompanyName);
+
+    if (hasB2bData) {
       updateOrgDetails({
-        companyName: profileCompanyName.trim(),
-        gstin: profileGstin.trim().toUpperCase(),
-        pan: profilePan.trim().toUpperCase(),
+        companyName: trimmedCompanyName,
+        gstin: trimmedGstin,
+        pan: trimmedPan,
       });
+      useStore.getState().setAppMode('B2B');
+      showToast('Profile and B2B credentials saved successfully', 'success');
+    } else {
+      // User cleared B2B credentials -> Reset organization and return to Retail B2C
+      updateOrgDetails({
+        companyName: '',
+        gstin: '',
+        pan: '',
+      });
+      useStore.getState().setAppMode('B2C');
+      if (currentUser.role === 'B2B_BUYER') {
+        updateUserProfile({
+          role: 'B2C_CUSTOMER',
+        });
+      }
+      showToast('Profile saved. Switched to Retail (B2C) customer.', 'success');
     }
+
     setIsEditingProfile(false);
   };
 
@@ -290,7 +318,10 @@ export const CustomerAccountPage: React.FC = () => {
     );
   }
 
-  const isB2B = currentUser.role.includes('B2B');
+  const isB2B = Boolean(
+    (appMode === 'B2B' || currentUser.role.includes('B2B')) &&
+    Boolean(currentOrg?.gstin?.trim() || currentOrg?.companyName?.trim())
+  );
   const cartSubtotal = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
 
   return (
@@ -478,29 +509,45 @@ export const CustomerAccountPage: React.FC = () => {
               {/* ───────────────────────────────────────────────────────────── */}
               {!isEditingProfile ? (
                 <div className="space-y-4">
-                  {/* B2B Organization Card (If B2B) */}
-                  {isB2B && (
+                  {/* B2B Organization Card (If B2B and has active organization data) */}
+                  {isB2B && Boolean(currentOrg.companyName?.trim() || currentOrg.gstin?.trim()) && (
                     <div className="p-5 rounded-2xl bg-blue-50/80 border border-blue-200 space-y-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
                         <span className="text-xs font-black text-[#0054A6] flex items-center gap-1.5">
                           <Building2 className="w-4 h-4" /> B2B Registered Organization
                         </span>
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold font-mono border border-emerald-300 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> GSTIN Verified (18% ITC)
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold font-mono border border-emerald-300 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> GSTIN Verified (18% ITC)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateOrgDetails({ companyName: '', gstin: '', pan: '' });
+                              useStore.getState().setAppMode('B2C');
+                              if (currentUser.role === 'B2B_BUYER') {
+                                updateUserProfile({ role: 'B2C_CUSTOMER' });
+                              }
+                              showToast('Removed B2B Organization. Switched to Retail (B2C).', 'success');
+                            }}
+                            className="px-2.5 py-0.5 rounded-full bg-white border border-slate-300 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600 text-slate-600 text-[10px] font-bold transition-all flex items-center gap-1"
+                          >
+                            <X className="w-3 h-3" /> Remove B2B
+                          </button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                         <div>
                           <span className="text-[10px] text-slate-500 uppercase font-bold block">Company Name</span>
-                          <strong className="text-slate-900">{currentOrg.companyName || 'Apollo Engineering EPC'}</strong>
+                          <strong className="text-slate-900">{currentOrg.companyName || 'N/A'}</strong>
                         </div>
                         <div>
                           <span className="text-[10px] text-slate-500 uppercase font-bold block">GSTIN (18% Input Tax)</span>
-                          <strong className="text-[#0054A6] font-mono">{currentOrg.gstin || '24AAACP9999P1Z2'}</strong>
+                          <strong className="text-[#0054A6] font-mono">{currentOrg.gstin || 'N/A'}</strong>
                         </div>
                         <div>
                           <span className="text-[10px] text-slate-500 uppercase font-bold block">Company PAN</span>
-                          <strong className="text-slate-800 font-mono">{currentOrg.pan || 'AAACP9999P'}</strong>
+                          <strong className="text-slate-800 font-mono">{currentOrg.pan || 'N/A'}</strong>
                         </div>
                       </div>
                     </div>
@@ -583,15 +630,41 @@ export const CustomerAccountPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {isB2B && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-blue-200/50">
+                  {/* B2B Commercial & Tax GST Details (Optional - Unlocks Wholesale Rates & 18% ITC) */}
+                  <div className="pt-3 border-t border-blue-200/50 space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-[#0054A6]" /> B2B Commercial & Tax GST Details (Optional)
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {Boolean(profileCompanyName || profileGstin || profilePan) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProfileCompanyName('');
+                              setProfileGstin('');
+                              setProfilePan('');
+                              showToast('Cleared B2B fields. Click "Save Profile Details" to save as Retail B2C.', 'info');
+                            }}
+                            className="text-[10px] text-rose-600 hover:text-rose-800 font-bold bg-rose-50 hover:bg-rose-100 px-2 py-0.5 rounded border border-rose-200 transition-all flex items-center gap-1"
+                          >
+                            <X className="w-3 h-3" /> Clear B2B (Switch to Retail)
+                          </button>
+                        )}
+                        <span className="text-[10px] text-[#0054A6] font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                          ⚡ Unlocks B2B Wholesale Pricing & 18% ITC
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-slate-700 font-bold mb-1">Company / Legal Entity Name</label>
                         <input
                           type="text"
                           value={profileCompanyName}
                           onChange={(e) => setProfileCompanyName(e.target.value)}
-                          placeholder="Apollo Engineering EPC"
+                          placeholder="e.g. Apollo Solar Infra Pvt Ltd"
                           className="w-full h-9 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium focus:ring-2 focus:ring-[#0054A6] focus:outline-none"
                         />
                       </div>
@@ -602,7 +675,7 @@ export const CustomerAccountPage: React.FC = () => {
                           type="text"
                           value={profileGstin}
                           onChange={(e) => setProfileGstin(e.target.value.toUpperCase())}
-                          placeholder="24AAACP9999P1Z2"
+                          placeholder="e.g. 24ABCDE1234F1Z5"
                           className="w-full h-9 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-bold uppercase focus:ring-2 focus:ring-[#0054A6] focus:outline-none"
                         />
                       </div>
@@ -613,12 +686,12 @@ export const CustomerAccountPage: React.FC = () => {
                           type="text"
                           value={profilePan}
                           onChange={(e) => setProfilePan(e.target.value.toUpperCase())}
-                          placeholder="AAACP9999P"
+                          placeholder="e.g. ABCDE1234F"
                           className="w-full h-9 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-bold uppercase focus:ring-2 focus:ring-[#0054A6] focus:outline-none"
                         />
                       </div>
                     </div>
-                  )}
+                  </div>
 
                   <div className="flex items-center justify-end gap-2.5 pt-2">
                     <button
@@ -647,6 +720,8 @@ export const CustomerAccountPage: React.FC = () => {
                   <label className="flex items-center gap-3 cursor-pointer select-none">
                     <input
                       type="checkbox"
+                      id="shipping-same-as-billing"
+                      name="shippingSameAsBilling"
                       checked={isShippingSameAsBilling}
                       onChange={(e) => handleToggleSameAsBilling(e.target.checked)}
                       className="w-5 h-5 rounded-lg text-[#0054A6] focus:ring-[#0054A6] cursor-pointer"
@@ -852,7 +927,7 @@ export const CustomerAccountPage: React.FC = () => {
                                 type="text"
                                 value={billingGstin}
                                 onChange={(e) => setBillingGstin(e.target.value.toUpperCase())}
-                                placeholder="24AAACP9999P1Z2"
+                                placeholder="e.g. 24ABCDE1234F1Z5"
                                 className="w-full h-9 px-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-bold uppercase"
                               />
                             </div>
@@ -1016,6 +1091,8 @@ export const CustomerAccountPage: React.FC = () => {
                             <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#0054A6] select-none">
                               <input
                                 type="checkbox"
+                                id="copy-from-billing"
+                                name="copyFromBilling"
                                 checked={isShippingSameAsBilling}
                                 onChange={(e) => handleToggleSameAsBilling(e.target.checked)}
                                 className="rounded text-[#0054A6] w-4 h-4"
@@ -1393,75 +1470,10 @@ export const CustomerAccountPage: React.FC = () => {
 
       {/* Tax Invoice Modal Overlay */}
       {selectedInvoiceOrder && (
-        <div className="fixed inset-0 z-[180] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-white text-slate-900 rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl border border-slate-300">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-              <div className="flex items-center gap-3">
-                <img src="/logo.webp" alt="Logo" className="h-10 w-auto" />
-                <div>
-                  <h3 className="font-black text-lg text-[#0054A6]">GST TAX INVOICE</h3>
-                  <p className="text-[10px] text-slate-500 font-mono">Original for Recipient</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setSelectedInvoiceOrder(null)}
-                className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div>
-                <strong className="block text-slate-900">Seller / Manufacturer:</strong>
-                <div className="text-slate-600">Apollo Engineering</div>
-                <div className="text-slate-600">100 / Gopinath Ind. Landmark, Kathwada GIDC, Ahmedabad, Gujarat - 382430</div>
-                <div className="font-mono text-slate-700">GSTIN: 24AAAPA1234F1Z9</div>
-              </div>
-
-              <div>
-                <strong className="block text-slate-900">Buyer / Billed To:</strong>
-                <div className="text-slate-600 font-bold">{selectedInvoiceOrder.deliveryAddress?.fullName}</div>
-                <div className="text-slate-600">{selectedInvoiceOrder.deliveryAddress?.flatBuilding}, {selectedInvoiceOrder.deliveryAddress?.streetArea}</div>
-                <div className="text-slate-600">{selectedInvoiceOrder.deliveryAddress?.city}, {selectedInvoiceOrder.deliveryAddress?.state} - {selectedInvoiceOrder.deliveryAddress?.pincode}</div>
-                <div className="font-mono text-slate-700">Invoice: {selectedInvoiceOrder.invoiceNumber}</div>
-              </div>
-            </div>
-
-            {/* Items Table */}
-            <table className="w-full text-xs text-left border border-slate-200">
-              <thead className="bg-slate-100 font-bold text-slate-700 border-b border-slate-200">
-                <tr>
-                  <th className="p-2">Item Description</th>
-                  <th className="p-2">HSN</th>
-                  <th className="p-2 text-center">Qty</th>
-                  <th className="p-2 text-right">Price</th>
-                  <th className="p-2 text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {selectedInvoiceOrder.shipments[0]?.items.map((it, i) => (
-                  <tr key={i}>
-                    <td className="p-2 font-medium">{it.productTitle} ({it.sku})</td>
-                    <td className="p-2 font-mono text-slate-500">{it.hsnCode}</td>
-                    <td className="p-2 text-center font-mono">{it.quantity}</td>
-                    <td className="p-2 text-right font-mono">₹{it.unitPrice}</td>
-                    <td className="p-2 text-right font-mono font-bold">₹{it.unitPrice * it.quantity}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-              <button
-                onClick={() => window.print()}
-                className="px-5 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs flex items-center gap-2"
-              >
-                <Printer className="w-4 h-4" /> Print Tax Invoice
-              </button>
-            </div>
-          </div>
-        </div>
+        <GstInvoice
+          order={selectedInvoiceOrder}
+          onClose={() => setSelectedInvoiceOrder(null)}
+        />
       )}
     </div>
   );

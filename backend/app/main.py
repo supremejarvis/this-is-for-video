@@ -1,10 +1,16 @@
-from contextlib import asynccontextmanager
 import logging
-from fastapi import FastAPI, Request
+from collections.abc import AsyncGenerator, Callable
+from contextlib import asynccontextmanager
+from typing import Any
+
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.api.v1.api import api_router
 from app.core.config import settings
+from app.core.rate_limiter import limiter
 
 logger = logging.getLogger("apollo.security")
 
@@ -16,19 +22,33 @@ if is_production and settings.DOCS_ENABLED:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup: Initialize tables and seed catalog & owner
     try:
         from app.core.database import init_db
         await init_db()
         from app.cli.seed_catalog import seed_catalog
         await seed_catalog()
-        from app.cli.seed_owner import async_seed_owner
-        await async_seed_owner(
-            email="admin@apolloengineering.co.in",
-            password="NIL@apl321",
-            name="Apollo Administrator"
-        )
+        # Safe One-Time Owner Provisioning Check:
+        # Never reset passwords on startup. Only provision if DB has no OWNER and ADMIN_INIT_PASSWORD is set.
+        from sqlalchemy import select
+
+        from app.core.database import AsyncSessionLocal
+        from app.models.auth import User, UserRole
+        async with AsyncSessionLocal() as session:
+            stmt = select(User).where(User.role == UserRole.OWNER)
+            res = await session.execute(stmt)
+            existing_owner = res.scalar_one_or_none()
+            if not existing_owner and settings.ADMIN_INIT_PASSWORD:
+                from app.cli.seed_owner import async_seed_owner
+                await async_seed_owner(
+                    email=settings.ADMIN_INIT_EMAIL or "admin@apolloengineering.co.in",
+                    password=settings.ADMIN_INIT_PASSWORD,
+                    name="Apollo Administrator"
+                )
+                logger.info("Initial system owner provisioned from secure environment.")
+            elif not existing_owner:
+                logger.info("Notice: No system OWNER user provisioned. Use 'python -m app.cli.seed_owner' to bootstrap.")
         logger.info("Database initialized and catalog seeded successfully.")
     except Exception as e:
         logger.warning(f"Database auto-initialization / seeding notice: {e}")
@@ -43,10 +63,14 @@ app = FastAPI(
     redoc_url=f"{settings.API_V1_STR}/redoc" if docs_enabled else None,
 )
 
+# Rate limiter setup
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Mandatory Security Headers Middleware (SEC-005)
 @app.middleware("http")
-async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
+async def add_security_headers(request: Request, call_next: Callable[[Request], Any]) -> Response:
+    response: Response = await call_next(request)
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
@@ -56,7 +80,12 @@ async def add_security_headers(request: Request, call_next):
 # CORS configuration for Frontend SPA
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://apollo-web-three.vercel.app",
+        "https://apolloengineering.co.in",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

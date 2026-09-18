@@ -34,7 +34,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://control.msg91.com https://api.razorpay.com https://*.posthog.com https://*.ingest.sentry.io; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com;"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://control.msg91.com https://api.razorpay.com https://*.posthog.com https://*.ingest.sentry.io https://backend-ten-pi-57.vercel.app; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com;"
         }
       ]
     },
@@ -50,8 +50,8 @@
   ],
   "rewrites": [
     {
-      "source": "/api/msg91/:path*",
-      "destination": "https://control.msg91.com/api/v5/:path*"
+      "source": "/api/v1/:path*",
+      "destination": "https://backend-ten-pi-57.vercel.app/api/v1/:path*"
     },
     {
       "source": "/(.*)",

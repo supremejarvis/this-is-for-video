@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { ProductCard } from '../ProductCard';
 import { PdfCatalog } from '../PdfCatalog';
 import { TrustedBy } from '../TrustedBy';
@@ -12,7 +12,13 @@ import { ORIGIN_HUB_PINCODE } from '../../constants';
 
 export const StorePage: React.FC = () => {
   const { products, searchQuery, selectedCategory, setSelectedCategory, appMode, setAppMode, currentUser, setIsAuthModalOpen } = useStore();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const isB2B = Boolean(appMode === 'B2B' || (currentUser?.role && currentUser.role.includes('B2B')));
+  const displayIsB2B = mounted ? isB2B : false;
 
   const categories = [
     'ALL',
@@ -170,7 +176,7 @@ export const StorePage: React.FC = () => {
       {/* 🏪 STOREFRONT SELECTOR (B2C RETAIL DIRECT vs B2B WHOLESALE TRADE)  */}
       {/* ───────────────────────────────────────────────────────────────── */}
       {/* 🛒 PURE ISOLATED STORE BANNER (ZERO B2B IN B2C, ZERO B2C IN B2B)  */}
-      {isB2B && (
+      {displayIsB2B && (
         <div className="p-5 rounded-2xl border border-blue-300 bg-white/95 shadow-xl backdrop-blur-md flex flex-wrap items-center justify-between gap-4 ring-2 ring-blue-500/10">
           <div className="flex items-center gap-3.5">
             <div className="w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-base shadow-sm bg-[#0054A6] text-white">

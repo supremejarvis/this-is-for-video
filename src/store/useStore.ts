@@ -135,6 +135,7 @@ export interface AppStore {
   apiCatalogLoading: boolean;
   apiCatalogError: string | null;
   fetchApiCatalog: () => Promise<void>;
+  isHydrated: boolean;
 
   // Multi-Lingual Architecture
   selectedLanguage: SupportedLanguage;
@@ -908,53 +909,22 @@ const DEFAULT_SAMPLE_ORDERS: Order[] = [
   }
 ];
 
-// Strict Session & PII State Loading from LocalStorage
-const initialUsers: UserProfile[] = loadStored<UserProfile[]>('apollo_users', []);
-const initialCurrentUser: UserProfile = loadStored<UserProfile | null>('apollo_current_user', null) || GUEST_USER;
-const initialAddresses: DeliveryAddress[] = loadStored<DeliveryAddress[]>('apollo_addresses', []);
-const initialShippingAddress: DeliveryAddress | null = loadStored<DeliveryAddress | null>('apollo_shipping_address', null) || initialAddresses[0] || null;
-const initialBillingAddress: DeliveryAddress | null = loadStored<DeliveryAddress | null>('apollo_billing_address', null) || initialShippingAddress;
-const initialActiveAddress: DeliveryAddress | null = initialShippingAddress;
-const initialOrders: Order[] = loadStored<Order[]>('apollo_orders', DEFAULT_SAMPLE_ORDERS);
+// Strict Session & PII State Defaults (Deterministic for Server-Side Rendering & Hydration)
+const initialUsers: UserProfile[] = [];
+const initialCurrentUser: UserProfile = GUEST_USER;
+const initialAddresses: DeliveryAddress[] = [];
+const initialShippingAddress: DeliveryAddress | null = null;
+const initialBillingAddress: DeliveryAddress | null = null;
+const initialActiveAddress: DeliveryAddress | null = null;
+const initialOrders: Order[] = DEFAULT_SAMPLE_ORDERS;
 
 // Track explicitly deleted product ASINs
-const initialDeletedProductAsins: string[] = loadStored<string[]>('apollo_deleted_products', []);
+const initialDeletedProductAsins: string[] = [];
 export const deletedProductAsinsSet = new Set<string>(initialDeletedProductAsins);
 
-// Strictly enforce the authentic products present in Admin & DB, filtering out deleted items
-const rawStoredProducts = loadStored<Product[]>('apollo_products', MOCK_PRODUCTS);
-const storedProductList = Array.isArray(rawStoredProducts) && rawStoredProducts.length > 0 ? rawStoredProducts : MOCK_PRODUCTS;
-
-// Merge stored products with mock defaults, strictly deduplicating by ASIN, honoring edits and new products, excluding deleted products
-const seenProductAsins = new Set<string>();
-const deduplicatedStoredList: Product[] = [];
-for (const p of storedProductList) {
-  if (p && p.asin && !deletedProductAsinsSet.has(p.asin) && !seenProductAsins.has(p.asin)) {
-    seenProductAsins.add(p.asin);
-    deduplicatedStoredList.push(p);
-  }
-}
-
-const initialProducts: Product[] = deduplicatedStoredList.map((p) => {
-  const mockMatch = MOCK_PRODUCTS.find((m) => m.asin === p.asin);
-  if (mockMatch) {
-    return {
-      ...mockMatch,
-      ...p,
-      isComboBundle: p.isComboBundle ?? mockMatch.isComboBundle,
-      comboFormulaEnabled: p.comboFormulaEnabled ?? mockMatch.comboFormulaEnabled,
-      variants: (p.variants && p.variants.length > 0 ? p.variants : mockMatch.variants).map((sv) => {
-        const mv = mockMatch.variants.find((v) => v.sku === sv.sku);
-        return mv ? { ...mv, ...sv, inventory: sv.inventory ?? mv.inventory } : sv;
-      })
-    };
-  }
-  return p;
-});
-
-// Save purified catalog back to localStorage immediately
-saveStored('apollo_products', initialProducts);
-const initialWishlist = loadStored<WishlistItem[]>('apollo_wishlist', []);
+// Deterministic server-safe catalog initialization
+const initialProducts: Product[] = MOCK_PRODUCTS;
+const initialWishlist: WishlistItem[] = [];
 const initialReviews = loadStored<ProductReview[]>('apollo_reviews', [
   {
     id: 'rev_001',
@@ -1479,7 +1449,7 @@ export function commitCatalogProductsUpdate(
 export const DEFAULT_API_CATALOG_PRODUCTS: ApiProduct[] = syncCatalogProducts(initialProducts);
 
 export const useStore = create<AppStore>((set, get) => ({
-  appMode: loadStored<AppMode>('apollo_app_mode', 'B2C'),
+  appMode: 'B2C',
   setAppMode: (mode) => {
     saveStored('apollo_app_mode', mode);
     const updates: Partial<AppStore> = { appMode: mode };
@@ -1491,7 +1461,7 @@ export const useStore = create<AppStore>((set, get) => ({
     set(updates);
     get().showToast(`Switched storefront mode to ${mode === 'B2B' ? '🏢 B2B Wholesale' : '🛒 B2C Retail'}`, 'info');
   },
-  b2cCodLimit: loadStored<number>('apollo_b2c_cod_limit', 10000),
+  b2cCodLimit: 10000,
   setB2cCodLimit: (limit: number) => {
     const valid = Math.max(0, Number(limit) || 0);
     saveStored('apollo_b2c_cod_limit', valid);
@@ -1502,7 +1472,7 @@ export const useStore = create<AppStore>((set, get) => ({
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   // ── Session & Auth State (Gate 2C - Backend Authoritative) ──
-  authStatus: (initialCurrentUser && initialCurrentUser.id && initialCurrentUser.id !== 'usr_guest' ? 'AUTHENTICATED' : 'GUEST') as AuthStatus,
+  authStatus: 'GUEST' as AuthStatus,
   authDestination: null as AuthDestination,
   setAuthDestination: (dest) => set({ authDestination: dest }),
   checkAuthSession: async () => {
@@ -2311,7 +2281,7 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
   },
 
   // Cart logic with B2B wholesale pricing rules
-  cart: loadSessionCart(),
+  cart: [],
   addToCart: (itemData, qty = 1) => {
     const { cart, appMode } = get();
     const existingIndex = cart.findIndex((i) => 
@@ -2521,6 +2491,7 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
   },
 
   // ── Database-Driven Catalog API (Gate 2C) ─────────────────────
+  isHydrated: false,
   apiCatalogProducts: syncCatalogProducts(initialProducts, DEFAULT_API_CATALOG_PRODUCTS),
   apiCatalogLoading: false,
   apiCatalogError: null,
@@ -3230,3 +3201,89 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
     }, 4000);
   }
 }));
+
+/**
+ * Safe post-hydration client storage rehydration.
+ * Guarantees that SSR and initial client hydration match 100% identically,
+ * and only loads persisted localStorage/sessionStorage state after the component mounts.
+ */
+export function rehydrateStoreFromStorage(): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    const rawStoredProducts = loadStored<Product[] | null>('apollo_products', null);
+    const storedAppMode = loadStored<AppMode | null>('apollo_app_mode', null);
+    const storedUser = loadStored<UserProfile | null>('apollo_current_user', null);
+    const storedAddresses = loadStored<DeliveryAddress[] | null>('apollo_addresses', null);
+    const storedOrders = loadStored<Order[] | null>('apollo_orders', null);
+    const storedWishlist = loadStored<WishlistItem[] | null>('apollo_wishlist', null);
+    const storedCart = loadSessionCart();
+    const storedDeleted = loadStored<string[] | null>('apollo_deleted_products', null);
+    const storedLang = loadStored<SupportedLanguage | null>('apollo_lang', null);
+
+    const updates: Partial<AppStore> = { isHydrated: true };
+
+    if (storedDeleted && Array.isArray(storedDeleted)) {
+      storedDeleted.forEach(asin => deletedProductAsinsSet.add(asin));
+    }
+
+    if (rawStoredProducts && Array.isArray(rawStoredProducts) && rawStoredProducts.length > 0) {
+      const seen = new Set<string>();
+      const deduped: Product[] = [];
+      for (const p of rawStoredProducts) {
+        if (p && p.asin && !deletedProductAsinsSet.has(p.asin) && !seen.has(p.asin)) {
+          seen.add(p.asin);
+          deduped.push(p);
+        }
+      }
+      if (deduped.length > 0) {
+        const merged = deduped.map((p) => {
+          const mockMatch = MOCK_PRODUCTS.find((m) => m.asin === p.asin);
+          if (mockMatch) {
+            return {
+              ...mockMatch,
+              ...p,
+              isComboBundle: p.isComboBundle ?? mockMatch.isComboBundle,
+              comboFormulaEnabled: p.comboFormulaEnabled ?? mockMatch.comboFormulaEnabled,
+              variants: (p.variants && p.variants.length > 0 ? p.variants : mockMatch.variants).map((sv) => {
+                const mv = mockMatch.variants.find((v) => v.sku === sv.sku);
+                return mv ? { ...mv, ...sv, inventory: sv.inventory ?? mv.inventory } : sv;
+              })
+            };
+          }
+          return p;
+        });
+        updates.products = merged;
+        updates.apiCatalogProducts = syncCatalogProducts(merged, useStore.getState().apiCatalogProducts);
+      }
+    }
+
+    if (storedAppMode) updates.appMode = storedAppMode;
+    if (storedUser && storedUser.id) {
+      updates.currentUser = storedUser;
+      updates.authStatus = storedUser.id !== 'usr_guest' ? 'AUTHENTICATED' : 'GUEST';
+    }
+    if (storedAddresses && Array.isArray(storedAddresses) && storedAddresses.length > 0) {
+      updates.addresses = storedAddresses;
+      updates.shippingAddress = storedAddresses[0] || null;
+      updates.billingAddress = storedAddresses[0] || null;
+      updates.activeAddress = storedAddresses[0] || null;
+    }
+    if (storedOrders && Array.isArray(storedOrders) && storedOrders.length > 0) {
+      updates.orders = storedOrders;
+    }
+    if (storedWishlist && Array.isArray(storedWishlist)) {
+      updates.wishlist = storedWishlist;
+    }
+    if (storedCart && Array.isArray(storedCart) && storedCart.length > 0) {
+      updates.cart = storedCart;
+    }
+    if (storedLang) {
+      updates.selectedLanguage = storedLang;
+    }
+
+    useStore.setState(updates);
+  } catch (e) {
+    console.warn('Store rehydration skipped', e);
+  }
+}
+

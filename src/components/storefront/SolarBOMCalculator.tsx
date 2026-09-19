@@ -638,6 +638,7 @@ export const SolarBOMCalculator: React.FC = () => {
               <div className="flex items-center gap-2 mt-1">
                 <input
                   id="panel-ubhi-input"
+                  name="vertical_panels"
                   type="number"
                   min={0}
                   max={10000}
@@ -664,6 +665,7 @@ export const SolarBOMCalculator: React.FC = () => {
               <div className="flex items-center gap-2 mt-1">
                 <input
                   id="panel-aadi-input"
+                  name="horizontal_panels"
                   type="number"
                   min={0}
                   max={10000}
@@ -690,6 +692,7 @@ export const SolarBOMCalculator: React.FC = () => {
               <div className="flex items-center gap-2 mt-1">
                 <input
                   id="panel-total-writing-input"
+                  name="total_panels"
                   type="number"
                   min={1}
                   max={10000}

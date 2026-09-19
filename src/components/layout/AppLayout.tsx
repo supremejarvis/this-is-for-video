@@ -6,7 +6,7 @@ import { Header } from '../storefront/Header';
 import { Footer } from '../Footer';
 import { WhatsAppButton } from '../WhatsAppButton';
 import { Background } from '../Background';
-import { useStore } from '../../store/useStore';
+import { useStore, rehydrateStoreFromStorage } from '../../store/useStore';
 import { runStorageMigration } from '../../utils/storageMigration';
 import { CheckCircle2, AlertCircle, Info, RefreshCw } from 'lucide-react';
 
@@ -35,8 +35,9 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
   const pathname = usePathname() || '/';
 
-  // Startup: Run storage migration & verify backend session
+  // Startup: Safely rehydrate client storage, run migrations & verify backend session
   useEffect(() => {
+    rehydrateStoreFromStorage();
     runStorageMigration();
     useStore.getState().checkAuthSession();
   }, []);

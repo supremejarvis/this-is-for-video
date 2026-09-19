@@ -22,7 +22,13 @@ export const BuyerCatalog: React.FC = () => {
     appMode, currentUser, currentOrg
   } = useStore();
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const isB2B = Boolean(appMode === 'B2B' || (currentUser?.role && currentUser.role.includes('B2B')) || currentOrg?.gstin);
+  const effectiveIsB2B = mounted ? isB2B : false;
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [sizeModalProduct, setSizeModalProduct] = useState<ApiProduct | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -322,7 +328,7 @@ const seenNames = new Set<string>();
               || (displayVariant as any)?.b2bPrice 
               || Math.round(retailUnitPrice * 0.72);
 
-            const unitPrice = isB2B ? b2bTierPrice : retailUnitPrice;
+            const unitPrice = effectiveIsB2B ? b2bTierPrice : retailUnitPrice;
             const mrp = displayVariant?.mrp || Math.round(retailUnitPrice * 1.5);
             const productImage = getProductImage(product);
             const materialBadge = getMaterialLabel(product);
@@ -421,17 +427,23 @@ const seenNames = new Set<string>();
 
                     {/* Price Block */}
                     <div className="text-right shrink-0">
-                      {isB2B ? (
+                      {effectiveIsB2B ? (
                         <>
                           <div className="flex items-center gap-1.5 justify-end">
-                            <span className="text-xs text-slate-500 font-medium line-through font-mono">
+                            <span 
+                              suppressHydrationWarning
+                              className="text-xs text-slate-500 font-medium line-through font-mono"
+                            >
                               ₹{retailUnitPrice}
                             </span>
                             <span className="px-1.5 py-0.5 rounded bg-blue-100 text-[#0054A6] text-[9px] font-mono font-bold">
                               B2B Rate
                             </span>
                           </div>
-                          <div className="text-2xl font-black text-[#0054A6] font-mono">
+                          <div 
+                            suppressHydrationWarning
+                            className="text-2xl font-black text-[#0054A6] font-mono"
+                          >
                             ₹{unitPrice}
                           </div>
                           <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">
@@ -441,11 +453,17 @@ const seenNames = new Set<string>();
                       ) : (
                         <>
                           {mrp > unitPrice && (
-                            <span className="text-xs text-slate-500 font-medium line-through font-mono block">
+                            <span 
+                              suppressHydrationWarning
+                              className="text-xs text-slate-500 font-medium line-through font-mono block"
+                            >
                               ₹{mrp}
                             </span>
                           )}
-                          <div className="text-2xl font-black text-slate-900 font-mono">
+                          <div 
+                            suppressHydrationWarning
+                            className="text-2xl font-black text-slate-900 font-mono"
+                          >
                             ₹{unitPrice}
                           </div>
                           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
@@ -538,7 +556,7 @@ const seenNames = new Set<string>();
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-800 font-mono flex items-center gap-1.5">
                         <Layers className="w-3.5 h-3.5 text-[#0054A6]" />
-                        {isB2B ? 'B2B Wholesale Quantity:' : 'Order Quantity:'}
+                        {effectiveIsB2B ? 'B2B Wholesale Quantity:' : 'Order Quantity:'}
                       </span>
                       <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-xl border border-slate-300 shadow-xs">
                         <button
@@ -552,6 +570,8 @@ const seenNames = new Set<string>();
                         <input
                           type="number"
                           min={1}
+                          id={`qty-input-${product.id}`}
+                          name={`quantity_${product.id}`}
                           aria-label={`Quantity for ${product.name}`}
                           value={getSelectedQty(product.id)}
                           onChange={(e) => setProductQty(product.id, parseInt(e.target.value, 10) || 1)}
@@ -571,7 +591,7 @@ const seenNames = new Set<string>();
                     {/* Quick Preset Buttons (e.g. 20, 50, 100, 500, 1000 pcs) */}
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[10px] text-slate-600 font-mono font-medium">Presets:</span>
-                      {(isDrain || isB2B ? [20, 50, 100, 500, 1000] : [1, 5, 10, 20, 50]).map((preset) => (
+                      {(isDrain || effectiveIsB2B ? [20, 50, 100, 500, 1000] : [1, 5, 10, 20, 50]).map((preset) => (
                         <button
                           key={preset}
                           type="button"
@@ -595,7 +615,7 @@ const seenNames = new Set<string>();
                 <div className="p-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
                   <button
                     type="button"
-                    aria-label={`View details for ${product.name}`}
+                    aria-label={`Details - View details for ${product.name}`}
                     onClick={() => handleOpenPdp(product)}
                     className="px-4 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
                   >
@@ -605,7 +625,7 @@ const seenNames = new Set<string>();
 
                   <button
                     type="button"
-                    aria-label={hasMultipleVariants && !isSizeSelected ? `Select size and add ${product.name} to cart` : `Add ${product.name} to cart`}
+                    aria-label={hasMultipleVariants && !isSizeSelected ? `Select size and add ${product.name} to cart` : `Add to cart: ${product.name}`}
                     onClick={() => {
                       if (hasMultipleVariants && !isSizeSelected) {
                         setSizeModalProduct(product);

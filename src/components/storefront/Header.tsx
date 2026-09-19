@@ -25,6 +25,7 @@ export const Header: React.FC = () => {
 
   const navigate = useNavigate();
   const isB2B = Boolean(appMode === 'B2B' || (currentUser?.role && currentUser.role.includes('B2B')));
+  const displayIsB2B = mounted ? isB2B : false;
 
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -68,6 +69,8 @@ export const Header: React.FC = () => {
           <img 
             src="/logo.webp" 
             alt="Apollo Engineering Logo" 
+            width={180}
+            height={48}
             className="h-10 md:h-12 w-auto object-contain group-hover:scale-105 transition-transform duration-300 pointer-events-none select-none"
             fetchPriority="high"
             decoding="async"
@@ -82,7 +85,7 @@ export const Header: React.FC = () => {
               <button
                 type="button"
                 id="header-category-dropdown"
-                aria-label="Filter products by category"
+                aria-label={`Category: ${selectedCategory} - Filter products by category`}
                 aria-haspopup="listbox"
                 aria-expanded={isCategoryOpen}
                 onClick={() => setIsCategoryOpen(!isCategoryOpen)}
@@ -117,6 +120,8 @@ export const Header: React.FC = () => {
             {/* Input */}
             <input
               type="text"
+              id="desktop-search-input"
+              name="search_query"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -145,7 +150,7 @@ export const Header: React.FC = () => {
           {isGuest ? (
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              aria-label="Sign In or Register for Apollo Engineering Account"
+              aria-label="Sign In / Register for Apollo Engineering Account"
               className="h-10 flex items-center gap-1.5 px-3 sm:px-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 shrink-0"
             >
               <User className="w-4 h-4 shrink-0" />
@@ -154,7 +159,7 @@ export const Header: React.FC = () => {
           ) : (
             <button
               onClick={() => navigateTo('account', '/account')}
-              aria-label={`View account profile for ${currentUser.name}`}
+              aria-label={`Account & KYC - Hello, ${currentUser.name.split(' ')[0]}`}
               className={`h-10 flex items-center gap-1.5 text-left px-2.5 sm:px-3 rounded-xl transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue shrink-0 ${
                 activeTab === 'account'
                   ? 'bg-[#0054A6] text-white border-[#0054A6] shadow-sm'
@@ -220,6 +225,8 @@ export const Header: React.FC = () => {
         <div className="relative flex w-full rounded-2xl overflow-hidden shadow-inner border border-slate-300 bg-white/90 focus-within:ring-2 focus-within:ring-[#0054A6] transition-all">
           <input
             type="text"
+            id="mobile-search-input"
+            name="search_query_mobile"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -246,7 +253,7 @@ export const Header: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between text-xs overflow-x-auto no-scrollbar gap-3">
             {/* Left: Isolated Store Mode Banner (Zero B2B in B2C, Zero B2C in B2B) */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              {isB2B ? (
+              {displayIsB2B ? (
                 <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#0054A6]/10 border border-[#0054A6]/30 text-[#0054A6] font-bold text-xs shadow-sm">
                   <Building2 className="w-3.5 h-3.5 text-[#0054A6]" />
                   <span>🏢 Apollo Commercial Wholesale Portal</span>
@@ -278,7 +285,7 @@ export const Header: React.FC = () => {
               {/* About Company */}
               <button
                 onClick={() => navigateTo('about', '/about')}
-                aria-label="Navigate to About Apollo Engineering"
+                aria-label="About Company - Apollo Engineering"
                 className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === 'about' ? 'bg-[#0054A6] text-white shadow-sm' : 'text-slate-700 hover:text-[#0054A6] hover:bg-white'
                 }`}
@@ -290,7 +297,7 @@ export const Header: React.FC = () => {
               {/* Installation & Why Us */}
               <button
                 onClick={() => navigateTo('installation', '/installation')}
-                aria-label="Navigate to Installation guide and why choose us"
+                aria-label="Installation & Why Us - Guide and why choose us"
                 className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === 'installation' ? 'bg-[#0054A6] text-white shadow-sm' : 'text-slate-700 hover:text-[#0054A6] hover:bg-white'
                 }`}
@@ -302,7 +309,7 @@ export const Header: React.FC = () => {
               {/* Contact & Map */}
               <button
                 onClick={() => navigateTo('contact', '/contact')}
-                aria-label="Navigate to Contact and Kathwada GIDC Location"
+                aria-label="Contact & Location - Kathwada GIDC Location"
                 className={`px-3.5 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
                   activeTab === 'contact' ? 'bg-[#0054A6] text-white shadow-sm' : 'text-slate-700 hover:text-[#0054A6] hover:bg-white'
                 }`}

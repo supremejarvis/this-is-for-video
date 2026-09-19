@@ -1,0 +1,121 @@
+[
+  {
+    "id": "ISSUE-001",
+    "title": "Trailing Slash HTTP 308 Permanent Redirect on Catalog API",
+    "severity": "MEDIUM",
+    "flow": "Home and product listing",
+    "reproductionSteps": [
+      "Navigate to http://localhost:3000/",
+      "Inspect DevTools Network panel on initial page load",
+      "Observe GET /api/v1/products/?include_archived=false returning HTTP 308 to /api/v1/products?include_archived=false"
+    ],
+    "browserEvidence": "Network request #37 returned HTTP 308 with response header 'location: /api/v1/products?include_archived=false', causing a redundant second HTTP GET roundtrip.",
+    "expectedBehavior": "Catalog API requests should return HTTP 200 directly without redirect hops.",
+    "actualBehavior": "FastAPI returned HTTP 308 Permanent Redirect due to trailing slash route normalization.",
+    "confirmedRootCause": "src/services/api/catalogApi.ts line 19 called '/products/?include_archived=...' instead of '/products?include_archived=...'.",
+    "relevantSourceFiles": [
+      "src/services/api/catalogApi.ts"
+    ],
+    "proposedFix": "Strip the trailing slash from the catalog request URL in catalogApi.ts.",
+    "status": "FIXED"
+  },
+  {
+    "id": "ISSUE-002",
+    "title": "Broken 'Back to Store' Routing Traps Customer on Account Page",
+    "severity": "HIGH",
+    "flow": "Account and order history",
+    "reproductionSteps": [
+      "Sign in with test customer credentials and navigate to /account",
+      "Click the 'Back to Store' button at the top of CustomerAccountPage",
+      "Observe browser address bar updating to /store while the viewport remains stuck on CustomerAccountPage"
+    ],
+    "browserEvidence": "Clicking button updated window.location.pathname to /store via window.history.pushState, but Next.js App Router did not execute a route transition; body content remained on Account & Order History desk.",
+    "expectedBehavior": "Clicking 'Back to Store' should navigate the user to the product catalog (/store or /).",
+    "actualBehavior": "The user was trapped on the account desk because pushState bypassed Next.js router reconciliation.",
+    "confirmedRootCause": "CustomerAccountPage.tsx lines 337, 467, 1242, and 1290 invoked window.history.pushState instead of the Next.js router / useNavigate hook.",
+    "relevantSourceFiles": [
+      "src/components/pages/CustomerAccountPage.tsx"
+    ],
+    "proposedFix": "Import useNavigate from @/lib/navigation and call navigate('/store') on all store transition buttons.",
+    "status": "FIXED"
+  },
+  {
+    "id": "ISSUE-003",
+    "title": "Form Input Elements Missing id and name Attributes in Catalog & BOM Calculator",
+    "severity": "MEDIUM",
+    "flow": "Product listing, quantity updates & BOM Estimator",
+    "reproductionSteps": [
+      "Open http://localhost:3000/",
+      "Open DevTools Console panel",
+      "Inspect logged DevTools accessibility issues"
+    ],
+    "browserEvidence": "Chrome DevTools Console Issue: 'A form field element should have an id or name attribute (count: 8)' pointing to quantity inputs in BuyerCatalog and inputs in SolarBOMCalculator.",
+    "expectedBehavior": "All form controls should possess valid id and name attributes for screen reader identification and browser autocomplete.",
+    "actualBehavior": "Quantity number inputs lacked id and name attributes.",
+    "confirmedRootCause": "src/components/storefront/BuyerCatalog.tsx line 552 rendered <input type='number'> without id or name props; SolarBOMCalculator.tsx inputs lacked name attributes.",
+    "relevantSourceFiles": [
+      "src/components/storefront/BuyerCatalog.tsx",
+      "src/components/storefront/SolarBOMCalculator.tsx"
+    ],
+    "proposedFix": "Add unique id={`qty-input-${product.id}`} and name={`quantity_${product.id}`} in BuyerCatalog.tsx, and add descriptive name attributes to SolarBOMCalculator.tsx inputs.",
+    "status": "FIXED"
+  },
+  {
+    "id": "ISSUE-004",
+    "title": "Missing id, name, and Label htmlFor Associations in Delivery Address Form",
+    "severity": "MEDIUM",
+    "flow": "Checkout and delivery address entry",
+    "reproductionSteps": [
+      "Add any item to cart and open Checkout modal",
+      "Click 'Add Delivery Address'",
+      "Inspect DOM for form inputs in AddressModal"
+    ],
+    "browserEvidence": "Inputs for Full Name, Phone, Flat/Building, Street/Area, Pincode, and Post Office facility lacked id and name attributes, preventing programmatic label-input association.",
+    "expectedBehavior": "Every input should have an explicit id matching its label's htmlFor attribute, along with a valid name attribute.",
+    "actualBehavior": "Inputs were rendered with placeholder text only, without id or name attributes.",
+    "confirmedRootCause": "src/components/auth/AddressModal.tsx lines 298-410 omitted id and name attributes on text inputs and select element.",
+    "relevantSourceFiles": [
+      "src/components/auth/AddressModal.tsx"
+    ],
+    "proposedFix": "Add id and name attributes to all inputs and select controls in AddressModal.tsx and bind labels using htmlFor.",
+    "status": "FIXED"
+  },
+  {
+    "id": "ISSUE-005",
+    "title": "WCAG 2.5.3 (Label in Name) Accessible Name Mismatch in Header Navigation",
+    "severity": "MEDIUM",
+    "flow": "Navigation and storefront header",
+    "reproductionSteps": [
+      "Run Lighthouse Snapshot audit on http://localhost:3000/",
+      "Inspect Accessibility category results"
+    ],
+    "browserEvidence": "Lighthouse Accessibility Audit failed 'label-content-name-mismatch' with score 0 for #header-category-dropdown, account button, and sub-navigation buttons.",
+    "expectedBehavior": "Accessible name (aria-label) must contain the exact visible text displayed to the user.",
+    "actualBehavior": "Visible text was 'Category: ALL', but aria-label was 'Filter products by category'; visible text was 'About Company', but aria-label was 'Navigate to About Apollo Engineering'.",
+    "confirmedRootCause": "aria-label attributes in src/components/storefront/Header.tsx did not include the visible text string, violating WCAG 2.5.3.",
+    "relevantSourceFiles": [
+      "src/components/storefront/Header.tsx"
+    ],
+    "proposedFix": "Prefix aria-labels with visible text (e.g. `Category: ${selectedCategory} - Filter products by category`, `About Company - Apollo Engineering`).",
+    "status": "FIXED"
+  },
+  {
+    "id": "ISSUE-006",
+    "title": "Header Brand Logo Missing Explicit Width and Height Dimensions",
+    "severity": "LOW",
+    "flow": "Storefront header & branding",
+    "reproductionSteps": [
+      "Open http://localhost:3000/",
+      "Inspect DevTools Console Issues"
+    ],
+    "browserEvidence": "DevTools flagged 'Lazy-loaded images should have explicit dimensions' for /logo.webp.",
+    "expectedBehavior": "Image elements should specify explicit width and height attributes to prevent layout shift (CLS).",
+    "actualBehavior": "Logo image relied exclusively on CSS classes without HTML width and height attributes.",
+    "confirmedRootCause": "src/components/storefront/Header.tsx line 68 rendered <img src='/logo.webp'> without width and height props.",
+    "relevantSourceFiles": [
+      "src/components/storefront/Header.tsx"
+    ],
+    "proposedFix": "Add width={180} and height={48} attributes to the logo img element in Header.tsx.",
+    "status": "FIXED"
+  }
+]

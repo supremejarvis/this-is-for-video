@@ -1,13 +1,13 @@
 {
   "lighthouseVersion": "13.4.1",
   "finalDisplayedUrl": "http://localhost:3000/",
-  "fetchTime": "2026-09-19T06:24:36.563Z",
+  "fetchTime": "2026-09-19T06:42:34.828Z",
   "gatherMode": "snapshot",
   "runWarnings": [],
   "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36",
   "environment": {
     "hostUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36",
-    "benchmarkIndex": 637.5,
+    "benchmarkIndex": 686.5,
     "credits": {
       "axe-core": "4.12.1"
     }
@@ -463,193 +463,13 @@
             "node": {
               "type": "node",
               "lhId": "1-0-SPAN",
-              "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,1,DIV,1,DIV,1,DIV,0,DIV,1,SPAN",
-              "selector": "div.p-6 > div.space-y-3 > div.flex > span.text-[11px]",
-              "boundingRect": {
-                "top": 1470,
-                "bottom": 1493,
-                "left": 1286,
-                "right": 1458,
-                "width": 172,
-                "height": 23
-              },
-              "snippet": "<span class=\"text-[11px] font-mono font-bold text-rose-800 bg-rose-50 px-2 py-0.5 round…\">",
-              "nodeLabel": "⚠️ Select Size (Compulsory)",
-              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.48 (foreground color: #c96582, background color: #fff6f3, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
-            },
-            "subItems": {
-              "type": "subitems",
-              "items": [
-                {
-                  "relatedNode": {
-                    "type": "node",
-                    "lhId": "1-1-DIV",
-                    "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,1,DIV,1,DIV,1,DIV",
-                    "selector": "div.grid > div#catalog-product-e1a6974f-6093-417f-b979-17388fbd2de9 > div.p-6 > div.space-y-3",
-                    "boundingRect": {
-                      "top": 1453,
-                      "bottom": 1761,
-                      "left": 941,
-                      "right": 1475,
-                      "width": 534,
-                      "height": 308
-                    },
-                    "snippet": "<div class=\"space-y-3 p-4 rounded-2xl border transition-all bg-amber-50/50 border-ambe…\">",
-                    "nodeLabel": "SOLAR FRAME THICKNESS::\n⚠️ Select Size (Compulsory)\n0.5 HP Single Phase Submersi…"
-                  }
-                },
-                {
-                  "relatedNode": {
-                    "type": "node",
-                    "lhId": "1-2-DIV",
-                    "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,1,DIV",
-                    "selector": "div.min-h-screen > div.space-y-8 > div.grid > div#catalog-product-e1a6974f-6093-417f-b979-17388fbd2de9",
-                    "boundingRect": {
-                      "top": 999,
-                      "bottom": 2071,
-                      "left": 912,
-                      "right": 1504,
-                      "width": 592,
-                      "height": 1072
-                    },
-                    "snippet": "<div id=\"catalog-product-e1a6974f-6093-417f-b979-17388fbd2de9\" class=\"bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden fle…\">",
-                    "nodeLabel": "24V DC BOOSTER\nIn Stock\nView Details\nHSN: 84137010 • SKU:\nSubmersible Pump (0.5…"
-                  }
-                }
-              ]
-            }
-          },
-          {
-            "node": {
-              "type": "node",
-              "lhId": "1-3-SPAN",
-              "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,2,DIV,1,DIV,1,DIV,0,DIV,1,SPAN",
-              "selector": "div.p-6 > div.space-y-3 > div.flex > span.text-[11px]",
-              "boundingRect": {
-                "top": 2574,
-                "bottom": 2597,
-                "left": 662,
-                "right": 834,
-                "width": 172,
-                "height": 23
-              },
-              "snippet": "<span class=\"text-[11px] font-mono font-bold text-rose-800 bg-rose-50 px-2 py-0.5 round…\">",
-              "nodeLabel": "⚠️ Select Size (Compulsory)",
-              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.48 (foreground color: #c96582, background color: #fff6f3, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
-            },
-            "subItems": {
-              "type": "subitems",
-              "items": [
-                {
-                  "relatedNode": {
-                    "type": "node",
-                    "lhId": "1-4-DIV",
-                    "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,2,DIV,1,DIV,1,DIV",
-                    "selector": "div.grid > div#catalog-product-3860da05-efe2-4224-b0f7-f20fc94f2701 > div.p-6 > div.space-y-3",
-                    "boundingRect": {
-                      "top": 2557,
-                      "bottom": 2889,
-                      "left": 317,
-                      "right": 851,
-                      "width": 534,
-                      "height": 332
-                    },
-                    "snippet": "<div class=\"space-y-3 p-4 rounded-2xl border transition-all bg-amber-50/50 border-ambe…\">",
-                    "nodeLabel": "SOLAR FRAME THICKNESS::\n⚠️ Select Size (Compulsory)\nUPVC Threaded Equal Tee with…"
-                  }
-                },
-                {
-                  "relatedNode": {
-                    "type": "node",
-                    "lhId": "1-5-DIV",
-                    "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,2,DIV",
-                    "selector": "div.min-h-screen > div.space-y-8 > div.grid > div#catalog-product-3860da05-efe2-4224-b0f7-f20fc94f2701",
-                    "boundingRect": {
-                      "top": 2103,
-                      "bottom": 3199,
-                      "left": 288,
-                      "right": 880,
-                      "width": 592,
-                      "height": 1096
-                    },
-                    "snippet": "<div id=\"catalog-product-3860da05-efe2-4224-b0f7-f20fc94f2701\" class=\"bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden fle…\">",
-                    "nodeLabel": "UPVC / CPVC\nIn Stock\nView Details\nHSN: 39174000 • SKU:\nCPVC / UPVC Solar Water …"
-                  }
-                }
-              ]
-            }
-          },
-          {
-            "node": {
-              "type": "node",
-              "lhId": "1-6-SPAN",
-              "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,5,DIV,1,DIV,1,DIV,0,DIV,1,SPAN",
-              "selector": "div.p-6 > div.space-y-3 > div.flex > span.text-[11px]",
-              "boundingRect": {
-                "top": 3734,
-                "bottom": 3757,
-                "left": 1286,
-                "right": 1458,
-                "width": 172,
-                "height": 23
-              },
-              "snippet": "<span class=\"text-[11px] font-mono font-bold text-rose-800 bg-rose-50 px-2 py-0.5 round…\">",
-              "nodeLabel": "⚠️ Select Size (Compulsory)",
-              "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 3.48 (foreground color: #c96582, background color: #fff6f3, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
-            },
-            "subItems": {
-              "type": "subitems",
-              "items": [
-                {
-                  "relatedNode": {
-                    "type": "node",
-                    "lhId": "1-7-DIV",
-                    "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,5,DIV,1,DIV,1,DIV",
-                    "selector": "div.grid > div#catalog-product-drain-clips > div.p-6 > div.space-y-3",
-                    "boundingRect": {
-                      "top": 3716,
-                      "bottom": 3856,
-                      "left": 941,
-                      "right": 1475,
-                      "width": 534,
-                      "height": 140
-                    },
-                    "snippet": "<div class=\"space-y-3 p-4 rounded-2xl border transition-all bg-amber-50/50 border-ambe…\">",
-                    "nodeLabel": "SOLAR FRAME THICKNESS::\n⚠️ Select Size (Compulsory)\n28 mm\nThin Profile\n30 mm\nBif…"
-                  }
-                },
-                {
-                  "relatedNode": {
-                    "type": "node",
-                    "lhId": "1-8-DIV",
-                    "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,5,DIV",
-                    "selector": "div.min-h-screen > div.space-y-8 > div.grid > div#catalog-product-drain-clips",
-                    "boundingRect": {
-                      "top": 3231,
-                      "bottom": 4167,
-                      "left": 912,
-                      "right": 1504,
-                      "width": 592,
-                      "height": 936
-                    },
-                    "snippet": "<div id=\"catalog-product-drain-clips\" class=\"bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden fle…\">",
-                    "nodeLabel": "AISI SS304\n10-Year Rust Warranty\nIn Stock\nView Details\nHSN: 73269099 • SKU:\nApo…"
-                  }
-                }
-              ]
-            }
-          },
-          {
-            "node": {
-              "type": "node",
-              "lhId": "1-9-SPAN",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,4,DIV,2,DIV,0,BUTTON,1,SPAN",
               "selector": "div#bom-frame-size-selector > div.grid > button.p-3 > span.text-[10px]",
               "boundingRect": {
-                "top": 4898,
-                "bottom": 4913,
-                "left": 352,
-                "right": 540,
+                "top": 4886,
+                "bottom": 4901,
+                "left": 251,
+                "right": 440,
                 "width": 189,
                 "height": 15
               },
@@ -661,14 +481,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-10-SPAN",
+              "lhId": "1-1-SPAN",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,4,DIV,2,DIV,1,BUTTON,1,SPAN",
               "selector": "div#bom-frame-size-selector > div.grid > button.p-3 > span.text-[10px]",
               "boundingRect": {
-                "top": 4898,
-                "bottom": 4913,
-                "left": 577,
-                "right": 765,
+                "top": 4886,
+                "bottom": 4901,
+                "left": 477,
+                "right": 665,
                 "width": 189,
                 "height": 15
               },
@@ -680,14 +500,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-11-SPAN",
+              "lhId": "1-2-SPAN",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,4,DIV,2,DIV,2,BUTTON,1,SPAN",
               "selector": "div#bom-frame-size-selector > div.grid > button.p-3 > span.text-[10px]",
               "boundingRect": {
-                "top": 4898,
-                "bottom": 4913,
-                "left": 802,
-                "right": 991,
+                "top": 4886,
+                "bottom": 4901,
+                "left": 702,
+                "right": 891,
                 "width": 189,
                 "height": 15
               },
@@ -699,14 +519,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-12-SPAN",
+              "lhId": "1-3-SPAN",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,4,DIV,2,DIV,3,BUTTON,1,SPAN",
               "selector": "div#bom-frame-size-selector > div.grid > button.p-3 > span.text-[10px]",
               "boundingRect": {
-                "top": 4898,
-                "bottom": 4913,
-                "left": 1027,
-                "right": 1216,
+                "top": 4886,
+                "bottom": 4901,
+                "left": 927,
+                "right": 1116,
                 "width": 189,
                 "height": 15
               },
@@ -718,14 +538,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-13-SPAN",
+              "lhId": "1-4-SPAN",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,4,DIV,2,DIV,4,BUTTON,1,SPAN",
               "selector": "div#bom-frame-size-selector > div.grid > button.p-3 > span.text-[10px]",
               "boundingRect": {
-                "top": 4898,
-                "bottom": 4913,
-                "left": 1252,
-                "right": 1441,
+                "top": 4886,
+                "bottom": 4901,
+                "left": 1152,
+                "right": 1341,
                 "width": 189,
                 "height": 15
               },
@@ -737,15 +557,15 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-14-DIV",
+              "lhId": "1-5-DIV",
               "path": "1,HTML,1,BODY,1,DIV,4,FOOTER,0,DIV,2,DIV,0,DIV",
               "selector": "footer.bg-slate-950 > div.max-w-6xl > div.flex > div",
               "boundingRect": {
-                "top": 6672,
-                "bottom": 6688,
-                "left": 320,
-                "right": 588,
-                "width": 268,
+                "top": 6657,
+                "bottom": 6673,
+                "left": 220,
+                "right": 488,
+                "width": 267,
                 "height": 16
               },
               "snippet": "<div>",
@@ -758,16 +578,16 @@
                 {
                   "relatedNode": {
                     "type": "node",
-                    "lhId": "1-15-FOOTER",
+                    "lhId": "1-6-FOOTER",
                     "path": "1,HTML,1,BODY,1,DIV,4,FOOTER",
                     "selector": "body > div.min-h-screen > footer.bg-slate-950",
                     "boundingRect": {
-                      "top": 6469,
-                      "bottom": 6728,
+                      "top": 6453,
+                      "bottom": 6713,
                       "left": 0,
-                      "right": 1793,
-                      "width": 1793,
-                      "height": 260
+                      "right": 1592,
+                      "width": 1592,
+                      "height": 259
                     },
                     "snippet": "<footer class=\"bg-slate-950 text-slate-400 border-t border-slate-800/80 py-10 px-6\">",
                     "nodeLabel": "About\nProducts\nInstallation\nWhy Us\nContact\n100 / Gopinath Ind. Landmark, Kathwa…"
@@ -779,14 +599,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-16-SPAN",
+              "lhId": "1-7-SPAN",
               "path": "1,HTML,1,BODY,1,DIV,4,FOOTER,0,DIV,2,DIV,1,DIV,0,SPAN",
               "selector": "div.max-w-6xl > div.flex > div.flex > span",
               "boundingRect": {
-                "top": 6672,
-                "bottom": 6688,
-                "left": 1023,
-                "right": 1104,
+                "top": 6657,
+                "bottom": 6673,
+                "left": 923,
+                "right": 1004,
                 "width": 81,
                 "height": 16
               },
@@ -800,16 +620,16 @@
                 {
                   "relatedNode": {
                     "type": "node",
-                    "lhId": "1-15-FOOTER",
+                    "lhId": "1-6-FOOTER",
                     "path": "1,HTML,1,BODY,1,DIV,4,FOOTER",
                     "selector": "body > div.min-h-screen > footer.bg-slate-950",
                     "boundingRect": {
-                      "top": 6469,
-                      "bottom": 6728,
+                      "top": 6453,
+                      "bottom": 6713,
                       "left": 0,
-                      "right": 1793,
-                      "width": 1793,
-                      "height": 260
+                      "right": 1592,
+                      "width": 1592,
+                      "height": 259
                     },
                     "snippet": "<footer class=\"bg-slate-950 text-slate-400 border-t border-slate-800/80 py-10 px-6\">",
                     "nodeLabel": "About\nProducts\nInstallation\nWhy Us\nContact\n100 / Gopinath Ind. Landmark, Kathwa…"
@@ -821,14 +641,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-17-SPAN",
+              "lhId": "1-8-SPAN",
               "path": "1,HTML,1,BODY,1,DIV,4,FOOTER,0,DIV,2,DIV,1,DIV,2,SPAN",
               "selector": "div.max-w-6xl > div.flex > div.flex > span",
               "boundingRect": {
-                "top": 6672,
-                "bottom": 6688,
-                "left": 1135,
-                "right": 1237,
+                "top": 6657,
+                "bottom": 6673,
+                "left": 1035,
+                "right": 1137,
                 "width": 102,
                 "height": 16
               },
@@ -842,16 +662,16 @@
                 {
                   "relatedNode": {
                     "type": "node",
-                    "lhId": "1-15-FOOTER",
+                    "lhId": "1-6-FOOTER",
                     "path": "1,HTML,1,BODY,1,DIV,4,FOOTER",
                     "selector": "body > div.min-h-screen > footer.bg-slate-950",
                     "boundingRect": {
-                      "top": 6469,
-                      "bottom": 6728,
+                      "top": 6453,
+                      "bottom": 6713,
                       "left": 0,
-                      "right": 1793,
-                      "width": 1793,
-                      "height": 260
+                      "right": 1592,
+                      "width": 1592,
+                      "height": 259
                     },
                     "snippet": "<footer class=\"bg-slate-950 text-slate-400 border-t border-slate-800/80 py-10 px-6\">",
                     "nodeLabel": "About\nProducts\nInstallation\nWhy Us\nContact\n100 / Gopinath Ind. Landmark, Kathwa…"
@@ -863,14 +683,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-18-SPAN",
+              "lhId": "1-9-SPAN",
               "path": "1,HTML,1,BODY,1,DIV,4,FOOTER,0,DIV,2,DIV,1,DIV,4,SPAN",
               "selector": "div.max-w-6xl > div.flex > div.flex > span",
               "boundingRect": {
-                "top": 6672,
-                "bottom": 6688,
-                "left": 1268,
-                "right": 1354,
+                "top": 6657,
+                "bottom": 6673,
+                "left": 1168,
+                "right": 1254,
                 "width": 86,
                 "height": 16
               },
@@ -884,16 +704,16 @@
                 {
                   "relatedNode": {
                     "type": "node",
-                    "lhId": "1-15-FOOTER",
+                    "lhId": "1-6-FOOTER",
                     "path": "1,HTML,1,BODY,1,DIV,4,FOOTER",
                     "selector": "body > div.min-h-screen > footer.bg-slate-950",
                     "boundingRect": {
-                      "top": 6469,
-                      "bottom": 6728,
+                      "top": 6453,
+                      "bottom": 6713,
                       "left": 0,
-                      "right": 1793,
-                      "width": 1793,
-                      "height": 260
+                      "right": 1592,
+                      "width": 1592,
+                      "height": 259
                     },
                     "snippet": "<footer class=\"bg-slate-950 text-slate-400 border-t border-slate-800/80 py-10 px-6\">",
                     "nodeLabel": "About\nProducts\nInstallation\nWhy Us\nContact\n100 / Gopinath Ind. Landmark, Kathwa…"
@@ -905,14 +725,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-19-SPAN",
+              "lhId": "1-10-SPAN",
               "path": "1,HTML,1,BODY,1,DIV,4,FOOTER,0,DIV,2,DIV,1,DIV,6,A,1,SPAN",
               "selector": "div.flex > div.flex > a.text-slate-500 > span",
               "boundingRect": {
-                "top": 6672,
-                "bottom": 6688,
-                "left": 1405,
-                "right": 1468,
+                "top": 6657,
+                "bottom": 6673,
+                "left": 1305,
+                "right": 1368,
                 "width": 63,
                 "height": 16
               },
@@ -926,16 +746,16 @@
                 {
                   "relatedNode": {
                     "type": "node",
-                    "lhId": "1-15-FOOTER",
+                    "lhId": "1-6-FOOTER",
                     "path": "1,HTML,1,BODY,1,DIV,4,FOOTER",
                     "selector": "body > div.min-h-screen > footer.bg-slate-950",
                     "boundingRect": {
-                      "top": 6469,
-                      "bottom": 6728,
+                      "top": 6453,
+                      "bottom": 6713,
                       "left": 0,
-                      "right": 1793,
-                      "width": 1793,
-                      "height": 260
+                      "right": 1592,
+                      "width": 1592,
+                      "height": 259
                     },
                     "snippet": "<footer class=\"bg-slate-950 text-slate-400 border-t border-slate-800/80 py-10 px-6\">",
                     "nodeLabel": "About\nProducts\nInstallation\nWhy Us\nContact\n100 / Gopinath Ind. Landmark, Kathwa…"
@@ -1173,18 +993,18 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-20-BUTTON",
+              "lhId": "1-11-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,1,HEADER,0,DIV,1,DIV,0,DIV,0,DIV,0,BUTTON",
               "selector": "div.hidden > div.relative > div.relative > button#header-category-dropdown",
               "boundingRect": {
                 "top": 16,
                 "bottom": 56,
-                "left": 457,
-                "right": 582,
+                "left": 357,
+                "right": 482,
                 "width": 125,
                 "height": 40
               },
-              "snippet": "<button type=\"button\" id=\"header-category-dropdown\" aria-label=\"Filter products by category\" aria-haspopup=\"listbox\" aria-expanded=\"false\" class=\"h-10 px-3 bg-slate-50 text-xs font-semibold text-slate-700 hover:bg-slate-…\">",
+              "snippet": "<button type=\"button\" id=\"header-category-dropdown\" aria-label=\"Category: ALL - Filter products by category\" aria-haspopup=\"listbox\" aria-expanded=\"false\" class=\"h-10 px-3 bg-slate-50 text-xs font-semibold text-slate-700 hover:bg-slate-…\">",
               "nodeLabel": "Category:\nALL",
               "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
             }
@@ -1192,18 +1012,18 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-21-BUTTON",
+              "lhId": "1-12-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,1,HEADER,0,DIV,2,DIV,0,BUTTON",
               "selector": "header.sticky > div.max-w-7xl > div.flex > button.h-10",
               "boundingRect": {
                 "top": 16,
                 "bottom": 56,
-                "left": 1133,
-                "right": 1299,
+                "left": 1034,
+                "right": 1199,
                 "width": 165,
                 "height": 40
               },
-              "snippet": "<button aria-label=\"View account profile for Pravin Patel\" class=\"h-10 flex items-center gap-1.5 text-left px-2.5 sm:px-3 rounded-xl transit…\">",
+              "snippet": "<button aria-label=\"Account &amp; KYC - Hello, Pravin\" class=\"h-10 flex items-center gap-1.5 text-left px-2.5 sm:px-3 rounded-xl transit…\">",
               "nodeLabel": "P\nHello, Pravin\nAccount & KYC",
               "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
             }
@@ -1211,110 +1031,34 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-22-BUTTON",
+              "lhId": "1-13-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,1,HEADER,0,DIV,2,DIV,2,BUTTON",
               "selector": "header.sticky > div.max-w-7xl > div.flex > button.h-10",
               "boundingRect": {
                 "top": 16,
                 "bottom": 56,
-                "left": 1418,
-                "right": 1504,
+                "left": 1318,
+                "right": 1404,
                 "width": 86,
                 "height": 40
               },
-              "snippet": "<button aria-label=\"Cart (2 items)\" class=\"h-10 relative flex items-center gap-1.5 px-3 sm:px-3.5 rounded-xl bg-gradi…\">",
-              "nodeLabel": "2\nCART",
+              "snippet": "<button aria-label=\"Cart (1000 items)\" class=\"h-10 relative flex items-center gap-1.5 px-3 sm:px-3.5 rounded-xl bg-gradi…\">",
+              "nodeLabel": "1000\nCART",
               "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
             }
           },
           {
             "node": {
               "type": "node",
-              "lhId": "1-23-BUTTON",
-              "path": "1,HTML,1,BODY,1,DIV,1,HEADER,2,DIV,0,DIV,1,NAV,1,BUTTON",
-              "selector": "div.bg-slate-100/90 > div.max-w-7xl > nav.flex > button.px-3",
-              "boundingRect": {
-                "top": 79,
-                "bottom": 107,
-                "left": 1022,
-                "right": 1161,
-                "width": 139,
-                "height": 28
-              },
-              "snippet": "<button aria-label=\"Navigate to About Apollo Engineering\" class=\"px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 …\">",
-              "nodeLabel": "About Company",
-              "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
-            }
-          },
-          {
-            "node": {
-              "type": "node",
-              "lhId": "1-24-BUTTON",
-              "path": "1,HTML,1,BODY,1,DIV,1,HEADER,2,DIV,0,DIV,1,NAV,2,BUTTON",
-              "selector": "div.bg-slate-100/90 > div.max-w-7xl > nav.flex > button.px-3",
-              "boundingRect": {
-                "top": 79,
-                "bottom": 107,
-                "left": 1169,
-                "right": 1337,
-                "width": 168,
-                "height": 28
-              },
-              "snippet": "<button aria-label=\"Navigate to Installation guide and why choose us\" class=\"px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 …\">",
-              "nodeLabel": "Installation & Why Us",
-              "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
-            }
-          },
-          {
-            "node": {
-              "type": "node",
-              "lhId": "1-25-BUTTON",
-              "path": "1,HTML,1,BODY,1,DIV,1,HEADER,2,DIV,0,DIV,1,NAV,3,BUTTON",
-              "selector": "div.bg-slate-100/90 > div.max-w-7xl > nav.flex > button.px-3.5",
-              "boundingRect": {
-                "top": 79,
-                "bottom": 107,
-                "left": 1345,
-                "right": 1504,
-                "width": 159,
-                "height": 28
-              },
-              "snippet": "<button aria-label=\"Navigate to Contact and Kathwada GIDC Location\" class=\"px-3.5 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.…\">",
-              "nodeLabel": "Contact & Location",
-              "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
-            }
-          },
-          {
-            "node": {
-              "type": "node",
-              "lhId": "1-26-BUTTON",
-              "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,0,DIV,2,DIV,1,BUTTON",
-              "selector": "div.grid > div#catalog-product-clamp > div.p-6 > button.flex-1",
-              "boundingRect": {
-                "top": 2005,
-                "bottom": 2045,
-                "left": 436,
-                "right": 855,
-                "width": 419,
-                "height": 40
-              },
-              "snippet": "<button type=\"button\" aria-label=\"Add Automatic Digital Solar Cleaning Water Timer &amp; Solenoid Valve to cart\" class=\"flex-1 px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider tr…\">",
-              "nodeLabel": "ADD TO CART",
-              "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
-            }
-          },
-          {
-            "node": {
-              "type": "node",
-              "lhId": "1-27-BUTTON",
+              "lhId": "1-14-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,1,DIV,1,DIV,1,DIV,1,DIV,0,BUTTON",
               "selector": "div.p-6 > div.space-y-3 > div.grid > button.p-2.5",
               "boundingRect": {
-                "top": 1505,
-                "bottom": 1744,
-                "left": 959,
-                "right": 1052,
-                "width": 93,
+                "top": 1503,
+                "bottom": 1741,
+                "left": 858,
+                "right": 952,
+                "width": 94,
                 "height": 238
               },
               "snippet": "<button type=\"button\" aria-label=\"Select 0.5 HP Single Phase Submersible Solar Wash Pump (SS304 Body) frame …\" aria-pressed=\"false\" class=\"p-2.5 rounded-2xl border text-center transition-all flex flex-col items-ce…\">",
@@ -1325,15 +1069,15 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-28-BUTTON",
+              "lhId": "1-15-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,1,DIV,1,DIV,1,DIV,1,DIV,1,BUTTON",
               "selector": "div.p-6 > div.space-y-3 > div.grid > button.p-2.5",
               "boundingRect": {
-                "top": 1505,
-                "bottom": 1744,
-                "left": 1060,
-                "right": 1154,
-                "width": 93,
+                "top": 1503,
+                "bottom": 1741,
+                "left": 960,
+                "right": 1053,
+                "width": 94,
                 "height": 238
               },
               "snippet": "<button type=\"button\" aria-label=\"Select 0.5 HP Single Phase Submersible Solar Wash Pump (SS304 Body) frame …\" aria-pressed=\"false\" class=\"p-2.5 rounded-2xl border text-center transition-all flex flex-col items-ce…\">",
@@ -1344,15 +1088,15 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-29-BUTTON",
+              "lhId": "1-16-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,1,DIV,2,DIV,1,BUTTON",
               "selector": "div.grid > div#catalog-product-e1a6974f-6093-417f-b979-17388fbd2de9 > div.p-6 > button.flex-1",
               "boundingRect": {
-                "top": 2005,
-                "bottom": 2045,
-                "left": 1060,
-                "right": 1479,
-                "width": 419,
+                "top": 2001,
+                "bottom": 2041,
+                "left": 959,
+                "right": 1379,
+                "width": 420,
                 "height": 40
               },
               "snippet": "<button type=\"button\" aria-label=\"Select size and add Submersible Pump (0.5 HP) (Stainless Steel Body · Copp…\" class=\"flex-1 px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider tr…\">",
@@ -1363,15 +1107,15 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-30-BUTTON",
+              "lhId": "1-17-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,2,DIV,1,DIV,1,DIV,1,DIV,0,BUTTON",
               "selector": "div.p-6 > div.space-y-3 > div.grid > button.p-2.5",
               "boundingRect": {
-                "top": 2609,
-                "bottom": 2871,
-                "left": 335,
-                "right": 428,
-                "width": 93,
+                "top": 2604,
+                "bottom": 2866,
+                "left": 234,
+                "right": 328,
+                "width": 94,
                 "height": 262
               },
               "snippet": "<button type=\"button\" aria-label=\"Select UPVC Threaded Equal Tee with Brass Female Thread (Pack of 20 pcs) f…\" aria-pressed=\"false\" class=\"p-2.5 rounded-2xl border text-center transition-all flex flex-col items-ce…\">",
@@ -1382,15 +1126,15 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-31-BUTTON",
+              "lhId": "1-18-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,2,DIV,1,DIV,1,DIV,1,DIV,1,BUTTON",
               "selector": "div.p-6 > div.space-y-3 > div.grid > button.p-2.5",
               "boundingRect": {
-                "top": 2609,
-                "bottom": 2871,
-                "left": 436,
-                "right": 530,
-                "width": 93,
+                "top": 2604,
+                "bottom": 2866,
+                "left": 336,
+                "right": 429,
+                "width": 94,
                 "height": 262
               },
               "snippet": "<button type=\"button\" aria-label=\"Select UPVC Threaded Equal Tee with Brass Female Thread (Pack of 20 pcs) f…\" aria-pressed=\"false\" class=\"p-2.5 rounded-2xl border text-center transition-all flex flex-col items-ce…\">",
@@ -1401,15 +1145,15 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-32-BUTTON",
+              "lhId": "1-19-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,2,DIV,2,DIV,1,BUTTON",
               "selector": "div.grid > div#catalog-product-3860da05-efe2-4224-b0f7-f20fc94f2701 > div.p-6 > button.flex-1",
               "boundingRect": {
-                "top": 3132,
-                "bottom": 3172,
-                "left": 436,
-                "right": 855,
-                "width": 419,
+                "top": 3126,
+                "bottom": 3166,
+                "left": 335,
+                "right": 755,
+                "width": 420,
                 "height": 40
               },
               "snippet": "<button type=\"button\" aria-label=\"Select size and add CPVC / UPVC Solar Water Pipe Fittings &amp; Connectors to …\" class=\"flex-1 px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider tr…\">",
@@ -1420,53 +1164,15 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-33-BUTTON",
-              "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,3,DIV,2,DIV,1,BUTTON",
-              "selector": "div.grid > div#catalog-product-clamp > div.p-6 > button.flex-1",
-              "boundingRect": {
-                "top": 3132,
-                "bottom": 3172,
-                "left": 1060,
-                "right": 1479,
-                "width": 419,
-                "height": 40
-              },
-              "snippet": "<button type=\"button\" aria-label=\"Add GI Solar Pipe Clamp (Galvanized Iron · L-Shape Adjustable) to cart\" class=\"flex-1 px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider tr…\">",
-              "nodeLabel": "ADD TO CART",
-              "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
-            }
-          },
-          {
-            "node": {
-              "type": "node",
-              "lhId": "1-34-BUTTON",
-              "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,4,DIV,2,DIV,1,BUTTON",
-              "selector": "div.grid > div#catalog-product-sprinkler > div.p-6 > button.flex-1",
-              "boundingRect": {
-                "top": 4100,
-                "bottom": 4140,
-                "left": 436,
-                "right": 855,
-                "width": 419,
-                "height": 40
-              },
-              "snippet": "<button type=\"button\" aria-label=\"Add SS304 Solar Panel Sprinkler (AetherWash Tech · SS304 Grade) to cart\" class=\"flex-1 px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider tr…\">",
-              "nodeLabel": "ADD TO CART",
-              "explanation": "Fix any of the following:\n  Text inside the element is not included in the accessible name"
-            }
-          },
-          {
-            "node": {
-              "type": "node",
-              "lhId": "1-35-BUTTON",
+              "lhId": "1-20-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,5,DIV,1,DIV,1,DIV,1,DIV,0,BUTTON",
               "selector": "div.p-6 > div.space-y-3 > div.grid > button.p-2.5",
               "boundingRect": {
-                "top": 3769,
-                "bottom": 3839,
-                "left": 959,
-                "right": 1052,
-                "width": 93,
+                "top": 3761,
+                "bottom": 3831,
+                "left": 858,
+                "right": 952,
+                "width": 94,
                 "height": 70
               },
               "snippet": "<button type=\"button\" aria-label=\"Select 28 mm frame thickness for Apollo AISI SS304 Solar Panel Water Drain…\" aria-pressed=\"false\" class=\"p-2.5 rounded-2xl border text-center transition-all flex flex-col items-ce…\">",
@@ -1477,15 +1183,15 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-36-BUTTON",
+              "lhId": "1-21-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,5,DIV,1,DIV,1,DIV,1,DIV,1,BUTTON",
               "selector": "div.p-6 > div.space-y-3 > div.grid > button.p-2.5",
               "boundingRect": {
-                "top": 3769,
-                "bottom": 3839,
-                "left": 1060,
-                "right": 1154,
-                "width": 93,
+                "top": 3761,
+                "bottom": 3831,
+                "left": 960,
+                "right": 1053,
+                "width": 94,
                 "height": 70
               },
               "snippet": "<button type=\"button\" aria-label=\"Select 30 mm frame thickness for Apollo AISI SS304 Solar Panel Water Drain…\" aria-pressed=\"false\" class=\"p-2.5 rounded-2xl border text-center transition-all flex flex-col items-ce…\">",
@@ -1496,15 +1202,15 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-37-BUTTON",
+              "lhId": "1-22-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,5,DIV,1,DIV,1,DIV,1,DIV,2,BUTTON",
               "selector": "div.p-6 > div.space-y-3 > div.grid > button.p-2.5",
               "boundingRect": {
-                "top": 3769,
-                "bottom": 3839,
-                "left": 1162,
-                "right": 1255,
-                "width": 93,
+                "top": 3761,
+                "bottom": 3831,
+                "left": 1061,
+                "right": 1155,
+                "width": 94,
                 "height": 70
               },
               "snippet": "<button type=\"button\" aria-label=\"Select 33 mm frame thickness for Apollo AISI SS304 Solar Panel Water Drain…\" aria-pressed=\"false\" class=\"p-2.5 rounded-2xl border text-center transition-all flex flex-col items-ce…\">",
@@ -1515,15 +1221,15 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-38-BUTTON",
+              "lhId": "1-23-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,5,DIV,1,DIV,1,DIV,1,DIV,3,BUTTON",
               "selector": "div.p-6 > div.space-y-3 > div.grid > button.p-2.5",
               "boundingRect": {
-                "top": 3769,
-                "bottom": 3839,
-                "left": 1263,
-                "right": 1356,
-                "width": 93,
+                "top": 3761,
+                "bottom": 3831,
+                "left": 1163,
+                "right": 1256,
+                "width": 94,
                 "height": 70
               },
               "snippet": "<button type=\"button\" aria-label=\"Select 35 mm frame thickness for Apollo AISI SS304 Solar Panel Water Drain…\" aria-pressed=\"false\" class=\"p-2.5 rounded-2xl border text-center transition-all flex flex-col items-ce…\">",
@@ -1534,15 +1240,15 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-39-BUTTON",
+              "lhId": "1-24-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,5,DIV,1,DIV,1,DIV,1,DIV,4,BUTTON",
               "selector": "div.p-6 > div.space-y-3 > div.grid > button.p-2.5",
               "boundingRect": {
-                "top": 3769,
-                "bottom": 3839,
-                "left": 1364,
-                "right": 1458,
-                "width": 93,
+                "top": 3761,
+                "bottom": 3831,
+                "left": 1264,
+                "right": 1358,
+                "width": 94,
                 "height": 70
               },
               "snippet": "<button type=\"button\" aria-label=\"Select 40 mm frame thickness for Apollo AISI SS304 Solar Panel Water Drain…\" aria-pressed=\"false\" class=\"p-2.5 rounded-2xl border text-center transition-all flex flex-col items-ce…\">",
@@ -1553,15 +1259,15 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-40-BUTTON",
+              "lhId": "1-25-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,1,DIV,1,DIV,5,DIV,2,DIV,1,BUTTON",
               "selector": "div.grid > div#catalog-product-drain-clips > div.p-6 > button.flex-1",
               "boundingRect": {
-                "top": 4100,
-                "bottom": 4140,
-                "left": 1060,
-                "right": 1479,
-                "width": 419,
+                "top": 4090,
+                "bottom": 4130,
+                "left": 959,
+                "right": 1379,
+                "width": 420,
                 "height": 40
               },
               "snippet": "<button type=\"button\" aria-label=\"Select size and add Apollo AISI SS304 Solar Panel Water Drain &amp; Anti-Soili…\" class=\"flex-1 px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider tr…\">",
@@ -1572,14 +1278,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-41-BUTTON",
+              "lhId": "1-26-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,4,DIV,2,DIV,0,BUTTON",
               "selector": "div#solar-bom-calculator > div#bom-frame-size-selector > div.grid > button.p-3",
               "boundingRect": {
-                "top": 4857,
-                "bottom": 4927,
-                "left": 339,
-                "right": 554,
+                "top": 4844,
+                "bottom": 4914,
+                "left": 238,
+                "right": 453,
                 "width": 215,
                 "height": 69
               },
@@ -1591,14 +1297,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-42-BUTTON",
+              "lhId": "1-27-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,4,DIV,2,DIV,1,BUTTON",
               "selector": "div#solar-bom-calculator > div#bom-frame-size-selector > div.grid > button.p-3",
               "boundingRect": {
-                "top": 4857,
-                "bottom": 4927,
-                "left": 564,
-                "right": 779,
+                "top": 4844,
+                "bottom": 4914,
+                "left": 463,
+                "right": 679,
                 "width": 215,
                 "height": 69
               },
@@ -1610,14 +1316,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-43-BUTTON",
+              "lhId": "1-28-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,4,DIV,2,DIV,2,BUTTON",
               "selector": "div#solar-bom-calculator > div#bom-frame-size-selector > div.grid > button.p-3",
               "boundingRect": {
-                "top": 4857,
-                "bottom": 4927,
-                "left": 789,
-                "right": 1004,
+                "top": 4844,
+                "bottom": 4914,
+                "left": 689,
+                "right": 904,
                 "width": 215,
                 "height": 69
               },
@@ -1629,14 +1335,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-44-BUTTON",
+              "lhId": "1-29-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,4,DIV,2,DIV,3,BUTTON",
               "selector": "div#solar-bom-calculator > div#bom-frame-size-selector > div.grid > button.p-3",
               "boundingRect": {
-                "top": 4857,
-                "bottom": 4927,
-                "left": 1014,
-                "right": 1229,
+                "top": 4844,
+                "bottom": 4914,
+                "left": 914,
+                "right": 1129,
                 "width": 215,
                 "height": 69
               },
@@ -1648,14 +1354,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-45-BUTTON",
+              "lhId": "1-30-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,4,DIV,2,DIV,4,BUTTON",
               "selector": "div#solar-bom-calculator > div#bom-frame-size-selector > div.grid > button.p-3",
               "boundingRect": {
-                "top": 4857,
-                "bottom": 4927,
-                "left": 1239,
-                "right": 1454,
+                "top": 4844,
+                "bottom": 4914,
+                "left": 1139,
+                "right": 1354,
                 "width": 215,
                 "height": 69
               },
@@ -1667,14 +1373,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-46-DIV",
+              "lhId": "1-31-DIV",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,5,DIV,1,DIV,0,DIV",
               "selector": "div#solar-bom-calculator > div.space-y-3 > div.grid > div.bg-white",
               "boundingRect": {
-                "top": 5006,
-                "bottom": 5224,
-                "left": 321,
-                "right": 597,
+                "top": 4993,
+                "bottom": 5211,
+                "left": 221,
+                "right": 497,
                 "width": 275,
                 "height": 218
               },
@@ -1686,14 +1392,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-47-DIV",
+              "lhId": "1-32-DIV",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,5,DIV,1,DIV,1,DIV",
               "selector": "div#solar-bom-calculator > div.space-y-3 > div.grid > div.bg-white",
               "boundingRect": {
-                "top": 5006,
-                "bottom": 5224,
-                "left": 613,
-                "right": 888,
+                "top": 4993,
+                "bottom": 5211,
+                "left": 513,
+                "right": 788,
                 "width": 275,
                 "height": 218
               },
@@ -1705,14 +1411,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-48-DIV",
+              "lhId": "1-33-DIV",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,5,DIV,1,DIV,2,DIV",
               "selector": "div#solar-bom-calculator > div.space-y-3 > div.grid > div.bg-white",
               "boundingRect": {
-                "top": 5006,
-                "bottom": 5224,
-                "left": 904,
-                "right": 1180,
+                "top": 4993,
+                "bottom": 5211,
+                "left": 804,
+                "right": 1080,
                 "width": 275,
                 "height": 218
               },
@@ -1724,14 +1430,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-49-DIV",
+              "lhId": "1-34-DIV",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,5,DIV,1,DIV,3,DIV",
               "selector": "div#solar-bom-calculator > div.space-y-3 > div.grid > div.bg-white",
               "boundingRect": {
-                "top": 5006,
-                "bottom": 5224,
-                "left": 1196,
-                "right": 1471,
+                "top": 4993,
+                "bottom": 5211,
+                "left": 1096,
+                "right": 1371,
                 "width": 275,
                 "height": 218
               },
@@ -1743,14 +1449,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-50-DIV",
+              "lhId": "1-35-DIV",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,5,DIV,1,DIV,4,DIV",
               "selector": "div#solar-bom-calculator > div.space-y-3 > div.grid > div.bg-white",
               "boundingRect": {
-                "top": 5240,
-                "bottom": 5443,
-                "left": 321,
-                "right": 597,
+                "top": 5227,
+                "bottom": 5429,
+                "left": 221,
+                "right": 497,
                 "width": 275,
                 "height": 203
               },
@@ -1762,14 +1468,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-51-DIV",
+              "lhId": "1-36-DIV",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,5,DIV,1,DIV,5,DIV",
               "selector": "div#solar-bom-calculator > div.space-y-3 > div.grid > div.bg-white",
               "boundingRect": {
-                "top": 5240,
-                "bottom": 5443,
-                "left": 613,
-                "right": 888,
+                "top": 5227,
+                "bottom": 5429,
+                "left": 513,
+                "right": 788,
                 "width": 275,
                 "height": 203
               },
@@ -1781,14 +1487,14 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-52-BUTTON",
+              "lhId": "1-37-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,6,DIV,0,DIV,1,DIV,1,DIV,0,BUTTON",
               "selector": "div.flex > div.flex > div.flex > button.flex-1",
               "boundingRect": {
-                "top": 5575,
-                "bottom": 5615,
-                "left": 1054,
-                "right": 1273,
+                "top": 5561,
+                "bottom": 5601,
+                "left": 955,
+                "right": 1174,
                 "width": 219,
                 "height": 40
               },
@@ -1800,15 +1506,15 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-53-BUTTON",
+              "lhId": "1-38-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,6,DIV,0,DIV,1,DIV,1,DIV,1,BUTTON",
               "selector": "div.flex > div.flex > div.flex > button.flex-1",
               "boundingRect": {
-                "top": 5575,
-                "bottom": 5615,
-                "left": 1281,
-                "right": 1446,
-                "width": 165,
+                "top": 5561,
+                "bottom": 5601,
+                "left": 1182,
+                "right": 1346,
+                "width": 164,
                 "height": 40
               },
               "snippet": "<button type=\"button\" aria-label=\"View combo kit specifications and photos\" class=\"flex-1 sm:flex-none h-10 px-4 bg-white hover:bg-slate-100 text-[#0054A6] b…\">",
@@ -1819,15 +1525,15 @@
           {
             "node": {
               "type": "node",
-              "lhId": "1-54-BUTTON",
+              "lhId": "1-39-BUTTON",
               "path": "1,HTML,1,BODY,1,DIV,2,MAIN,0,DIV,2,DIV,7,DIV,1,DIV,0,BUTTON",
               "selector": "div#solar-bom-calculator > div.p-5 > div.flex > button.h-11",
               "boundingRect": {
-                "top": 5712,
-                "bottom": 5756,
-                "left": 830,
-                "right": 1143,
-                "width": 313,
+                "top": 5698,
+                "bottom": 5742,
+                "left": 731,
+                "right": 1044,
+                "width": 312,
                 "height": 44
               },
               "snippet": "<button type=\"button\" aria-label=\"Add Hardware BOM Items Only\" class=\"h-11 px-5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-3…\">",
@@ -2939,673 +2645,673 @@
   "timing": {
     "entries": [
       {
-        "startTime": 42325976.86,
+        "startTime": 43405708.08,
         "name": "lh:config",
-        "duration": 2573.22,
+        "duration": 1161.33,
         "entryType": "measure"
       },
       {
-        "startTime": 42326014.15,
+        "startTime": 43405755.2,
         "name": "lh:config:resolveArtifactsToDefns",
-        "duration": 17.55,
+        "duration": 19.18,
         "entryType": "measure"
       },
       {
-        "startTime": 42328553.12,
+        "startTime": 43406869.57,
         "name": "lh:driver:connect",
-        "duration": 128.66,
+        "duration": 77.65,
         "entryType": "measure"
       },
       {
-        "startTime": 42328686.64,
+        "startTime": 43406947.31,
         "name": "lh:runner:gather",
-        "duration": 12264.21,
+        "duration": 11842.77,
         "entryType": "measure"
       },
       {
-        "startTime": 42328688.08,
+        "startTime": 43406947.35,
         "name": "lh:gather:getBenchmarkIndex",
-        "duration": 1040.06,
+        "duration": 1038.81,
         "entryType": "measure"
       },
       {
-        "startTime": 42329729.05,
+        "startTime": 43407986.39,
         "name": "lh:gather:getVersion",
-        "duration": 6.44,
+        "duration": 8.89,
         "entryType": "measure"
       },
       {
-        "startTime": 42329735.97,
+        "startTime": 43407995.41,
         "name": "lh:gather:getDevicePixelRatio",
-        "duration": 8.27,
+        "duration": 13.87,
         "entryType": "measure"
       },
       {
-        "startTime": 42329779.4,
+        "startTime": 43408011.31,
         "name": "lh:gather:getArtifact:LlmsTxt",
-        "duration": 147.69,
+        "duration": 122.06,
         "entryType": "measure"
       },
       {
-        "startTime": 42329927.28,
+        "startTime": 43408133.51,
         "name": "lh:gather:getArtifact:Accessibility",
-        "duration": 4007.35,
+        "duration": 3775.82,
         "entryType": "measure"
       },
       {
-        "startTime": 42333934.92,
+        "startTime": 43411909.61,
         "name": "lh:gather:getArtifact:AnchorElements",
-        "duration": 254.16,
+        "duration": 409.38,
         "entryType": "measure"
       },
       {
-        "startTime": 42334189.29,
+        "startTime": 43412319.13,
         "name": "lh:gather:getArtifact:Doctype",
-        "duration": 6.64,
+        "duration": 10.13,
         "entryType": "measure"
       },
       {
-        "startTime": 42334196.13,
+        "startTime": 43412329.37,
         "name": "lh:gather:getArtifact:Inputs",
-        "duration": 106.66,
+        "duration": 52.9,
         "entryType": "measure"
       },
       {
-        "startTime": 42334303.01,
+        "startTime": 43412382.39,
         "name": "lh:gather:getArtifact:ImageElements",
-        "duration": 6509.47,
+        "duration": 6226.73,
         "entryType": "measure"
       },
       {
-        "startTime": 42340812.63,
+        "startTime": 43418609.42,
         "name": "lh:gather:getArtifact:MetaElements",
-        "duration": 16.44,
+        "duration": 22.05,
         "entryType": "measure"
       },
       {
-        "startTime": 42340829.21,
+        "startTime": 43418631.56,
         "name": "lh:gather:getArtifact:NetworkUserAgent",
-        "duration": 0.14,
+        "duration": 0.02,
         "entryType": "measure"
       },
       {
-        "startTime": 42340829.52,
+        "startTime": 43418631.6,
         "name": "lh:gather:getArtifact:RobotsTxt",
-        "duration": 23.34,
+        "duration": 67.46,
         "entryType": "measure"
       },
       {
-        "startTime": 42340853.01,
+        "startTime": 43418699.13,
         "name": "lh:gather:getArtifact:Stacks",
-        "duration": 81.32,
+        "duration": 75.13,
         "entryType": "measure"
       },
       {
-        "startTime": 42340853.35,
+        "startTime": 43418699.15,
         "name": "lh:gather:collectStacks",
-        "duration": 80.88,
+        "duration": 75.02,
         "entryType": "measure"
       },
       {
-        "startTime": 42340934.4,
+        "startTime": 43418774.32,
         "name": "lh:gather:getArtifact:ViewportDimensions",
-        "duration": 3.93,
+        "duration": 6.69,
         "entryType": "measure"
       },
       {
-        "startTime": 42340938.57,
+        "startTime": 43418781.13,
         "name": "lh:gather:getArtifact:FullPageScreenshot",
-        "duration": 0.12,
+        "duration": 0.02,
         "entryType": "measure"
       },
       {
-        "startTime": 42340952.6,
+        "startTime": 43418790.34,
         "name": "lh:runner:audit",
-        "duration": 1516.25,
+        "duration": 959.59,
         "entryType": "measure"
       },
       {
-        "startTime": 42340953.06,
+        "startTime": 43418790.37,
         "name": "lh:runner:auditing",
-        "duration": 1513.04,
+        "duration": 959.3,
         "entryType": "measure"
       },
       {
-        "startTime": 42340959.96,
+        "startTime": 43418792.46,
         "name": "lh:audit:image-aspect-ratio",
-        "duration": 7.86,
+        "duration": 4.45,
         "entryType": "measure"
       },
       {
-        "startTime": 42340968.81,
+        "startTime": 43418797.6,
         "name": "lh:audit:image-size-responsive",
-        "duration": 6.28,
+        "duration": 1.9,
         "entryType": "measure"
       },
       {
-        "startTime": 42340976.05,
+        "startTime": 43418800,
         "name": "lh:audit:accesskeys",
-        "duration": 4.27,
+        "duration": 1.43,
         "entryType": "measure"
       },
       {
-        "startTime": 42340980.88,
+        "startTime": 43418801.87,
         "name": "lh:audit:aria-allowed-attr",
-        "duration": 15.22,
+        "duration": 9.97,
         "entryType": "measure"
       },
       {
-        "startTime": 42340996.76,
+        "startTime": 43418812.48,
         "name": "lh:audit:aria-allowed-role",
-        "duration": 13.48,
+        "duration": 10.49,
         "entryType": "measure"
       },
       {
-        "startTime": 42341011.58,
+        "startTime": 43418823.87,
         "name": "lh:audit:aria-command-name",
+        "duration": 10.47,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418834.81,
+        "name": "lh:audit:aria-conditional-attr",
+        "duration": 12.15,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418847.51,
+        "name": "lh:audit:aria-deprecated-role",
+        "duration": 14.08,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418862.67,
+        "name": "lh:audit:aria-dialog-name",
+        "duration": 1.95,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418865.17,
+        "name": "lh:audit:aria-hidden-body",
         "duration": 13.19,
         "entryType": "measure"
       },
       {
-        "startTime": 42341025.81,
-        "name": "lh:audit:aria-conditional-attr",
-        "duration": 14.33,
+        "startTime": 43418879.19,
+        "name": "lh:audit:aria-hidden-focus",
+        "duration": 11.58,
         "entryType": "measure"
       },
       {
-        "startTime": 42341040.73,
-        "name": "lh:audit:aria-deprecated-role",
-        "duration": 8.49,
+        "startTime": 43418891.56,
+        "name": "lh:audit:aria-input-field-name",
+        "duration": 2.86,
         "entryType": "measure"
       },
       {
-        "startTime": 42341049.75,
-        "name": "lh:audit:aria-dialog-name",
-        "duration": 2.84,
+        "startTime": 43418894.92,
+        "name": "lh:audit:aria-meter-name",
+        "duration": 3.01,
         "entryType": "measure"
       },
       {
-        "startTime": 42341053.33,
-        "name": "lh:audit:aria-hidden-body",
+        "startTime": 43418898.54,
+        "name": "lh:audit:aria-progressbar-name",
+        "duration": 2.33,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418901.34,
+        "name": "lh:audit:aria-prohibited-attr",
+        "duration": 12.08,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418914.13,
+        "name": "lh:audit:aria-required-attr",
+        "duration": 12.04,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418926.74,
+        "name": "lh:audit:aria-required-children",
+        "duration": 2.83,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418930.08,
+        "name": "lh:audit:aria-required-parent",
+        "duration": 2.49,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418933.05,
+        "name": "lh:audit:aria-roles",
+        "duration": 11.23,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418945.46,
+        "name": "lh:audit:aria-text",
+        "duration": 3.46,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418949.52,
+        "name": "lh:audit:aria-toggle-field-name",
+        "duration": 7.17,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418957.82,
+        "name": "lh:audit:aria-tooltip-name",
+        "duration": 5.94,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418964.89,
+        "name": "lh:audit:aria-treeitem-name",
+        "duration": 3.83,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418970.94,
+        "name": "lh:audit:aria-valid-attr-value",
+        "duration": 21.61,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43418994.04,
+        "name": "lh:audit:aria-valid-attr",
+        "duration": 23.05,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419017.69,
+        "name": "lh:audit:button-name",
+        "duration": 23.83,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419042.61,
+        "name": "lh:audit:bypass",
+        "duration": 15.5,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419059.63,
+        "name": "lh:audit:color-contrast",
+        "duration": 15.33,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419076.16,
+        "name": "lh:audit:definition-list",
+        "duration": 6.61,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419083.72,
+        "name": "lh:audit:dlitem",
+        "duration": 7.26,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419091.72,
+        "name": "lh:audit:document-title",
+        "duration": 9.04,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419101.31,
+        "name": "lh:audit:duplicate-id-aria",
+        "duration": 14.25,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419116.56,
+        "name": "lh:audit:empty-heading",
+        "duration": 17.64,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419135.41,
+        "name": "lh:audit:form-field-multiple-labels",
+        "duration": 19.04,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419155.57,
+        "name": "lh:audit:frame-title",
+        "duration": 7.39,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419163.57,
+        "name": "lh:audit:heading-order",
+        "duration": 15.62,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419180.34,
+        "name": "lh:audit:html-has-lang",
+        "duration": 19.48,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419200.52,
+        "name": "lh:audit:html-lang-valid",
+        "duration": 10.88,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419211.96,
+        "name": "lh:audit:html-xml-lang-mismatch",
+        "duration": 4.41,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419217.02,
+        "name": "lh:audit:identical-links-same-purpose",
+        "duration": 76.06,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419294.2,
+        "name": "lh:audit:image-alt",
+        "duration": 29.39,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419325.87,
+        "name": "lh:audit:image-redundant-alt",
+        "duration": 32.91,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419359.99,
+        "name": "lh:audit:input-button-name",
+        "duration": 11.78,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419373.12,
+        "name": "lh:audit:input-image-alt",
+        "duration": 36.62,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419412.56,
+        "name": "lh:audit:label-content-name-mismatch",
+        "duration": 30.02,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419443.67,
+        "name": "lh:audit:label",
+        "duration": 17.34,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419461.9,
+        "name": "lh:audit:landmark-one-main",
+        "duration": 15.65,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419478.74,
+        "name": "lh:audit:link-name",
+        "duration": 20.65,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419501.07,
+        "name": "lh:audit:link-in-text-block",
+        "duration": 23.41,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419525.69,
+        "name": "lh:audit:list",
+        "duration": 7.36,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419533.74,
+        "name": "lh:audit:listitem",
+        "duration": 9.71,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419544.24,
+        "name": "lh:audit:meta-refresh",
+        "duration": 6.35,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419551.2,
+        "name": "lh:audit:meta-viewport",
         "duration": 14.37,
         "entryType": "measure"
       },
       {
-        "startTime": 42341068.82,
-        "name": "lh:audit:aria-hidden-focus",
-        "duration": 13.12,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341082.56,
-        "name": "lh:audit:aria-input-field-name",
-        "duration": 2.69,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341085.81,
-        "name": "lh:audit:aria-meter-name",
-        "duration": 5.4,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341092.2,
-        "name": "lh:audit:aria-progressbar-name",
-        "duration": 3.09,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341096.1,
-        "name": "lh:audit:aria-prohibited-attr",
-        "duration": 13.85,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341110.74,
-        "name": "lh:audit:aria-required-attr",
-        "duration": 13.7,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341125.28,
-        "name": "lh:audit:aria-required-children",
-        "duration": 3.77,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341129.91,
-        "name": "lh:audit:aria-required-parent",
-        "duration": 5.1,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341136.24,
-        "name": "lh:audit:aria-roles",
-        "duration": 13.35,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341150.55,
-        "name": "lh:audit:aria-text",
-        "duration": 4.16,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341156.21,
-        "name": "lh:audit:aria-toggle-field-name",
-        "duration": 4.35,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341161.16,
-        "name": "lh:audit:aria-tooltip-name",
-        "duration": 4.47,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341166.41,
-        "name": "lh:audit:aria-treeitem-name",
-        "duration": 9.13,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341176.5,
-        "name": "lh:audit:aria-valid-attr-value",
-        "duration": 10.26,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341188.85,
-        "name": "lh:audit:aria-valid-attr",
-        "duration": 13.09,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341202.86,
-        "name": "lh:audit:button-name",
-        "duration": 25.75,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341229.84,
-        "name": "lh:audit:bypass",
-        "duration": 18.68,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341249.28,
-        "name": "lh:audit:color-contrast",
-        "duration": 26.23,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341277.6,
-        "name": "lh:audit:definition-list",
-        "duration": 9.45,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341290.95,
-        "name": "lh:audit:dlitem",
-        "duration": 9.14,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341301.17,
-        "name": "lh:audit:document-title",
-        "duration": 22.61,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341324.7,
-        "name": "lh:audit:duplicate-id-aria",
-        "duration": 69.73,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341396.52,
-        "name": "lh:audit:empty-heading",
-        "duration": 60.41,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341460.21,
-        "name": "lh:audit:form-field-multiple-labels",
-        "duration": 61.82,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341523.98,
-        "name": "lh:audit:frame-title",
-        "duration": 19.59,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341545.16,
-        "name": "lh:audit:heading-order",
-        "duration": 48.6,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341595.92,
-        "name": "lh:audit:html-has-lang",
-        "duration": 32.77,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341629.76,
-        "name": "lh:audit:html-lang-valid",
-        "duration": 37.63,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341672.34,
-        "name": "lh:audit:html-xml-lang-mismatch",
-        "duration": 37.42,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341712.31,
-        "name": "lh:audit:identical-links-same-purpose",
-        "duration": 81.14,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341798.04,
-        "name": "lh:audit:image-alt",
-        "duration": 46.66,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341847.81,
-        "name": "lh:audit:image-redundant-alt",
-        "duration": 37.05,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341887.85,
-        "name": "lh:audit:input-button-name",
-        "duration": 13.31,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341902.05,
-        "name": "lh:audit:input-image-alt",
-        "duration": 10.5,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341913.18,
-        "name": "lh:audit:label-content-name-mismatch",
-        "duration": 14.39,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341928.66,
-        "name": "lh:audit:label",
-        "duration": 17.88,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341947.23,
-        "name": "lh:audit:landmark-one-main",
-        "duration": 15.83,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341963.98,
-        "name": "lh:audit:link-name",
-        "duration": 16.13,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341981.17,
-        "name": "lh:audit:link-in-text-block",
-        "duration": 10.12,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42341992.47,
-        "name": "lh:audit:list",
-        "duration": 61.58,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42342056.73,
-        "name": "lh:audit:listitem",
-        "duration": 11.85,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42342069.51,
-        "name": "lh:audit:meta-refresh",
-        "duration": 12.86,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42342083.96,
-        "name": "lh:audit:meta-viewport",
-        "duration": 22.57,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42342107.16,
+        "startTime": 43419566.51,
         "name": "lh:audit:object-alt",
-        "duration": 5.81,
+        "duration": 10.97,
         "entryType": "measure"
       },
       {
-        "startTime": 42342113.55,
+        "startTime": 43419578.37,
         "name": "lh:audit:select-name",
-        "duration": 5.7,
+        "duration": 5.91,
         "entryType": "measure"
       },
       {
-        "startTime": 42342122.46,
+        "startTime": 43419584.79,
         "name": "lh:audit:skip-link",
-        "duration": 8.92,
+        "duration": 45.81,
         "entryType": "measure"
       },
       {
-        "startTime": 42342131.9,
+        "startTime": 43419631.14,
         "name": "lh:audit:tabindex",
-        "duration": 16.38,
+        "duration": 13.15,
         "entryType": "measure"
       },
       {
-        "startTime": 42342149.31,
+        "startTime": 43419644.85,
         "name": "lh:audit:table-duplicate-name",
-        "duration": 14.5,
+        "duration": 5.42,
         "entryType": "measure"
       },
       {
-        "startTime": 42342164.52,
+        "startTime": 43419650.82,
         "name": "lh:audit:table-fake-caption",
-        "duration": 23.74,
+        "duration": 7.94,
         "entryType": "measure"
       },
       {
-        "startTime": 42342192.45,
+        "startTime": 43419659.29,
         "name": "lh:audit:target-size",
-        "duration": 39.35,
+        "duration": 7.48,
         "entryType": "measure"
       },
       {
-        "startTime": 42342233.46,
+        "startTime": 43419667.26,
         "name": "lh:audit:td-has-header",
-        "duration": 23.68,
+        "duration": 7.48,
         "entryType": "measure"
       },
       {
-        "startTime": 42342259.36,
+        "startTime": 43419675.28,
         "name": "lh:audit:td-headers-attr",
-        "duration": 23.73,
+        "duration": 5.63,
         "entryType": "measure"
       },
       {
-        "startTime": 42342284.48,
+        "startTime": 43419681.37,
         "name": "lh:audit:th-has-data-cells",
-        "duration": 15.7,
+        "duration": 7.21,
         "entryType": "measure"
       },
       {
-        "startTime": 42342300.92,
+        "startTime": 43419689.21,
         "name": "lh:audit:valid-lang",
-        "duration": 12.7,
+        "duration": 7.08,
         "entryType": "measure"
       },
       {
-        "startTime": 42342314.44,
+        "startTime": 43419696.78,
         "name": "lh:audit:video-caption",
-        "duration": 25.84,
+        "duration": 8.18,
         "entryType": "measure"
       },
       {
-        "startTime": 42342340.78,
+        "startTime": 43419705.05,
         "name": "lh:audit:custom-controls-labels",
-        "duration": 0.74,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42342341.64,
-        "name": "lh:audit:custom-controls-roles",
-        "duration": 0.08,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42342341.81,
-        "name": "lh:audit:focus-traps",
-        "duration": 0.07,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42342341.96,
-        "name": "lh:audit:focusable-controls",
-        "duration": 0.05,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42342342.09,
-        "name": "lh:audit:interactive-element-affordance",
-        "duration": 0.06,
-        "entryType": "measure"
-      },
-      {
-        "startTime": 42342342.22,
-        "name": "lh:audit:logical-tab-order",
         "duration": 0.04,
         "entryType": "measure"
       },
       {
-        "startTime": 42342342.35,
+        "startTime": 43419705.11,
+        "name": "lh:audit:custom-controls-roles",
+        "duration": 0.01,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419705.14,
+        "name": "lh:audit:focus-traps",
+        "duration": 0.01,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419705.17,
+        "name": "lh:audit:focusable-controls",
+        "duration": 0.01,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419705.2,
+        "name": "lh:audit:interactive-element-affordance",
+        "duration": 0.01,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419705.23,
+        "name": "lh:audit:logical-tab-order",
+        "duration": 0.01,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 43419705.26,
         "name": "lh:audit:managed-focus",
-        "duration": 0.06,
+        "duration": 0.01,
         "entryType": "measure"
       },
       {
-        "startTime": 42342342.65,
+        "startTime": 43419705.29,
         "name": "lh:audit:offscreen-content-hidden",
-        "duration": 0.22,
+        "duration": 0.02,
         "entryType": "measure"
       },
       {
-        "startTime": 42342343.22,
+        "startTime": 43419705.4,
         "name": "lh:audit:use-landmarks",
-        "duration": 0.39,
+        "duration": 0.02,
         "entryType": "measure"
       },
       {
-        "startTime": 42342343.73,
+        "startTime": 43419705.46,
         "name": "lh:audit:visual-order-follows-dom",
-        "duration": 0.07,
+        "duration": 0.02,
         "entryType": "measure"
       },
       {
-        "startTime": 42342345.51,
+        "startTime": 43419706.09,
         "name": "lh:audit:autocomplete-valid",
-        "duration": 12.76,
+        "duration": 3.72,
         "entryType": "measure"
       },
       {
-        "startTime": 42342359.68,
+        "startTime": 43419710.51,
         "name": "lh:audit:presentation-role-conflict",
-        "duration": 9.6,
+        "duration": 6.33,
         "entryType": "measure"
       },
       {
-        "startTime": 42342372.23,
+        "startTime": 43419717.38,
         "name": "lh:audit:svg-img-alt",
-        "duration": 9.33,
+        "duration": 8.54,
         "entryType": "measure"
       },
       {
-        "startTime": 42342382.27,
+        "startTime": 43419726.41,
         "name": "lh:audit:doctype",
-        "duration": 3.47,
+        "duration": 1.58,
         "entryType": "measure"
       },
       {
-        "startTime": 42342387.75,
+        "startTime": 43419728.33,
         "name": "lh:audit:js-libraries",
-        "duration": 3.22,
+        "duration": 1.09,
         "entryType": "measure"
       },
       {
-        "startTime": 42342392.09,
+        "startTime": 43419729.85,
         "name": "lh:audit:paste-preventing-inputs",
-        "duration": 3.37,
+        "duration": 1.33,
         "entryType": "measure"
       },
       {
-        "startTime": 42342396.42,
+        "startTime": 43419731.58,
         "name": "lh:audit:meta-description",
-        "duration": 2.97,
+        "duration": 1.28,
         "entryType": "measure"
       },
       {
-        "startTime": 42342400.46,
+        "startTime": 43419733.27,
         "name": "lh:audit:link-text",
-        "duration": 9.23,
+        "duration": 4,
         "entryType": "measure"
       },
       {
-        "startTime": 42342410.72,
+        "startTime": 43419737.78,
         "name": "lh:audit:crawlable-anchors",
-        "duration": 7.62,
+        "duration": 2.51,
         "entryType": "measure"
       },
       {
-        "startTime": 42342429.07,
+        "startTime": 43419741.53,
         "name": "lh:audit:robots-txt",
-        "duration": 13.9,
+        "duration": 2.76,
         "entryType": "measure"
       },
       {
-        "startTime": 42342444.98,
+        "startTime": 43419744.63,
         "name": "lh:audit:structured-data",
-        "duration": 2.54,
+        "duration": 0.85,
         "entryType": "measure"
       },
       {
-        "startTime": 42342448.96,
+        "startTime": 43419745.92,
         "name": "lh:audit:agent-accessibility-tree",
-        "duration": 10.53,
+        "duration": 1.47,
         "entryType": "measure"
       },
       {
-        "startTime": 42342461.33,
+        "startTime": 43419747.85,
         "name": "lh:audit:llms-txt",
-        "duration": 4.53,
+        "duration": 1.77,
         "entryType": "measure"
       },
       {
-        "startTime": 42342466.18,
+        "startTime": 43419749.7,
         "name": "lh:runner:generate",
-        "duration": 2.56,
+        "duration": 0.21,
         "entryType": "measure"
       }
     ],
-    "total": 13780.46
+    "total": 12802.36
   },
   "i18n": {
     "rendererFormattedStrings": {},

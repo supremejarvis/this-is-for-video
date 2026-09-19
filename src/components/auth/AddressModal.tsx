@@ -294,9 +294,11 @@ export const AddressModal: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name / Business Entity *</label>
+                  <label htmlFor="addr-fullname" className="block text-xs font-semibold text-slate-300 mb-1">Full Name / Business Entity *</label>
                   <input
                     type="text"
+                    id="addr-fullname"
+                    name="fullName"
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
@@ -306,9 +308,11 @@ export const AddressModal: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Contact Phone (APE Dispatch SMS) *</label>
+                  <label htmlFor="addr-phone" className="block text-xs font-semibold text-slate-300 mb-1">Contact Phone (APE Dispatch SMS) *</label>
                   <input
                     type="text"
+                    id="addr-phone"
+                    name="phone"
                     required
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
@@ -342,9 +346,11 @@ export const AddressModal: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Flat, House No., Building, Company Complex *</label>
+                <label htmlFor="addr-flatbuilding" className="block text-xs font-semibold text-slate-300 mb-1">Flat, House No., Building, Company Complex *</label>
                 <input
                   type="text"
+                  id="addr-flatbuilding"
+                  name="flatBuilding"
                   required
                   value={flatBuilding}
                   onChange={(e) => setFlatBuilding(e.target.value)}
@@ -354,9 +360,11 @@ export const AddressModal: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Street, Road, Area, Landmark *</label>
+                <label htmlFor="addr-streetarea" className="block text-xs font-semibold text-slate-300 mb-1">Street, Road, Area, Landmark *</label>
                 <input
                   type="text"
+                  id="addr-streetarea"
+                  name="streetArea"
                   required
                   value={streetArea}
                   onChange={(e) => setStreetArea(e.target.value)}
@@ -379,9 +387,11 @@ export const AddressModal: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">6-Digit Destination Pincode *</label>
+                    <label htmlFor="addr-pincode" className="block text-xs font-semibold text-slate-300 mb-1">6-Digit Destination Pincode *</label>
                     <input
                       type="text"
+                      id="addr-pincode"
+                      name="pincode"
                       maxLength={6}
                       required
                       value={pincode}
@@ -392,10 +402,12 @@ export const AddressModal: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    <label htmlFor="addr-postoffice" className="block text-xs font-semibold text-slate-300 mb-1">
                       Select Delivery Hub ({availablePostOffices.length} Found) *
                     </label>
                     <select
+                      id="addr-postoffice"
+                      name="facilityId"
                       value={selectedPostOffice?.facilityId || ''}
                       onChange={(e) => {
                         const found = availablePostOffices.find((po) => po.facilityId === e.target.value);

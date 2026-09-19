@@ -14,8 +14,10 @@ import { DeliveryAddress, PostOfficeInfo, Order } from '../../types';
 import { lookupPincode } from '../../services/logisticsService';
 import { ORIGIN_HUB_PINCODE } from '../../constants';
 import { GstInvoice } from '../logistics/GstInvoice';
+import { useNavigate } from '../../lib/navigation';
 
 export const CustomerAccountPage: React.FC = () => {
+  const navigate = useNavigate();
   const { 
     currentUser, updateUserProfile, currentOrg, updateOrgDetails,
     activeAddress, billingAddress, setBillingAddress, 
@@ -334,7 +336,7 @@ export const CustomerAccountPage: React.FC = () => {
           <button
             onClick={() => {
               setActiveTab('store');
-              window.history.pushState({}, '', '/store');
+              navigate('/store');
             }}
             className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 shadow-sm text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-all"
           >
@@ -464,7 +466,7 @@ export const CustomerAccountPage: React.FC = () => {
             onClick={() => {
               logout();
               setActiveTab('store');
-              window.history.pushState({}, '', '/store');
+              navigate('/store');
             }}
             className="px-3.5 py-2 rounded-xl text-xs md:text-sm font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-all flex items-center gap-1.5 whitespace-nowrap border border-rose-200/60 shadow-sm"
           >
@@ -1239,7 +1241,7 @@ export const CustomerAccountPage: React.FC = () => {
                     <button
                       onClick={() => {
                         setActiveTab('store');
-                        window.history.pushState({}, '', '/store');
+                        navigate('/store');
                       }}
                       className="px-3.5 py-1.5 rounded-xl bg-[#0054A6] hover:bg-[#003d7a] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
                     >
@@ -1287,7 +1289,7 @@ export const CustomerAccountPage: React.FC = () => {
                     <button
                       onClick={() => {
                         setActiveTab('store');
-                        window.history.pushState({}, '', '/store');
+                        navigate('/store');
                       }}
                       className="px-4 py-2 bg-[#0054A6] text-white font-bold text-xs rounded-xl shadow-sm hover:bg-[#003d7a]"
                     >

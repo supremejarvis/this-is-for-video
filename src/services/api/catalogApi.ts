@@ -16,7 +16,7 @@ export class CatalogApi {
    * Fetches active buyer catalog products and variants from PostgreSQL
    */
   public async getProducts(includeArchived: boolean = false): Promise<ApiProduct[]> {
-    return apiClient.get<ApiProduct[]>(`/products/?include_archived=${includeArchived}`);
+    return apiClient.get<ApiProduct[]>(`/products?include_archived=${includeArchived}`);
   }
 
   /**

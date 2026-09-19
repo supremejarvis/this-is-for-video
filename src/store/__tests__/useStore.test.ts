@@ -361,5 +361,217 @@ describe('Zustand State Store Actions & Order Workflow', () => {
     const apiActive = useStore.getState().apiCatalogProducts.find(p => p.id === target.asin || p.rawProduct?.asin === target.asin);
     expect(apiActive?.is_active).toBe(true);
   });
+
+  describe('B2B Dynamic Multi-Tier Pricing & Cross-Size Family Pooling', () => {
+    it('in B2C mode, retail customer pays B2C price regardless of quantity', () => {
+      useStore.getState().setAppMode('B2C');
+      const prod = useStore.getState().products.find(p => p.asin === 'AP-DRAINCLIPS-02')!;
+      const v28 = prod.variants.find(v => v.sku.includes('28'))!;
+
+      const item: CartItem = {
+        sku: v28.sku,
+        parentAsin: prod.asin,
+        productTitle: prod.title,
+        variantTitle: v28.title,
+        attributes: { size: '28mm' },
+        imageUrl: v28.images?.[0] ?? '/Drain_clips.webp',
+        unitPrice: v28.b2cPrice,
+        b2cPrice: v28.b2cPrice,
+        mrp: v28.mrp,
+        gstRate: 18,
+        hsnCode: '73269099',
+        sellerId: 'apollo_factory',
+        sellerName: 'Apollo Engineering Hub',
+        fulfillmentType: 'FBF',
+        weightGrams: v28.weightGrams,
+        quantity: 1500,
+        isB2BPricingApplied: false,
+      };
+
+      useStore.getState().addToCart(item, 1500);
+      const cart = useStore.getState().cart;
+      expect(cart[0].unitPrice).toBe(20);
+      expect(cart[0].isB2BPricingApplied).toBe(false);
+    });
+
+    it('in B2B mode, single variant under 1000 pcs pays base B2B price (₹17)', () => {
+      useStore.getState().setAppMode('B2B');
+      const prod = useStore.getState().products.find(p => p.asin === 'AP-DRAINCLIPS-02')!;
+      const v28 = prod.variants.find(v => v.sku.includes('28'))!;
+
+      const item: CartItem = {
+        sku: v28.sku,
+        parentAsin: prod.asin,
+        productTitle: prod.title,
+        variantTitle: v28.title,
+        attributes: { size: '28mm' },
+        imageUrl: v28.images?.[0] ?? '/Drain_clips.webp',
+        unitPrice: 17,
+        b2cPrice: v28.b2cPrice,
+        mrp: v28.mrp,
+        gstRate: 18,
+        hsnCode: '73269099',
+        sellerId: 'apollo_factory',
+        sellerName: 'Apollo Engineering Hub',
+        fulfillmentType: 'FBF',
+        weightGrams: v28.weightGrams,
+        quantity: 500,
+        isB2BPricingApplied: true,
+      };
+
+      useStore.getState().addToCart(item, 500);
+      const cart = useStore.getState().cart;
+      expect(cart[0].unitPrice).toBe(17);
+      expect(cart[0].isB2BPricingApplied).toBe(true);
+    });
+
+    it('in B2B mode, buying 500 pcs of 28mm + 500 pcs of 35mm pools to 1000 pcs and gives ₹15 to both', () => {
+      useStore.getState().setAppMode('B2B');
+      const prod = useStore.getState().products.find(p => p.asin === 'AP-DRAINCLIPS-02')!;
+      const v28 = prod.variants.find(v => v.sku.includes('28'))!;
+      const v35 = prod.variants.find(v => v.sku.includes('35'))!;
+
+      const item28: CartItem = {
+        sku: v28.sku,
+        parentAsin: prod.asin,
+        productTitle: prod.title,
+        variantTitle: v28.title,
+        attributes: { size: '28mm' },
+        imageUrl: v28.images?.[0] ?? '/Drain_clips.webp',
+        unitPrice: 17,
+        b2cPrice: v28.b2cPrice,
+        mrp: v28.mrp,
+        gstRate: 18,
+        hsnCode: '73269099',
+        sellerId: 'apollo_factory',
+        sellerName: 'Apollo Engineering Hub',
+        fulfillmentType: 'FBF',
+        weightGrams: v28.weightGrams,
+        quantity: 500,
+        isB2BPricingApplied: true,
+      };
+
+      const item35: CartItem = {
+        sku: v35.sku,
+        parentAsin: prod.asin,
+        productTitle: prod.title,
+        variantTitle: v35.title,
+        attributes: { size: '35mm' },
+        imageUrl: v28.images?.[0] ?? '/Drain_clips.webp',
+        unitPrice: 17,
+        b2cPrice: v35.b2cPrice,
+        mrp: v35.mrp,
+        gstRate: 18,
+        hsnCode: '73269099',
+        sellerId: 'apollo_factory',
+        sellerName: 'Apollo Engineering Hub',
+        fulfillmentType: 'FBF',
+        weightGrams: v35.weightGrams,
+        quantity: 500,
+        isB2BPricingApplied: true,
+      };
+
+      useStore.getState().addToCart(item28, 500);
+      useStore.getState().addToCart(item35, 500);
+
+      const cart = useStore.getState().cart;
+      expect(cart.length).toBe(2);
+      expect(cart.find(i => i.sku === v28.sku)?.unitPrice).toBe(15);
+      expect(cart.find(i => i.sku === v35.sku)?.unitPrice).toBe(15);
+    });
+
+    it('in B2B mode, buying 1500 pcs of 28mm + 1000 pcs of 35mm pools to 2500 pcs and gives ₹10 to both', () => {
+      useStore.getState().setAppMode('B2B');
+      const prod = useStore.getState().products.find(p => p.asin === 'AP-DRAINCLIPS-02')!;
+      const v28 = prod.variants.find(v => v.sku.includes('28'))!;
+      const v35 = prod.variants.find(v => v.sku.includes('35'))!;
+
+      const item28: CartItem = {
+        sku: v28.sku,
+        parentAsin: prod.asin,
+        productTitle: prod.title,
+        variantTitle: v28.title,
+        attributes: { size: '28mm' },
+        imageUrl: v28.images?.[0] ?? '/Drain_clips.webp',
+        unitPrice: 17,
+        b2cPrice: v28.b2cPrice,
+        mrp: v28.mrp,
+        gstRate: 18,
+        hsnCode: '73269099',
+        sellerId: 'apollo_factory',
+        sellerName: 'Apollo Engineering Hub',
+        fulfillmentType: 'FBF',
+        weightGrams: v28.weightGrams,
+        quantity: 1500,
+        isB2BPricingApplied: true,
+      };
+
+      const item35: CartItem = {
+        sku: v35.sku,
+        parentAsin: prod.asin,
+        productTitle: prod.title,
+        variantTitle: v35.title,
+        attributes: { size: '35mm' },
+        imageUrl: v28.images?.[0] ?? '/Drain_clips.webp',
+        unitPrice: 17,
+        b2cPrice: v35.b2cPrice,
+        mrp: v35.mrp,
+        gstRate: 18,
+        hsnCode: '73269099',
+        sellerId: 'apollo_factory',
+        sellerName: 'Apollo Engineering Hub',
+        fulfillmentType: 'FBF',
+        weightGrams: v35.weightGrams,
+        quantity: 1000,
+        isB2BPricingApplied: true,
+      };
+
+      useStore.getState().addToCart(item28, 1500);
+      useStore.getState().addToCart(item35, 1000);
+
+      const cart = useStore.getState().cart;
+      expect(cart.find(i => i.sku === v28.sku)?.unitPrice).toBe(10);
+      expect(cart.find(i => i.sku === v35.sku)?.unitPrice).toBe(10);
+    });
+
+    it('switching from B2B to B2C recalculates cart items to B2C price, and vice versa', () => {
+      useStore.getState().setAppMode('B2B');
+      const prod = useStore.getState().products.find(p => p.asin === 'AP-DRAINCLIPS-02')!;
+      const v28 = prod.variants.find(v => v.sku.includes('28'))!;
+
+      const item28: CartItem = {
+        sku: v28.sku,
+        parentAsin: prod.asin,
+        productTitle: prod.title,
+        variantTitle: v28.title,
+        attributes: { size: '28mm' },
+        imageUrl: v28.images?.[0] ?? '/Drain_clips.webp',
+        unitPrice: 17,
+        b2cPrice: v28.b2cPrice,
+        mrp: v28.mrp,
+        gstRate: 18,
+        hsnCode: '73269099',
+        sellerId: 'apollo_factory',
+        sellerName: 'Apollo Engineering Hub',
+        fulfillmentType: 'FBF',
+        weightGrams: v28.weightGrams,
+        quantity: 1000,
+        isB2BPricingApplied: true,
+      };
+
+      useStore.getState().addToCart(item28, 1000);
+      expect(useStore.getState().cart[0].unitPrice).toBe(15);
+
+      // Switch to B2C
+      useStore.getState().setAppMode('B2C');
+      expect(useStore.getState().cart[0].unitPrice).toBe(20);
+      expect(useStore.getState().cart[0].isB2BPricingApplied).toBe(false);
+
+      // Switch back to B2B
+      useStore.getState().setAppMode('B2B');
+      expect(useStore.getState().cart[0].unitPrice).toBe(15);
+      expect(useStore.getState().cart[0].isB2BPricingApplied).toBe(true);
+    });
+  });
 });
 

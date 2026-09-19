@@ -75,7 +75,16 @@ def default_clock() -> datetime:
 
 class QuoteService:
     @staticmethod
-    def _build_price_version_stmt(filter_clause, min_quantity: int):
+    def _build_price_version_stmt(filter_clause, min_quantity: int, channel: str | None = None):
+        conditions = [
+            filter_clause,
+            ProductVariant.is_active.is_(True),
+            Product.is_active.is_(True),
+            PriceVersion.valid_to.is_(None),  # current price version
+            PriceVersion.min_quantity <= min_quantity,
+        ]
+        if channel:
+            conditions.append(PriceVersion.channel == channel)
         return (
             select(ProductVariant, PriceVersion, Product)
             .join(Product, ProductVariant.product_id == Product.id)
@@ -84,13 +93,7 @@ class QuoteService:
                 (PriceVersion.variant_id == ProductVariant.id)
                 | ((PriceVersion.product_id == Product.id) & (PriceVersion.variant_id.is_(None))),
             )
-            .where(
-                filter_clause,
-                ProductVariant.is_active.is_(True),
-                Product.is_active.is_(True),
-                PriceVersion.valid_to.is_(None),  # current price version
-                PriceVersion.min_quantity <= min_quantity,
-            )
+            .where(*conditions)
             .order_by(PriceVersion.min_quantity.desc(), PriceVersion.valid_from.desc())
         )
     """Service to create, store, validate, and convert quotes to orders."""
@@ -126,9 +129,11 @@ class QuoteService:
             s = sku_val.upper()
             return s.startswith("APE-SC") or "CLIP" in s or "DRAIN" in s
 
-        # Pre-pass: Resolve variants and compute aggregate family quantities (e.g. Drain Clips across all sizes)
-        resolved_items_info: list[tuple[Any, ProductVariant | None, Product | None, bool]] = []
+        # Pre-pass: Resolve variants and compute aggregate family quantities (cross-size pooling per product)
+        resolved_items_info: list[tuple[Any, ProductVariant | None, Product | None]] = []
+        product_family_qty: dict[uuid.UUID, int] = {}
         total_drain_clip_qty = 0
+
         for item in request.items:
             filter_clause = (ProductVariant.id == item.variant_id) if item.variant_id is not None else (ProductVariant.sku == item.sku)
             stmt_v = select(ProductVariant, Product).join(Product, ProductVariant.product_id == Product.id).where(filter_clause)
@@ -147,21 +152,46 @@ class QuoteService:
                         break
             if res_v is not None:
                 v_obj, p_obj = res_v
-                is_drain = is_drain_clip_sku(v_obj.sku) or getattr(p_obj, "sku_prefix", "") == "APE-SC"
-                if is_drain:
+                product_family_qty[p_obj.id] = product_family_qty.get(p_obj.id, 0) + item.quantity
+                if is_drain_clip_sku(v_obj.sku) or getattr(p_obj, "sku_prefix", "") == "APE-SC":
                     total_drain_clip_qty += item.quantity
-                resolved_items_info.append((item, v_obj, p_obj, is_drain))
+                resolved_items_info.append((item, v_obj, p_obj))
             else:
-                resolved_items_info.append((item, None, None, False))
+                resolved_items_info.append((item, None, None))
 
-        for item, variant_obj, product_obj, is_drain in resolved_items_info:
+        is_b2b = (getattr(request, "channel", "B2C") or "B2C").upper() == "B2B"
+
+        for item, variant_obj, product_obj in resolved_items_info:
             if variant_obj is None or product_obj is None:
                 ident = str(item.variant_id) if item.variant_id else item.sku
                 raise InvalidSkuError(f"SKU/Variant '{ident}' is invalid, inactive, or has no active price version in catalog.")
 
-            effective_tier_qty = max(item.quantity, total_drain_clip_qty) if is_drain else item.quantity
-            stmt = QuoteService._build_price_version_stmt(ProductVariant.id == variant_obj.id, effective_tier_qty)
-            result = (await session.execute(stmt)).first()
+            result = None
+            if is_b2b:
+                # B2B: Pool across variants of the same product family ("koi pn size ma")
+                family_qty = product_family_qty.get(product_obj.id, item.quantity)
+                drain_extra = total_drain_clip_qty if is_drain_clip_sku(variant_obj.sku) else 0
+                effective_tier_qty = max(item.quantity, family_qty, drain_extra)
+                # 1. Try B2B price versions matching volume tier
+                stmt = QuoteService._build_price_version_stmt(ProductVariant.id == variant_obj.id, effective_tier_qty, channel="B2B")
+                result = (await session.execute(stmt)).first()
+                # 2. Fallback to B2C price version if no B2B price is configured
+                if result is None:
+                    stmt = QuoteService._build_price_version_stmt(ProductVariant.id == variant_obj.id, 1, channel="B2C")
+                    result = (await session.execute(stmt)).first()
+            else:
+                # B2C: Retail customers pay standard B2C price (no volume tiers apply)
+                stmt = QuoteService._build_price_version_stmt(ProductVariant.id == variant_obj.id, 1, channel="B2C")
+                result = (await session.execute(stmt)).first()
+                # Fallback to B2B base price if only B2B price exists
+                if result is None:
+                    stmt = QuoteService._build_price_version_stmt(ProductVariant.id == variant_obj.id, 1, channel="B2B")
+                    result = (await session.execute(stmt)).first()
+
+            # Final fallback to any channel if channel-specific wasn't found (e.g. legacy price versions)
+            if result is None:
+                stmt = QuoteService._build_price_version_stmt(ProductVariant.id == variant_obj.id, item.quantity, channel=None)
+                result = (await session.execute(stmt)).first()
 
             if result is None:
                 ident = str(item.variant_id) if item.variant_id else item.sku
@@ -362,14 +392,15 @@ class QuoteService:
                 .where(
                     ProductVariant.sku == item.sku,
                     PriceVersion.valid_to.is_(None),
-                    PriceVersion.min_quantity <= item.quantity,
                 )
                 .order_by(PriceVersion.min_quantity.desc(), PriceVersion.valid_from.desc())
             )
-            current_price_ver = (await session.execute(stmt_price)).scalars().first()
-            if current_price_ver is None or current_price_ver.unit_price != item.unit_price:
+            active_price_vers = (await session.execute(stmt_price)).scalars().all()
+            valid_prices = {pv.unit_price for pv in active_price_vers}
+            if not valid_prices or item.unit_price not in valid_prices:
+                current_price_str = f"₹{active_price_vers[0].unit_price}" if active_price_vers else "N/A"
                 raise PriceChangedError(
-                    f"Catalog price for SKU {item.sku} has changed from ₹{item.unit_price} to ₹{getattr(current_price_ver, 'unit_price', 'N/A')}. A new quote is required."
+                    f"Catalog price for SKU {item.sku} has changed from ₹{item.unit_price} to {current_price_str}. A new quote is required."
                 )
 
         # 3. Create Order

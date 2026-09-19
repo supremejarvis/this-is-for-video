@@ -2,6 +2,7 @@
 import re
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -111,6 +112,9 @@ class ProductVariantResponse(BaseModel):
     available_stock: int = 0
     unit_price: Decimal | None = None
     tax_mode: str | None = None
+    b2c_price: Decimal | None = None
+    b2b_price: Decimal | None = None
+    b2b_tier_pricing: list[dict[str, Any]] = Field(default_factory=list)
     created_at: datetime
 
 
@@ -125,13 +129,17 @@ class ProductCreate(BaseModel):
 
 
 class ProductUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
 
     name: str | None = Field(default=None, min_length=2, max_length=255)
     description: str | None = Field(default=None)
     hsn_code: str | None = Field(default=None, min_length=4, max_length=20)
     is_active: bool | None = Field(default=None)
     version: int | None = Field(default=None, ge=1, description="Expected entity version for optimistic concurrency control")
+    b2c_price: Decimal | None = None
+    b2b_price: Decimal | None = None
+    b2b_tier_pricing: list[dict[str, Any]] | None = None
+    inventory_stock: int | None = None
 
 
 class ProductResponse(BaseModel):

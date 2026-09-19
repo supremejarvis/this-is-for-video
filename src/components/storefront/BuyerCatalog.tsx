@@ -211,8 +211,26 @@ const seenNames = new Set<string>();
     // Check for B2B-specific tier pricing
     let finalUnitPrice = variantBasePrice;
     if (isB2B) {
-      if (variant.b2bTierPricing && variant.b2bTierPricing.length > 0) {
-        finalUnitPrice = variant.b2bTierPricing[0].pricePerUnit;
+      const isDrainItem = Boolean(
+        product.name.toLowerCase().includes('drain') ||
+        product.sku_prefix === 'APE-SC' ||
+        variant.sku.startsWith('APE-SC')
+      );
+      if (isDrainItem) {
+        if (quantityToAdd >= 2500) {
+          finalUnitPrice = 10;
+        } else if (quantityToAdd >= 1000) {
+          finalUnitPrice = 15;
+        } else {
+          finalUnitPrice = 17;
+        }
+      } else if (variant.b2bTierPricing && variant.b2bTierPricing.length > 0) {
+        const matchingTier = [...variant.b2bTierPricing]
+          .sort((a, b) => (b.minQty || b.min_quantity || 0) - (a.minQty || a.min_quantity || 0))
+          .find((t) => quantityToAdd >= (t.minQty || t.min_quantity || 0));
+        finalUnitPrice = matchingTier 
+          ? Number(matchingTier.pricePerUnit || matchingTier.unit_price) 
+          : Number(variant.b2bTierPricing[0].pricePerUnit || variant.b2bTierPricing[0].unit_price);
       } else if ((variant as any).b2bPrice) {
         finalUnitPrice = (variant as any).b2bPrice;
       } else {
@@ -551,64 +569,118 @@ const seenNames = new Set<string>();
                     </div>
                   </div>
 
-                  {/* Wholesale Quantity Selector & Quick Batch Chips */}
-                  <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800 font-mono flex items-center gap-1.5">
-                        <Layers className="w-3.5 h-3.5 text-[#0054A6]" />
-                        {effectiveIsB2B ? 'B2B Wholesale Quantity:' : 'Order Quantity:'}
-                      </span>
-                      <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-xl border border-slate-300 shadow-xs">
-                        <button
-                          type="button"
-                          aria-label="Decrease quantity"
-                          onClick={() => setProductQty(product.id, getSelectedQty(product.id) - (isB2B ? 5 : 1))}
-                          className="px-2 py-0.5 text-slate-600 hover:text-slate-900 font-bold active:scale-95"
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          min={1}
-                          id={`qty-input-${product.id}`}
-                          name={`quantity_${product.id}`}
-                          aria-label={`Quantity for ${product.name}`}
-                          value={getSelectedQty(product.id)}
-                          onChange={(e) => setProductQty(product.id, parseInt(e.target.value, 10) || 1)}
-                          className="w-12 text-center text-xs font-mono font-bold text-slate-900 focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          aria-label="Increase quantity"
-                          onClick={() => setProductQty(product.id, getSelectedQty(product.id) + (isB2B ? 5 : 1))}
-                          className="px-2 py-0.5 text-slate-600 hover:text-slate-900 font-bold active:scale-95"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
+                  {/* Smart Quantity Selector */}
+                  {(() => {
+                    const cardQty = getSelectedQty(product.id);
+                    let activeRate = retailUnitPrice;
+                    let activeTierBadge: { label: string; bg: string; text: string; border: string } | null = null;
+                    let nextTierHint: string | null = null;
 
-                    {/* Quick Preset Buttons (e.g. 20, 50, 100, 500, 1000 pcs) */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] text-slate-600 font-mono font-medium">Presets:</span>
-                      {(isDrain || effectiveIsB2B ? [20, 50, 100, 500, 1000] : [1, 5, 10, 20, 50]).map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setProductQty(product.id, preset)}
-                          className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
-                            getSelectedQty(product.id) === preset
-                              ? 'bg-[#0054A6] text-white shadow-xs'
-                              : preset >= 1000
-                              ? 'bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100'
-                              : 'bg-white border border-slate-200 text-slate-700 hover:border-blue-300'
-                          }`}
-                        >
-                          {preset} pcs {preset >= 1000 ? '(₹12.75)' : ''}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                    if (effectiveIsB2B) {
+                      if (isDrain) {
+                        if (cardQty >= 2500) {
+                          activeRate = 10;
+                          activeTierBadge = { label: '🔥 2,500+ Rate: ₹10/pc', bg: 'bg-emerald-50', text: 'text-emerald-800', border: 'border-emerald-300' };
+                        } else if (cardQty >= 1000) {
+                          activeRate = 15;
+                          activeTierBadge = { label: '⭐ 1,000+ Rate: ₹15/pc', bg: 'bg-blue-50', text: 'text-blue-800', border: 'border-blue-300' };
+                          nextTierHint = `Add ${(2500 - cardQty).toLocaleString('en-IN')} more pcs for ₹10/pc`;
+                        } else {
+                          activeRate = 17;
+                          activeTierBadge = { label: 'Standard B2B: ₹17/pc', bg: 'bg-slate-100', text: 'text-slate-800', border: 'border-slate-300' };
+                          nextTierHint = `Add ${(1000 - cardQty).toLocaleString('en-IN')} more pcs for ₹15/pc`;
+                        }
+                      } else if (displayVariant?.b2bTierPricing && displayVariant.b2bTierPricing.length > 0) {
+                        const matchingTier = [...displayVariant.b2bTierPricing]
+                          .sort((a, b) => (b.minQty || b.min_quantity || 0) - (a.minQty || a.min_quantity || 0))
+                          .find((t) => cardQty >= (t.minQty || t.min_quantity || 0));
+                        if (matchingTier) {
+                          activeRate = Number(matchingTier.pricePerUnit || matchingTier.unit_price);
+                          activeTierBadge = { label: `B2B Tier: ₹${activeRate}/pc`, bg: 'bg-blue-50', text: 'text-blue-800', border: 'border-blue-300' };
+                        } else {
+                          activeRate = b2bTierPrice;
+                        }
+                      } else {
+                        activeRate = b2bTierPrice;
+                      }
+                    } else {
+                      activeRate = retailUnitPrice;
+                    }
+
+                    const lineSubtotal = cardQty * activeRate;
+                    const step = effectiveIsB2B ? (cardQty >= 500 ? 100 : (cardQty >= 50 ? 50 : 10)) : 1;
+
+                    return (
+                      <div className="p-3 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-slate-800 font-mono flex items-center gap-1.5">
+                            <Layers className="w-3.5 h-3.5 text-[#0054A6]" />
+                            {effectiveIsB2B ? 'B2B Wholesale Quantity:' : 'Order Quantity:'}
+                          </span>
+                          
+                          {/* Smart Stepper */}
+                          <div className="flex items-center bg-white rounded-xl border border-slate-300 shadow-xs overflow-hidden focus-within:ring-2 focus-within:ring-[#0054A6]/20 focus-within:border-[#0054A6]">
+                            <button
+                              type="button"
+                              aria-label="Decrease quantity"
+                              onClick={() => setProductQty(product.id, Math.max(1, cardQty - step))}
+                              className="h-8 px-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-bold active:scale-95 transition-all cursor-pointer flex items-center justify-center text-sm select-none"
+                            >
+                              −
+                            </button>
+                            <input
+                              type="number"
+                              min={1}
+                              id={`qty-input-${product.id}`}
+                              name={`quantity_${product.id}`}
+                              aria-label={`Quantity for ${product.name}`}
+                              value={cardQty}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                setProductQty(product.id, isNaN(val) ? 1 : Math.max(1, val));
+                              }}
+                              className="w-16 h-8 text-center text-xs font-mono font-bold text-slate-900 focus:outline-none bg-transparent"
+                            />
+                            <button
+                              type="button"
+                              aria-label="Increase quantity"
+                              onClick={() => setProductQty(product.id, cardQty + step)}
+                              className="h-8 px-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-bold active:scale-95 transition-all cursor-pointer flex items-center justify-center text-sm select-none"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Live Smart Feedback Bar */}
+                        <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-200/60 flex-wrap gap-1">
+                          {effectiveIsB2B && activeTierBadge ? (
+                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border ${activeTierBadge.bg} ${activeTierBadge.text} ${activeTierBadge.border}`}>
+                              {activeTierBadge.label}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-mono text-slate-500">
+                              ₹{activeRate}/pc · Incl. 18% GST
+                            </span>
+                          )}
+
+                          <div className="text-right font-mono text-xs">
+                            <span className="text-slate-500 text-[10px] mr-1">Est. Total:</span>
+                            <strong className="text-slate-900 font-black">
+                              ₹{lineSubtotal.toLocaleString('en-IN')}
+                            </strong>
+                          </div>
+                        </div>
+
+                        {nextTierHint && (
+                          <div className="text-[10px] font-mono text-emerald-700 bg-emerald-50/70 border border-emerald-200 rounded-lg px-2 py-0.5 flex items-center justify-between">
+                            <span>💡 Wholesale Tip:</span>
+                            <strong>{nextTierHint}</strong>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Card Action / Add to Cart & View Details */}
@@ -744,25 +816,15 @@ const seenNames = new Set<string>();
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] text-slate-500 font-mono">Quick lots:</span>
-                  {(Boolean(sizeModalProduct.name.toLowerCase().includes('drain') || sizeModalProduct.sku_prefix === 'APE-SC') || isB2B ? [20, 50, 100, 500, 1000] : [1, 5, 10, 20, 50]).map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setModalQuantity(preset)}
-                      className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
-                        modalQuantity === preset
-                          ? 'bg-[#0054A6] text-white shadow-xs'
-                          : preset >= 1000
-                          ? 'bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100'
-                          : 'bg-white border border-slate-200 text-slate-700 hover:border-blue-300'
-                      }`}
-                    >
-                      {preset} pcs {preset >= 1000 ? '(₹12.75)' : ''}
-                    </button>
-                  ))}
-                </div>
+                {/* Live Modal Tier Status */}
+                {isB2B && Boolean(sizeModalProduct.name.toLowerCase().includes('drain') || sizeModalProduct.sku_prefix === 'APE-SC') && (
+                  <div className="flex items-center justify-between text-[11px] font-mono pt-1 border-t border-blue-200/80">
+                    <span className="text-slate-600">Active Rate:</span>
+                    <strong className="text-[#0054A6] bg-white px-2 py-0.5 rounded border border-blue-200">
+                      {modalQuantity >= 2500 ? '🔥 ₹10/pc (2,500+ Bulk)' : modalQuantity >= 1000 ? '⭐ ₹15/pc (1,000+ Bulk)' : '₹17/pc (Standard B2B)'}
+                    </strong>
+                  </div>
+                )}
               </div>
 
               {/* 5 Sizes List */}
@@ -784,7 +846,9 @@ const seenNames = new Set<string>();
                       : '330W Poly / Mono';
 
                     const isDrainVariant = Boolean(sizeModalProduct.name.toLowerCase().includes('drain') || sizeModalProduct.sku_prefix === 'APE-SC' || v.sku.startsWith('APE-SC'));
-                    const displayPrice = (isDrainVariant && modalQuantity >= 1000) ? 12.75 : (v.unit_price || 20);
+                    const displayPrice = isDrainVariant 
+                      ? (isB2B ? (modalQuantity >= 2500 ? 10 : (modalQuantity >= 1000 ? 15 : 17)) : (v.unit_price || 20))
+                      : (v.unit_price || 20);
 
                     return (
                       <button
@@ -802,8 +866,8 @@ const seenNames = new Set<string>();
                           <span className="text-xl font-black font-mono text-slate-900 group-hover:text-[#0054A6]">
                             {v.display_label || `${mm} mm`}
                           </span>
-                          <span className={`text-xs font-mono font-black ${modalQuantity >= 1000 && isDrainVariant ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200' : 'text-amber-700'}`}>
-                            ₹{displayPrice}
+                          <span className={`text-xs font-mono font-black ${isB2B && isDrainVariant ? 'text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200' : 'text-slate-900'}`}>
+                            ₹{displayPrice}/pc
                           </span>
                         </div>
                         <span className="text-[10px] text-slate-600 mt-1 font-medium">

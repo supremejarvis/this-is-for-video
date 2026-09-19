@@ -6,7 +6,7 @@ export const FlashDealBanner: React.FC = () => {
   const { addToCart, showToast, appMode, currentUser } = useStore();
   const isB2B = Boolean(appMode === 'B2B' || (currentUser?.role && currentUser.role.includes('B2B')));
 
-  const dealPrice = isB2B ? 12.75 : 18.0;
+  const dealPrice = isB2B ? 15.0 : 18.0;
   const dealMrp = 25.0;
   const discountPercent = Math.round(((dealMrp - dealPrice) / dealMrp) * 100);
 
@@ -55,7 +55,7 @@ export const FlashDealBanner: React.FC = () => {
 
     showToast(
       isB2B 
-        ? 'Claimed B2B Wholesale Deal: 50x SS304 Clips added to Cart at ₹12.75!'
+        ? 'Claimed B2B Wholesale Deal: 50x SS304 Clips added to Cart at ₹15.00!'
         : 'Claimed Retail Flash Deal: 10x SS304 Clips added to Cart at ₹18.00!', 
       'success'
     );

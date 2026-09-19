@@ -80,11 +80,16 @@ async def login(
         ) from e
 
     # Set secure HttpOnly session cookie
+    is_secure = (
+        request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto") == "https"
+        or settings.ENVIRONMENT == "production"
+    )
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=raw_session_token,
         httponly=True,
-        secure=True,
+        secure=is_secure,
         samesite="lax",
         max_age=86400,
         path="/",
@@ -95,7 +100,7 @@ async def login(
         key=CSRF_COOKIE_NAME,
         value=raw_csrf_token,
         httponly=False,
-        secure=True,
+        secure=is_secure,
         samesite="lax",
         max_age=86400,
         path="/",
@@ -171,7 +176,7 @@ async def admin_login(
     if not user.is_active or user.is_archived:
         await reject_unauthorized(error_code="ACCOUNT_INACTIVE_OR_ARCHIVED", user_id=user.id)
 
-    # 5. Strict Role Validation: Admin login strictly requires OWNER administrative role
+    # 5. Strict Role Validation: Admin login strictly requires OWNER administrative role (P0-003)
     ADMIN_LOGIN_ALLOWED_ROLES = {UserRole.OWNER}
     if user.role not in ADMIN_LOGIN_ALLOWED_ROLES:
         await reject_unauthorized(
@@ -191,7 +196,12 @@ async def admin_login(
 
     # 8. Verify RFC 6238 TOTP against user's mfa_secret or secure ADMIN_TOTP_SECRET override
     totp_valid = False
-    if (user.mfa_secret and verify_totp_code(user.mfa_secret, payload.totp_code)) or (settings.ADMIN_TOTP_SECRET and verify_totp_code(settings.ADMIN_TOTP_SECRET, payload.totp_code)):
+    clean_totp = (payload.totp_code or "").strip()
+    if clean_totp:
+        if (user.mfa_secret and verify_totp_code(user.mfa_secret, clean_totp)) or (settings.ADMIN_TOTP_SECRET and verify_totp_code(settings.ADMIN_TOTP_SECRET, clean_totp)):
+            totp_valid = True
+    elif not user.mfa_enabled:
+        # If user has not enabled MFA, password verification is authoritative
         totp_valid = True
 
     if not password_valid or not totp_valid:
@@ -251,11 +261,16 @@ async def admin_login(
     )
     await db.commit()
 
+    is_secure = (
+        request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto") == "https"
+        or settings.ENVIRONMENT == "production"
+    )
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=raw_session_token,
         httponly=True,
-        secure=True,
+        secure=is_secure,
         samesite="lax",
         max_age=86400,
         path="/",
@@ -264,7 +279,7 @@ async def admin_login(
         key=CSRF_COOKIE_NAME,
         value=raw_csrf_token,
         httponly=False,
-        secure=True,
+        secure=is_secure,
         samesite="lax",
         max_age=86400,
         path="/",

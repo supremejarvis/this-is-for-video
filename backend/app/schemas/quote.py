@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.pricing import PricingLineResult
 
@@ -44,6 +44,10 @@ class CreateQuoteRequest(BaseModel):
         pattern=r"^[1-9][0-9]{5}$",
         description="Valid 6-digit Indian PIN code (cannot begin with 0)"
     )
+    channel: str = Field(
+        default="B2C",
+        description="Sales channel: B2C or B2B"
+    )
     payment_method: str = Field(
         default="PREPAID",
         description="Payment method: PREPAID (UPI) or COD"
@@ -56,6 +60,15 @@ class CreateQuoteRequest(BaseModel):
         max_length=100,
         pattern=r"^[a-zA-Z0-9_\-\.:]+$"
     )
+
+    @field_validator("channel", mode="before")
+    @classmethod
+    def normalize_channel(cls, v: object) -> str:
+        if isinstance(v, str):
+            v_upper = v.strip().upper()
+            if v_upper in ("B2C", "B2B"):
+                return v_upper
+        return "B2C"
 
 
 class QuoteResponse(BaseModel):

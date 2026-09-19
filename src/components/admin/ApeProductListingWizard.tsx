@@ -39,9 +39,9 @@ const UNITS_OF_MEASURE = [
 ];
 
 const DEFAULT_DRAIN_CLIP_B2B_TIERS = [
-  { minQty: 50, pricePerUnit: 16, discountPercent: 27 },
-  { minQty: 200, pricePerUnit: 14, discountPercent: 36 },
-  { minQty: 500, pricePerUnit: 11.5, discountPercent: 48 }
+  { minQty: 1, pricePerUnit: 17, discountPercent: 15 },
+  { minQty: 1000, pricePerUnit: 15, discountPercent: 25 },
+  { minQty: 2500, pricePerUnit: 10, discountPercent: 50 }
 ];
 
 interface ManualSampleItem {
@@ -384,6 +384,75 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
       }
     ];
   });
+
+  const [defaultB2cPrice, setDefaultB2cPrice] = useState(initialProduct?.variants?.[0]?.b2cPrice || 20);
+  const [defaultMrp, setDefaultMrp] = useState(initialProduct?.variants?.[0]?.mrp || 120);
+  const [b2bTiers, setB2bTiers] = useState<{ minQty: number; pricePerUnit: number; discountPercent?: number }[]>(() => {
+    if (initialProduct?.variants?.[0]?.b2bTierPricing && initialProduct.variants[0].b2bTierPricing.length > 0) {
+      return initialProduct.variants[0].b2bTierPricing.map(t => ({
+        minQty: t.minQty,
+        pricePerUnit: t.pricePerUnit,
+        discountPercent: t.discountPercent
+      }));
+    }
+    return [
+      { minQty: 1, pricePerUnit: 17, discountPercent: 15 },
+      { minQty: 1000, pricePerUnit: 15, discountPercent: 25 },
+      { minQty: 2500, pricePerUnit: 10, discountPercent: 50 },
+    ];
+  });
+  const defaultB2bPrice = b2bTiers[0]?.pricePerUnit || 17;
+  const defaultB2bMinQty = b2bTiers[0]?.minQty || 1;
+
+  const handleAddB2bTier = () => {
+    const lastTier = b2bTiers[b2bTiers.length - 1];
+    const newMin = lastTier ? (lastTier.minQty >= 1000 ? lastTier.minQty + 1500 : 1000) : 1000;
+    const newPrice = lastTier ? Math.max(1, lastTier.pricePerUnit - 2) : 15;
+    const disc = defaultB2cPrice > 0 ? Math.max(0, Math.round(((defaultB2cPrice - newPrice) / defaultB2cPrice) * 100)) : 25;
+    setB2bTiers([...b2bTiers, { minQty: newMin, pricePerUnit: newPrice, discountPercent: disc }]);
+  };
+
+  const handleUpdateB2bTier = (idx: number, field: 'minQty' | 'pricePerUnit', val: number) => {
+    setB2bTiers(prev => prev.map((t, i) => {
+      if (i !== idx) return t;
+      const updated = { ...t, [field]: Math.max(field === 'minQty' ? 1 : 0, val) };
+      if (field === 'pricePerUnit') {
+        updated.discountPercent = defaultB2cPrice > 0
+          ? Math.max(0, Math.round(((defaultB2cPrice - val) / defaultB2cPrice) * 100))
+          : 0;
+      }
+      return updated;
+    }));
+  };
+
+  const handleRemoveB2bTier = (idx: number) => {
+    if (b2bTiers.length <= 1) {
+      showToast('At least one B2B wholesale tier is required', 'warning');
+      return;
+    }
+    setB2bTiers(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleApplyDefaultPriceToAll = () => {
+    const formattedTiers = b2bTiers.map(t => ({
+      minQty: Math.max(1, Number(t.minQty) || 1),
+      pricePerUnit: Math.max(0, Number(t.pricePerUnit) || 0),
+      discountPercent: defaultB2cPrice > 0 ? Math.max(0, Math.round(((defaultB2cPrice - Number(t.pricePerUnit)) / defaultB2cPrice) * 100)) : 0
+    })).sort((a, b) => a.minQty - b.minQty);
+
+    const lowestMoq = formattedTiers[0]?.minQty || 1;
+
+    setVariantsList((prev) =>
+      prev.map((v) => ({
+        ...v,
+        b2bMoq: lowestMoq,
+        b2cPrice: defaultB2cPrice,
+        mrp: defaultMrp,
+        b2bTierPricing: formattedTiers
+      }))
+    );
+    showToast(`Applied B2C ₹${defaultB2cPrice} and ${formattedTiers.length} B2B wholesale tiers across all ${variantsList.length} variations!`, 'success');
+  };
 
   const handleAddVariant = (term: string) => {
     if (!term.trim()) return;
@@ -1078,34 +1147,11 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
   // ─────────────────────────────────────────────────────────────────────────
   // TAB 4: OFFER, FULFILLMENT & SHIPPING RULES
   // ─────────────────────────────────────────────────────────────────────────
-  const [defaultB2cPrice, setDefaultB2cPrice] = useState(variantsList[0]?.b2cPrice || 20);
-  const [defaultMrp, setDefaultMrp] = useState(variantsList[0]?.mrp || 120);
-  const [defaultB2bPrice, setDefaultB2bPrice] = useState(variantsList[0]?.b2bTierPricing?.[0]?.pricePerUnit || 12.75);
-  const [defaultB2bMinQty, setDefaultB2bMinQty] = useState(initialProduct?.b2bMoq || variantsList[0]?.b2bMoq || variantsList[0]?.b2bTierPricing?.[0]?.minQty || 50);
   const [condition, setCondition] = useState('New');
   const [handlingTimeDays, setHandlingTimeDays] = useState(initialProduct?.handlingTimeDays || 1);
   const [isCodAllowed, setIsCodAllowed] = useState(initialProduct?.isCodAllowed ?? true);
   const [maxOrderQuantity, setMaxOrderQuantity] = useState(initialProduct?.maxOrderQuantity || 1000);
   const [returnPolicy, setReturnPolicy] = useState(initialProduct?.returnPolicy || '7 Days Replacement for Manufacturing Defects');
-
-  const handleApplyDefaultPriceToAll = () => {
-    setVariantsList((prev) =>
-      prev.map((v) => ({
-        ...v,
-        b2bMoq: defaultB2bMinQty,
-        b2cPrice: defaultB2cPrice,
-        mrp: defaultMrp,
-        b2bTierPricing: [
-          {
-            minQty: defaultB2bMinQty,
-            pricePerUnit: defaultB2bPrice,
-            discountPercent: Math.round(((defaultB2cPrice - defaultB2bPrice) / (defaultB2cPrice || 1)) * 100)
-          }
-        ]
-      }))
-    );
-    showToast('Applied standardized pricing & B2B MOQ across all variant rows!', 'success');
-  };
 
   // ─────────────────────────────────────────────────────────────────────────
   // TAB 5: TECHNICAL SPECS, DIMENSIONS & VOLUMETRIC CALCULATOR
@@ -2490,7 +2536,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                   <DollarSign className="w-4 h-4" /> Global Pricing & Wholesale Rules
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="block text-xs text-slate-700 font-semibold">Standard MRP (₹) *</label>
                     <input
@@ -2512,31 +2558,104 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                       className="w-full h-10 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-bold text-xs focus:outline-none focus:border-[#0054A6]"
                     />
                   </div>
+                </div>
 
-                  <div className="space-y-1.5">
-                    <label className="block text-xs text-emerald-800 font-semibold font-bold">
-                      Wholesale B2B Tier Price (₹ / {unitOfMeasure}) *
-                    </label>
-                    <input
-                      type="number"
-                      value={defaultB2bPrice}
-                      onChange={(e) => setDefaultB2bPrice(Number(e.target.value))}
-                      className="w-full h-10 px-3 bg-emerald-50/50 border border-emerald-300 rounded-xl text-emerald-800 font-mono font-bold text-xs focus:outline-none focus:border-emerald-500"
-                    />
+                {/* Dynamic B2B Multi-Tier Wholesale Pricing (Cross-Size Volume Pooling) */}
+                <div className="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-200 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-emerald-700" />
+                        <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider font-mono">
+                          B2B Wholesale Volume Pricing Tiers (Only B2B)
+                        </h4>
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-200 text-emerald-900 text-[10px] font-bold">
+                          Cross-Size Pooled
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-emerald-800/80 mt-0.5">
+                        Set wholesale volume rates. Units are aggregated across all sizes/variants of this product family ("koi pn size ma"). B2C retail orders always pay B2C price.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setB2bTiers([
+                            { minQty: 1, pricePerUnit: 17, discountPercent: defaultB2cPrice > 0 ? Math.round(((defaultB2cPrice - 17) / defaultB2cPrice) * 100) : 15 },
+                            { minQty: 1000, pricePerUnit: 15, discountPercent: defaultB2cPrice > 0 ? Math.round(((defaultB2cPrice - 15) / defaultB2cPrice) * 100) : 25 },
+                            { minQty: 2500, pricePerUnit: 10, discountPercent: defaultB2cPrice > 0 ? Math.round(((defaultB2cPrice - 10) / defaultB2cPrice) * 100) : 50 }
+                          ]);
+                          showToast('Loaded Apollo 3-tier wholesale preset (<1k @ ₹17 | 1k+ @ ₹15 | 2.5k+ @ ₹10)', 'info');
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] font-bold transition-all"
+                      >
+                        Load Standard Preset (&lt;1k: ₹17 | 1k+: ₹15 | 2.5k+: ₹10)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAddB2bTier}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-bold flex items-center gap-1 shadow-xs transition-all"
+                      >
+                        <Plus className="w-3 h-3" /> Add Tier
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-1">
+                    {b2bTiers.map((tier, tIdx) => (
+                      <div
+                        key={tIdx}
+                        className="flex flex-wrap items-center gap-3 bg-white p-2.5 rounded-xl border border-emerald-200 shadow-2xs"
+                      >
+                        <span className="text-[11px] font-mono font-bold text-emerald-950 w-16 shrink-0">
+                          Tier #{tIdx + 1}
+                        </span>
+
+                        <div className="flex items-center gap-1.5 flex-1 min-w-[140px]">
+                          <label className="text-[10px] text-slate-500 font-semibold shrink-0">Min Qty ({unitOfMeasure}):</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={tier.minQty}
+                            onChange={(e) => handleUpdateB2bTier(tIdx, 'minQty', Number(e.target.value))}
+                            className="w-24 h-8 px-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-emerald-600"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-1.5 flex-1 min-w-[140px]">
+                          <label className="text-[10px] text-slate-500 font-semibold shrink-0">Rate (₹):</label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={tier.pricePerUnit}
+                            onChange={(e) => handleUpdateB2bTier(tIdx, 'pricePerUnit', Number(e.target.value))}
+                            className="w-24 h-8 px-2 bg-emerald-50/60 border border-emerald-400 rounded-lg text-xs font-mono font-bold text-emerald-900 focus:outline-none focus:border-emerald-600"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="px-2 py-1 rounded bg-emerald-100 text-emerald-900 text-[10px] font-mono font-bold">
+                            {defaultB2cPrice > 0 ? Math.max(0, Math.round(((defaultB2cPrice - tier.pricePerUnit) / defaultB2cPrice) * 100)) : 0}% OFF B2C
+                          </span>
+                          {b2bTiers.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveB2bTier(tIdx)}
+                              className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50 transition-colors"
+                              title="Delete this tier"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                  <div className="space-y-1.5">
-                    <label className="block text-xs text-slate-700 font-semibold">Minimum Wholesale Quantity for B2B ({unitOfMeasure}) *</label>
-                    <input
-                      type="number"
-                      value={defaultB2bMinQty}
-                      onChange={(e) => setDefaultB2bMinQty(Number(e.target.value))}
-                      className="w-full h-10 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-xs focus:outline-none focus:border-[#0054A6]"
-                    />
-                  </div>
-
                   <div className="space-y-1.5">
                     <label className="block text-xs text-slate-700 font-semibold">Item Condition</label>
                     <select
@@ -2548,16 +2667,16 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                       <option value="Certified Refurbished">Certified Refurbished</option>
                     </select>
                   </div>
-                </div>
 
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={handleApplyDefaultPriceToAll}
-                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-sm transition-all"
-                  >
-                    Apply Standard Pricing Across All Variations
-                  </button>
+                  <div className="space-y-1.5 flex flex-col justify-end">
+                    <button
+                      type="button"
+                      onClick={handleApplyDefaultPriceToAll}
+                      className="w-full h-10 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-sm transition-all flex items-center justify-center gap-2"
+                    >
+                      <Sliders className="w-4 h-4" /> Apply B2C Price & B2B Tiers to All {variantsList.length} Variations
+                    </button>
+                  </div>
                 </div>
               </div>
 

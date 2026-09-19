@@ -251,6 +251,7 @@ export interface CartItem {
   fulfillmentType: 'FBF' | 'FBM';
   weightGrams: number;
   isB2BPricingApplied: boolean;
+  b2cPrice?: number;
   isUnavailable?: boolean;
   unavailableReason?: string;
 }

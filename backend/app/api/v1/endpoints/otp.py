@@ -76,7 +76,13 @@ async def verify_otp(
 
     try:
         phone_email = f"{payload.phone}@ape-store.com"
-        stmt = select(User).where(User.email == phone_email)
+        clean_phone = payload.phone.replace("+", "").replace("-", "").strip()
+        # If this is the configured administrator mobile number, link to the existing OWNER account
+        is_admin_phone = clean_phone.endswith("8511626267")
+        if is_admin_phone and settings.ADMIN_INIT_EMAIL:
+            stmt = select(User).where(User.email.in_([settings.ADMIN_INIT_EMAIL, phone_email]))
+        else:
+            stmt = select(User).where(User.email == phone_email)
         res = await db.execute(stmt)
         user = res.scalar_one_or_none()
 
@@ -113,7 +119,11 @@ async def verify_otp(
         user_response = UserResponse.model_validate(user)
 
         # Set secure HttpOnly session cookie
-        is_secure = request.url.scheme == "https"
+        is_secure = (
+            request.url.scheme == "https"
+            or request.headers.get("x-forwarded-proto") == "https"
+            or settings.ENVIRONMENT == "production"
+        )
         response.set_cookie(
             key=SESSION_COOKIE_NAME,
             value=raw_session_token,

@@ -337,11 +337,12 @@ export const AuthModal: React.FC = () => {
       const matchedUser = allUsers.find(u => u.phone && u.phone.replace(/\D/g, '').endsWith(cleanPhone10))
         || savedUsers.find(u => u.phone && u.phone.replace(/\D/g, '').endsWith(cleanPhone10));
 
+      const isPrivileged = Boolean(user?.role && ['OWNER', 'SUPER_ADMIN', 'ADMIN', 'CATALOG_MANAGER', 'INVENTORY_MANAGER', 'ORDER_OPERATIONS', 'FINANCE', 'SUPPORT', 'AUDITOR'].includes(user.role));
       const role: UserRole = (authMode === 'SIGNUP' && accountType === 'B2B')
         ? 'B2B_BUYER'
         : (matchedUser?.role && matchedUser.role.includes('B2B')
           ? 'B2B_BUYER'
-          : (user?.role === 'ADMIN' ? 'SUPER_ADMIN' : 'B2C_CUSTOMER'));
+          : (isPrivileged ? (user?.role === 'OWNER' ? 'OWNER' : (user?.role === 'SUPPORT' ? 'SUPPORT' : (user?.role === 'AUDITOR' ? 'AUDITOR' : 'SUPER_ADMIN'))) : 'B2C_CUSTOMER'));
 
       // Authentic Name Resolution:
       let resolvedName = '';
@@ -533,6 +534,7 @@ export const AuthModal: React.FC = () => {
     setOtpStep(false);
     setOtpDigits(['', '', '', '']);
     setErrorMessage(null);
+    setDevOtpCode(null);
   };
 
   return (
@@ -626,6 +628,25 @@ export const AuthModal: React.FC = () => {
                   />
                 ))}
               </div>
+
+              {/* Development Testing Helper (renders only when dev_code is present) */}
+              {devOtpCode && (
+                <div className="p-3 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 text-xs flex items-center justify-between shadow-2xs">
+                  <div className="flex items-center gap-1.5 font-mono">
+                    <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Dev OTP: <strong className="font-black text-amber-950 text-sm tracking-wider">{devOtpCode}</strong></span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleOtpPaste(devOtpCode);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-amber-200 hover:bg-amber-300 text-amber-950 font-bold text-[11px] cursor-pointer transition-colors shadow-2xs"
+                  >
+                    Auto-Fill
+                  </button>
+                </div>
+              )}
 
               {/* Primary Action Button: VERIFY & SIGN IN */}
               <button

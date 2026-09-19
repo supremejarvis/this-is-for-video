@@ -6,9 +6,15 @@ from app.schemas.auth import UserResponse
 
 
 def normalize_phone(v: str) -> str:
-    clean = re.sub(r"\D", "", v)
-    if len(clean) == 12 and clean.startswith("91"):
+    clean = re.sub(r"\D", "", str(v))
+    if len(clean) == 11 and clean.startswith("0"):
+        clean = clean[1:]
+    elif len(clean) == 12 and clean.startswith("91"):
         clean = clean[2:]
+    elif len(clean) == 13 and clean.startswith("091"):
+        clean = clean[3:]
+    elif len(clean) == 14 and clean.startswith("0091"):
+        clean = clean[4:]
     if len(clean) != 10 or clean[0] not in "6789":
         raise ValueError("Phone number must be a valid 10-digit Indian mobile number")
     return clean

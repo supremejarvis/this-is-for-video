@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.inventory import InventoryItem, InventoryMovement, MovementType
+from app.models.price import PriceVersion, TaxMode
 from app.models.product import FitMode, Product, ProductVariant
 from app.schemas.product import (
     ProductCreate,
@@ -351,6 +352,91 @@ class CatalogService:
             product.hsn_code = data.hsn_code.strip()
         if data.is_active is not None:
             product.is_active = data.is_active
+
+        # Update variant prices and inventory if specified
+        if data.b2c_price is not None or data.b2b_price is not None or data.b2b_tier_pricing is not None or data.inventory_stock is not None:
+            now = utcnow()
+            for variant in product.variants:
+                if variant.is_archived:
+                    continue
+
+                # Update inventory stock
+                if data.inventory_stock is not None and variant.inventory_item:
+                    variant.inventory_item.quantity_on_hand = int(data.inventory_stock)
+                    variant.inventory_item.updated_at = now
+
+                # Update B2C price version
+                if data.b2c_price is not None:
+                    # Close existing open-ended B2C versions
+                    if hasattr(variant, "price_versions"):
+                        for pv in variant.price_versions:
+                            if getattr(pv, "channel", "B2C") == "B2C" and pv.valid_to is None:
+                                pv.valid_to = now
+                    new_b2c_pv = PriceVersion(
+                        id=uuid.uuid4(),
+                        variant_id=variant.id,
+                        product_id=product.id,
+                        currency="INR",
+                        channel="B2C",
+                        min_quantity=1,
+                        unit_price=Decimal(str(data.b2c_price)),
+                        gst_rate=Decimal("0.1800"),
+                        hsn_code=product.hsn_code,
+                        tax_mode=TaxMode.GST_INCLUSIVE,
+                        valid_from=now,
+                        valid_to=None,
+                        reason="Admin Catalog Price Update",
+                    )
+                    db.add(new_b2c_pv)
+
+                # Update B2B tier pricing versions
+                if data.b2b_tier_pricing is not None:
+                    # Close existing open-ended B2B versions
+                    if hasattr(variant, "price_versions"):
+                        for pv in variant.price_versions:
+                            if getattr(pv, "channel", "") == "B2B" and pv.valid_to is None:
+                                pv.valid_to = now
+
+                    for tier in data.b2b_tier_pricing:
+                        min_qty = int(tier.get("minQty") or tier.get("min_quantity") or 1)
+                        rate = Decimal(str(tier.get("pricePerUnit") or tier.get("unit_price") or data.b2c_price or "20"))
+                        new_b2b_pv = PriceVersion(
+                            id=uuid.uuid4(),
+                            variant_id=variant.id,
+                            product_id=product.id,
+                            currency="INR",
+                            channel="B2B",
+                            min_quantity=min_qty,
+                            unit_price=rate,
+                            gst_rate=Decimal("0.1800"),
+                            hsn_code=product.hsn_code,
+                            tax_mode=TaxMode.GST_INCLUSIVE,
+                            valid_from=now,
+                            valid_to=None,
+                            reason=f"Admin B2B Tier {min_qty}+ Price Update",
+                        )
+                        db.add(new_b2b_pv)
+                elif data.b2b_price is not None:
+                    if hasattr(variant, "price_versions"):
+                        for pv in variant.price_versions:
+                            if getattr(pv, "channel", "") == "B2B" and pv.valid_to is None:
+                                pv.valid_to = now
+                    new_b2b_pv = PriceVersion(
+                        id=uuid.uuid4(),
+                        variant_id=variant.id,
+                        product_id=product.id,
+                        currency="INR",
+                        channel="B2B",
+                        min_quantity=1,
+                        unit_price=Decimal(str(data.b2b_price)),
+                        gst_rate=Decimal("0.1800"),
+                        hsn_code=product.hsn_code,
+                        tax_mode=TaxMode.GST_INCLUSIVE,
+                        valid_from=now,
+                        valid_to=None,
+                        reason="Admin B2B Base Price Update",
+                    )
+                    db.add(new_b2b_pv)
 
         # Increment version upon mutation
         product.version += 1

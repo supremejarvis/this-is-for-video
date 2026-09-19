@@ -29,6 +29,7 @@ export class QuoteApi {
         quantity: i.quantity,
       })),
       destination_pincode: payload.destination_pincode.trim(),
+      channel: payload.channel || 'B2C',
       payment_method: payload.payment_method || 'PREPAID',
       rounding_multiple: payload.rounding_multiple ?? 5,
       ...(payload.base_shipping ? { base_shipping: payload.base_shipping } : {}),

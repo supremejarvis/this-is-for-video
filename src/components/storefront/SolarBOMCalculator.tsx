@@ -149,7 +149,7 @@ export const SolarBOMCalculator: React.FC = () => {
   // Pricing calculations for individual components
   const clipKitRate = 20;
   const clipRetailRate = 20;
-  const clipB2bRate = 12.75;
+  const clipB2bRate = clipsNeeded >= 2500 ? 10 : (clipsNeeded >= 1000 ? 15 : 17);
 
   const sprinklerKitRate = 60;
   const sprinklerRetailRate = 220;

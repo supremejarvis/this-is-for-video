@@ -6,8 +6,7 @@ import {
   AuthStatus, QuoteStatus, AdminRole, AdminAuditLog, SolarContractorInquiry
 } from '../types';
 import { 
-  MOCK_USERS, MOCK_B2B_ORGANIZATIONS, 
-  MOCK_PRODUCTS, MOCK_SELLERS 
+  LEGACY_ASIN_SPRINKLER, LEGACY_ASIN_DRAINCLIPS
 } from '../data/mockData';
 import { calculateSpeedPostTariff, generateIndiaPostBooking } from '../services/logisticsService';
 import { ORIGIN_HUB_PINCODE, DEFAULT_GST_RATE_PERCENT, ORIGIN_STATE_CODE } from '../constants';
@@ -299,21 +298,109 @@ export const isDrainClipCartItem = (i: { sku?: string; parentAsin?: string; prod
   return s.startsWith('APE-SC') || s.includes('CLIP') || s.includes('DRAIN') || p.includes('CLIP') || p === 'AP-DRAIN-02' || t.includes('drain clip');
 };
 
-export const recalculateCartVolumeTiers = (cartItems: CartItem[]) => {
-  const totalDrainClipQty = cartItems
-    .filter(isDrainClipCartItem)
-    .reduce((sum, i) => sum + (i.quantity || 0), 0);
+export const recalculateCartVolumeTiers = (
+  cartItems: CartItem[],
+  explicitMode?: AppMode,
+  catalogProducts?: Product[]
+): CartItem[] => {
+  if (!cartItems || cartItems.length === 0) return [];
 
-  const drainTierPrice = totalDrainClipQty >= 1000 ? 12.75 : 20.00;
+  // Determine current mode: explicit parameter -> localStorage -> fallback 'B2C'
+  let currentMode: AppMode = explicitMode || 'B2C';
+  if (!explicitMode) {
+    try {
+      if (typeof window !== 'undefined') {
+        const storedMode = localStorage.getItem('apollo_app_mode');
+        if (storedMode === '"B2B"' || storedMode === 'B2B') {
+          currentMode = 'B2B';
+        }
+      }
+    } catch {}
+  }
+
+  // Resolve available products list for tier definitions
+  let productsList: Product[] = catalogProducts || [];
+  if (productsList.length === 0) {
+    try {
+      productsList = loadStored<Product[]>('apollo_products', []);
+    } catch {
+      productsList = [];
+    }
+  }
+
+  // Group items by product family (parentAsin, or product id, or matching prefix) for cross-size volume pooling
+  const productFamilyGroups = new Map<string, { totalQty: number; items: CartItem[] }>();
+
+  cartItems.forEach((item) => {
+    const familyKey = item.parentAsin || item.productId || (item.sku ? item.sku.split('-').slice(0, 2).join('-') : 'default');
+    if (!productFamilyGroups.has(familyKey)) {
+      productFamilyGroups.set(familyKey, { totalQty: 0, items: [] });
+    }
+    const group = productFamilyGroups.get(familyKey)!;
+    group.totalQty += (item.quantity || 0);
+    group.items.push(item);
+  });
 
   return cartItems.map((item) => {
-    if (isDrainClipCartItem(item)) {
+    // Find the product and variant in catalog
+    const product = productsList.find((p) =>
+      p.asin === item.parentAsin ||
+      p.asin === item.productId ||
+      (p.variants && p.variants.some((v) => v.sku === item.sku))
+    );
+    const variant = product?.variants?.find((v) => v.sku === item.sku) || product?.variants?.[0];
+
+    const isB2B = currentMode === 'B2B';
+
+    if (!isB2B) {
+      // B2C Mode: STRICTLY B2C price (never apply B2B bulk tiers)
+      const b2cRate = variant?.b2cPrice ?? item.b2cPrice ?? item.unitPrice;
       return {
         ...item,
-        unitPrice: drainTierPrice,
+        unitPrice: b2cRate,
+        isB2BPricingApplied: false,
       };
     }
-    return item;
+
+    // B2B Mode: Cross-size variant pooling ("koi pn size ma")
+    const familyKey = item.parentAsin || item.productId || (item.sku ? item.sku.split('-').slice(0, 2).join('-') : 'default');
+    const group = productFamilyGroups.get(familyKey);
+    const pooledQty = group ? group.totalQty : item.quantity;
+
+    // Resolve B2B tiers: variant tiers -> product tiers -> fallback
+    const tiers = (variant?.b2bTierPricing && variant.b2bTierPricing.length > 0)
+      ? variant.b2bTierPricing
+      : ((product as any)?.b2bTierPricing || (item as any).b2bTierPricing || []);
+
+    if (tiers && tiers.length > 0) {
+      // Sort tiers descending by minQty (e.g. 2500, 1000, 50, 1)
+      const sortedTiers = [...tiers].sort((a, b) => (b.minQty || 0) - (a.minQty || 0));
+      const matchedTier = sortedTiers.find((t) => pooledQty >= t.minQty);
+      if (matchedTier && typeof matchedTier.pricePerUnit === 'number') {
+        return {
+          ...item,
+          unitPrice: matchedTier.pricePerUnit,
+          isB2BPricingApplied: true,
+        };
+      }
+      // If below lowest tier minQty, use lowest tier price or base B2B price
+      const lowestTier = sortedTiers[sortedTiers.length - 1];
+      if (lowestTier && typeof lowestTier.pricePerUnit === 'number') {
+        return {
+          ...item,
+          unitPrice: lowestTier.pricePerUnit,
+          isB2BPricingApplied: true,
+        };
+      }
+    }
+
+    // Fallback B2B price if no tiers defined
+    const baseB2bPrice = (variant as any)?.b2bPrice ?? Math.round((variant?.b2cPrice || item.unitPrice) * 0.75);
+    return {
+      ...item,
+      unitPrice: baseB2bPrice,
+      isB2BPricingApplied: true,
+    };
   });
 };
 
@@ -923,12 +1010,12 @@ const initialDeletedProductAsins: string[] = [];
 export const deletedProductAsinsSet = new Set<string>(initialDeletedProductAsins);
 
 // Deterministic server-safe catalog initialization
-const initialProducts: Product[] = MOCK_PRODUCTS;
+const initialProducts: Product[] = [];
 const initialWishlist: WishlistItem[] = [];
 const initialReviews = loadStored<ProductReview[]>('apollo_reviews', [
   {
     id: 'rev_001',
-    asin: MOCK_PRODUCTS[0]?.asin || 'AP-001',
+    asin: LEGACY_ASIN_SPRINKLER,
     userId: 'u_customer_b2c',
     userName: 'Rajesh K. (Solar EPC Contractor)',
     rating: 5,
@@ -940,7 +1027,7 @@ const initialReviews = loadStored<ProductReview[]>('apollo_reviews', [
   },
   {
     id: 'rev_002',
-    asin: MOCK_PRODUCTS[0]?.asin || 'AP-001',
+    asin: LEGACY_ASIN_SPRINKLER,
     userId: 'u_epc_procure',
     userName: 'Nilesh P. (Plant Procurement Head)',
     rating: 5,
@@ -952,7 +1039,7 @@ const initialReviews = loadStored<ProductReview[]>('apollo_reviews', [
   },
   {
     id: 'rev_003',
-    asin: MOCK_PRODUCTS[1]?.asin || 'AP-002',
+    asin: LEGACY_ASIN_DRAINCLIPS,
     userId: 'u_customer_b2c',
     userName: 'Manish S. (Rooftop Owner)',
     rating: 4,
@@ -1446,13 +1533,16 @@ export function commitCatalogProductsUpdate(
   return { products: updated, selectedProduct, apiCatalogProducts };
 }
 
-export const DEFAULT_API_CATALOG_PRODUCTS: ApiProduct[] = syncCatalogProducts(initialProducts);
+export const DEFAULT_API_CATALOG_PRODUCTS: ApiProduct[] = [];
 
 export const useStore = create<AppStore>((set, get) => ({
   appMode: 'B2C',
   setAppMode: (mode) => {
     saveStored('apollo_app_mode', mode);
-    const updates: Partial<AppStore> = { appMode: mode };
+    const currentCart = get().cart;
+    const revaluedCart = recalculateCartVolumeTiers(currentCart, mode, get().products);
+    saveSessionCart(revaluedCart);
+    const updates: Partial<AppStore> = { appMode: mode, cart: revaluedCart };
     if (mode === 'B2B' && get().quotePaymentMethod === 'COD') {
       updates.quotePaymentMethod = 'PREPAID';
       updates.quoteStatus = 'QUOTE_REQUIRED';
@@ -1481,7 +1571,10 @@ export const useStore = create<AppStore>((set, get) => ({
       const sessionResult = await authApi.getSession().catch(() => null);
       const data: any = sessionResult?.authenticated ? sessionResult.user : null;
       if (data && data.id) {
-        const role = data.role === 'ADMIN' ? 'SUPER_ADMIN' : 'B2C_CUSTOMER';
+        const isPrivileged = ['OWNER', 'SUPER_ADMIN', 'ADMIN', 'CATALOG_MANAGER', 'INVENTORY_MANAGER', 'ORDER_OPERATIONS', 'FINANCE', 'SUPPORT', 'AUDITOR'].includes(data.role) || Boolean(data.is_superuser);
+        const role: UserRole = isPrivileged
+          ? (data.role === 'OWNER' ? 'OWNER' : (data.role === 'SUPPORT' ? 'SUPPORT' : (data.role === 'AUDITOR' ? 'AUDITOR' : 'SUPER_ADMIN')))
+          : 'B2C_CUSTOMER';
         const userPhone = data.phone || (data.email?.includes('@ape-store.com') ? data.email.split('@')[0] : '');
 
         // Check if we have a saved profile for this user/phone in persistent storage
@@ -1506,9 +1599,9 @@ export const useStore = create<AppStore>((set, get) => ({
           resolvedEmail = matchedLocal.email;
         }
 
-        const resolvedRole: UserRole = (matchedLocal?.role && matchedLocal.role.includes('B2B')) 
-          ? 'B2B_BUYER' 
-          : role;
+        const resolvedRole: UserRole = isPrivileged
+          ? role
+          : ((matchedLocal?.role && matchedLocal.role.includes('B2B')) ? 'B2B_BUYER' : role);
 
         const mappedUser: UserProfile = {
           id: data.id,
@@ -1516,7 +1609,7 @@ export const useStore = create<AppStore>((set, get) => ({
           email: resolvedEmail,
           phone: userPhone || matchedLocal?.phone || '',
           role: resolvedRole,
-          isPrime: false,
+          isPrime: isPrivileged || false,
           createdAt: data.created_at || matchedLocal?.createdAt || new Date().toISOString()
         };
 
@@ -1529,7 +1622,7 @@ export const useStore = create<AppStore>((set, get) => ({
         set({ 
           authStatus: 'AUTHENTICATED', 
           currentUser: mappedUser,
-          appMode: resolvedRole === 'SUPER_ADMIN' ? 'ADMIN' : (resolvedRole === 'B2B_BUYER' ? 'B2B' : get().appMode)
+          appMode: (resolvedRole === 'SUPER_ADMIN' || resolvedRole === 'OWNER') ? 'ADMIN' : (resolvedRole === 'B2B_BUYER' ? 'B2B' : get().appMode)
         });
         return;
       }
@@ -1927,7 +2020,10 @@ selectProductVariant: (asin, sku) => {
       get().apiCatalogProducts,
       asin
     );
-    set(catalogState);
+    // Recalculate cart items immediately if pricing or tiers updated
+    const revaluedCart = recalculateCartVolumeTiers(get().cart, get().appMode, updated);
+    saveSessionCart(revaluedCart);
+    set({ ...catalogState, cart: revaluedCart });
     get().showToast(`Product ${asin} updated successfully`, 'success');
 
     // Background sync to backend if backend product exists
@@ -2357,7 +2453,7 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       });
     }
 
-    updatedCart = recalculateCartVolumeTiers(updatedCart);
+    updatedCart = recalculateCartVolumeTiers(updatedCart, isB2B ? 'B2B' : 'B2C', get().products);
 
     saveSessionCart(updatedCart);
     set({ 
@@ -2368,23 +2464,15 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
     });
     // Note: Do not auto-open cart drawer on add to cart, keep customer in shop flow
 
-    const totalDrainClipsNow = updatedCart.filter(isDrainClipCartItem).reduce((acc, i) => acc + i.quantity, 0);
-    if (isDrainClipCartItem(itemData)) {
-      if (totalDrainClipsNow >= 1000) {
-        get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle}. Bulk Rate ₹12.75/pc active! (${totalDrainClipsNow} total pcs)`, 'success');
-      } else {
-        get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle} to cart (${totalDrainClipsNow}/1,000 pcs for ₹12.75 bulk tier)`, 'info');
-      }
-    } else if (isB2B) {
-      const currentCartTotalUnits = cart.reduce((acc, i) => acc + (i.sku === itemData.sku ? 0 : i.quantity), 0);
-      const totalOrderB2bUnits = currentCartTotalUnits + newTotalQty;
-      if (totalOrderB2bUnits >= 50) {
-        get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle} to cart (Wholesale Total: ${totalOrderB2bUnits} units)`, 'success');
-      } else {
-        get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle} (${totalOrderB2bUnits}/50 wholesale units in cart)`, 'info');
-      }
+    const currentItem = updatedCart.find(i => i.sku === itemData.sku);
+    const activeRate = currentItem?.unitPrice || finalUnitPrice;
+    const sameProductItems = updatedCart.filter(i => (itemData.parentAsin && i.parentAsin === itemData.parentAsin) || (itemData.sku && i.sku.startsWith(itemData.sku.slice(0, 6))));
+    const totalFamilyQty = sameProductItems.reduce((acc, i) => acc + i.quantity, 0);
+
+    if (isB2B) {
+      get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle} to cart (Wholesale Tier: ₹${activeRate}/pc across ${totalFamilyQty} pcs)`, 'success');
     } else {
-      get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle} to cart`, 'success');
+      get().showToast(`Added ${effectiveAddQty}x ${itemData.variantTitle} to cart (₹${activeRate}/pc)`, 'success');
     }
   },
   updateCartQuantity: (sku, qty) => {
@@ -2393,7 +2481,9 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       return;
     }
     const updatedCart = recalculateCartVolumeTiers(
-      get().cart.map((item) => item.sku === sku ? { ...item, quantity: qty } : item)
+      get().cart.map((item) => item.sku === sku ? { ...item, quantity: qty } : item),
+      get().appMode,
+      get().products
     );
 
     saveSessionCart(updatedCart);
@@ -2407,7 +2497,9 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
   },
   removeFromCart: (sku) => {
     const remaining = recalculateCartVolumeTiers(
-      get().cart.filter((item) => item.sku !== sku)
+      get().cart.filter((item) => item.sku !== sku),
+      get().appMode,
+      get().products
     );
 
     saveSessionCart(remaining);
@@ -2478,6 +2570,7 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       const quote = await quoteApi.requestQuote({
         items,
         destination_pincode: cleanPin,
+        channel: get().appMode === 'B2B' ? 'B2B' : 'B2C',
         payment_method: effectivePaymentMethod,
       });
 
@@ -2492,7 +2585,7 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
 
   // ── Database-Driven Catalog API (Gate 2C) ─────────────────────
   isHydrated: false,
-  apiCatalogProducts: syncCatalogProducts(initialProducts, DEFAULT_API_CATALOG_PRODUCTS),
+  apiCatalogProducts: [],
   apiCatalogLoading: false,
   apiCatalogError: null,
   fetchApiCatalog: async () => {
@@ -2503,13 +2596,21 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
         const merged = syncCatalogProducts(get().products, prods);
         set({ apiCatalogProducts: merged, apiCatalogLoading: false, apiCatalogError: null });
       } else {
-        const merged = syncCatalogProducts(get().products, DEFAULT_API_CATALOG_PRODUCTS);
-        set({ apiCatalogProducts: merged, apiCatalogLoading: false, apiCatalogError: null });
+        // Backend returned empty catalog
+        set({ apiCatalogProducts: [], apiCatalogLoading: false, apiCatalogError: null });
       }
     } catch {
-      // Graceful fallback ensuring catalog products and pricing remain active
-      const merged = syncCatalogProducts(get().products, DEFAULT_API_CATALOG_PRODUCTS);
-      set({ apiCatalogProducts: merged, apiCatalogLoading: false, apiCatalogError: null });
+      // Backend unreachable — keep existing catalog products if any, show error
+      const existing = get().apiCatalogProducts;
+      set({ apiCatalogLoading: false, apiCatalogError: 'Backend catalog service unavailable. Showing cached products.' });
+      if (existing.length === 0) {
+        // Try to build from locally stored products
+        const localProducts = get().products;
+        if (localProducts.length > 0) {
+          const merged = syncCatalogProducts(localProducts, []);
+          set({ apiCatalogProducts: merged });
+        }
+      }
     }
   },
 
@@ -2537,7 +2638,7 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
     const effectivePin = activeAddress?.pincode || destinationPincode || '382430';
 
     return Object.entries(groupedBySeller).map(([sellerId, items], idx) => {
-      const seller = MOCK_SELLERS[sellerId] || { name: items[0].sellerName, fulfillment: items[0].fulfillmentType };
+      const seller = { name: items[0]?.sellerName || 'Apollo Engineering', fulfillment: items[0]?.fulfillmentType || 'FBF' };
       const subtotal = items.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
       const isIntraState = effectivePin.startsWith(ORIGIN_STATE_CODE);
       const taxAmount = calculateInclusiveGst(subtotal, DEFAULT_GST_RATE_PERCENT, isIntraState).totalTax;
@@ -3236,24 +3337,9 @@ export function rehydrateStoreFromStorage(): void {
         }
       }
       if (deduped.length > 0) {
-        const merged = deduped.map((p) => {
-          const mockMatch = MOCK_PRODUCTS.find((m) => m.asin === p.asin);
-          if (mockMatch) {
-            return {
-              ...mockMatch,
-              ...p,
-              isComboBundle: p.isComboBundle ?? mockMatch.isComboBundle,
-              comboFormulaEnabled: p.comboFormulaEnabled ?? mockMatch.comboFormulaEnabled,
-              variants: (p.variants && p.variants.length > 0 ? p.variants : mockMatch.variants).map((sv) => {
-                const mv = mockMatch.variants.find((v) => v.sku === sv.sku);
-                return mv ? { ...mv, ...sv, inventory: sv.inventory ?? mv.inventory } : sv;
-              })
-            };
-          }
-          return p;
-        });
-        updates.products = merged;
-        updates.apiCatalogProducts = syncCatalogProducts(merged, useStore.getState().apiCatalogProducts);
+        // Use stored products directly — no mock merging
+        updates.products = deduped;
+        updates.apiCatalogProducts = syncCatalogProducts(deduped, useStore.getState().apiCatalogProducts);
       }
     }
 

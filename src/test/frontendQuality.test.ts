@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useStore } from '../store/useStore';
-import { MOCK_PRODUCTS, INITIAL_ORDERS } from '../data/mockData';
+import { INITIAL_ORDERS } from '../data/mockData';
 import { CartItem } from '../types';
 
 describe('Frontend Quality & E-Commerce Business Logic Test Suite', () => {
@@ -53,13 +53,25 @@ describe('Frontend Quality & E-Commerce Business Logic Test Suite', () => {
   // 3. Quantity Validation
   it('enforces quantity validation: positive integers, non-negative, and minimum thresholds', () => {
     const store = useStore.getState();
-    const product = MOCK_PRODUCTS[1]; // Drain clips
-    const variant = product.variants[0];
+    // Inline test fixture (replaces removed MOCK_PRODUCTS reference)
+    const testProduct = {
+      asin: 'AP-DRAINCLIPS-02',
+      title: 'Apollo AISI SS304 Solar Panel Water Drain & Anti-Soiling Clamp',
+      variants: [{
+        sku: 'APE-SC-28.00MM',
+        title: 'Apollo SS304 Solar Drain Clip - 28mm Frame Size',
+        b2cPrice: 20,
+        mrp: 35,
+        images: ['/Drain_clips.webp'],
+        weightGrams: 25,
+      }]
+    };
+    const variant = testProduct.variants[0];
 
     const cartItemPayload: Omit<CartItem, 'quantity'> = {
       sku: variant.sku,
-      parentAsin: product.asin,
-      productTitle: product.title,
+      parentAsin: testProduct.asin,
+      productTitle: testProduct.title,
       variantTitle: variant.title,
       attributes: {
         material: 'AISI SS304',

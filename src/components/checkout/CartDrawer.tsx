@@ -236,7 +236,12 @@ export const CartDrawer: React.FC = () => {
 
                 {/* Items Container */}
                 <div className="space-y-3">
-                  {cart.map((item) => (
+                  {cart.map((item) => {
+                    const quoteLine = currentQuote?.items?.find((qi) => qi.sku === item.sku);
+                    const displayUnitPrice = quoteLine ? Number(quoteLine.unit_price) : item.unitPrice;
+                    const displayLineGross = quoteLine ? Number(quoteLine.line_gross) : (item.unitPrice * item.quantity);
+
+                    return (
                     <div 
                       key={item.sku} 
                       className="flex gap-3.5 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm"
@@ -266,7 +271,7 @@ export const CartDrawer: React.FC = () => {
                             {item.variantTitle}
                           </span>
                           <span className="text-xs font-mono font-bold text-slate-900">
-                            ₹{item.unitPrice.toFixed(2)}
+                            ₹{displayUnitPrice.toFixed(2)}
                           </span>
                         </div>
 
@@ -293,12 +298,13 @@ export const CartDrawer: React.FC = () => {
                           </div>
 
                           <span className="text-xs font-mono font-bold text-slate-900">
-                            ₹{(item.unitPrice * item.quantity).toFixed(2)}
+                            ₹{displayLineGross.toFixed(2)}
                           </span>
                         </div>
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
 
                 {/* Logistics & Payment Configuration */}

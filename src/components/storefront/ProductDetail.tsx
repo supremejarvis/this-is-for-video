@@ -85,11 +85,19 @@ export const ProductDetail: React.FC = () => {
   let activeTierDiscount = 0;
 
   if (isDrainClip) {
-    if (combinedDrainClipQty >= 1000 || selectedQty >= 1000) {
-      currentUnitPrice = 12.75;
-      activeTierDiscount = 36.25;
+    if (isB2BUser) {
+      if (combinedDrainClipQty >= 2500 || selectedQty >= 2500) {
+        currentUnitPrice = 10.00;
+        activeTierDiscount = 50.0;
+      } else if (combinedDrainClipQty >= 1000 || selectedQty >= 1000) {
+        currentUnitPrice = 15.00;
+        activeTierDiscount = 25.0;
+      } else {
+        currentUnitPrice = 17.00;
+        activeTierDiscount = 15.0;
+      }
     } else {
-      currentUnitPrice = 20.00;
+      currentUnitPrice = currentVariant.b2cPrice || 20.00;
       activeTierDiscount = 0;
     }
   } else if (isB2BUser && currentVariant.b2bTierPricing.length > 0) {
@@ -838,86 +846,119 @@ export const ProductDetail: React.FC = () => {
 
             {/* Drain Clip Tier Pricing Information Banner */}
             {isDrainClip && (
-              <div className="p-3.5 bg-gradient-to-br from-blue-50/70 to-indigo-50/50 border border-blue-200 rounded-2xl space-y-2.5 shadow-xs">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#0054A6] flex items-center gap-1.5">
-                    <Layers className="w-4 h-4 text-[#0054A6]" />
-                    Volume Tier Rates (Mix &amp; Match Any Sizes):
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">28 / 30 / 33 / 35 / 40 mm</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className={`p-2.5 rounded-xl border transition-all ${combinedDrainClipQty < 1000 ? 'bg-white border-blue-400 shadow-xs' : 'bg-slate-50/80 border-slate-200 text-slate-500'}`}>
-                    <div className="text-[10px] uppercase font-bold text-slate-500">Regular (1 - 999 pcs)</div>
-                    <div className="text-base font-black font-mono text-slate-900 mt-0.5">₹20.00 <span className="text-[10px] font-normal text-slate-500">/ pc</span></div>
+              isB2BUser ? (
+                <div className="p-3.5 bg-gradient-to-br from-blue-50/70 to-indigo-50/50 border border-blue-200 rounded-2xl space-y-2.5 shadow-xs">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-[#0054A6] flex items-center gap-1.5">
+                      <Layers className="w-4 h-4 text-[#0054A6]" />
+                      B2B Volume Tier Rates (Mix &amp; Match Any Sizes):
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">28 / 30 / 33 / 35 / 40 mm</span>
                   </div>
-                  <div className={`p-2.5 rounded-xl border transition-all ${combinedDrainClipQty >= 1000 ? 'bg-emerald-50 border-emerald-500 text-emerald-950 shadow-xs ring-2 ring-emerald-400/20' : 'bg-white border-dashed border-emerald-300 text-emerald-800'}`}>
-                    <div className="text-[10px] uppercase font-bold flex items-center justify-between text-emerald-700">
-                      <span>Bulk (1,000+ pcs)</span>
-                      <span className="bg-emerald-600 text-white text-[9px] px-1 py-0.2 rounded font-black tracking-tight">SAVE 36%</span>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className={`p-2.5 rounded-xl border transition-all ${combinedDrainClipQty < 1000 ? 'bg-white border-blue-400 shadow-xs ring-1 ring-blue-400/30' : 'bg-slate-50/80 border-slate-200 text-slate-500'}`}>
+                      <div className="text-[9px] uppercase font-bold text-slate-500">1 - 999 pcs</div>
+                      <div className="text-sm font-black font-mono text-slate-900 mt-0.5">₹17.00 <span className="text-[9px] font-normal text-slate-500">/ pc</span></div>
                     </div>
-                    <div className="text-base font-black font-mono text-emerald-900 mt-0.5">₹12.75 <span className="text-[10px] font-normal text-emerald-700">/ pc</span></div>
+                    <div className={`p-2.5 rounded-xl border transition-all ${combinedDrainClipQty >= 1000 && combinedDrainClipQty < 2500 ? 'bg-blue-50 border-blue-500 text-blue-950 shadow-xs ring-2 ring-blue-400/20' : 'bg-white border-slate-200 text-slate-700'}`}>
+                      <div className="text-[9px] uppercase font-bold flex items-center justify-between text-[#0054A6]">
+                        <span>1,000+ pcs</span>
+                        <span className="bg-[#0054A6] text-white text-[8px] px-1 py-0.2 rounded font-black">SAVE 25%</span>
+                      </div>
+                      <div className="text-sm font-black font-mono text-blue-950 mt-0.5">₹15.00 <span className="text-[9px] font-normal text-blue-700">/ pc</span></div>
+                    </div>
+                    <div className={`p-2.5 rounded-xl border transition-all ${combinedDrainClipQty >= 2500 ? 'bg-emerald-50 border-emerald-500 text-emerald-950 shadow-xs ring-2 ring-emerald-400/20' : 'bg-white border-dashed border-emerald-300 text-emerald-800'}`}>
+                      <div className="text-[9px] uppercase font-bold flex items-center justify-between text-emerald-700">
+                        <span>2,500+ pcs</span>
+                        <span className="bg-emerald-600 text-white text-[8px] px-1 py-0.2 rounded font-black">SAVE 50%</span>
+                      </div>
+                      <div className="text-sm font-black font-mono text-emerald-900 mt-0.5">₹10.00 <span className="text-[9px] font-normal text-emerald-700">/ pc</span></div>
+                    </div>
                   </div>
+                  {cartDrainClipQty > 0 ? (
+                    <div className="text-[11px] text-slate-600 flex items-center justify-between pt-1 border-t border-blue-100">
+                      <span>In Cart: <strong className="font-mono text-slate-900">{cartDrainClipQty} pcs</strong></span>
+                      <span>Combined Total: <strong className="font-mono text-[#0054A6]">{combinedDrainClipQty} pcs</strong></span>
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-slate-500 italic">
+                      Tip: Order 1,000+ pcs for ₹15/pc or 2,500+ pcs for ₹10/pc wholesale rate across any combination of sizes.
+                    </div>
+                  )}
                 </div>
-                {cartDrainClipQty > 0 ? (
-                  <div className="text-[11px] text-slate-600 flex items-center justify-between pt-1 border-t border-blue-100">
-                    <span>In Cart: <strong className="font-mono text-slate-900">{cartDrainClipQty} pcs</strong></span>
-                    <span>Combined Total: <strong className="font-mono text-[#0054A6]">{combinedDrainClipQty} pcs</strong></span>
+              ) : (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-slate-700 font-medium">Standard Retail: <strong className="font-mono text-slate-900 font-bold">₹20.00 / pc</strong> (Incl. 18% GST)</span>
                   </div>
-                ) : (
-                  <div className="text-[10px] text-slate-500 italic">
-                    Tip: Add any combination of frame sizes to reach 1,000 total pcs for the ₹12.75 rate.
-                  </div>
-                )}
-              </div>
+                  <span className="text-[10px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">Kathwada Factory Stock</span>
+                </div>
+              )
             )}
 
-            {/* Quantity Selector */}
-            <div className="space-y-2">
+            {/* Smart Quantity Selector */}
+            <div className="space-y-2.5 p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700 block">Quantity:</label>
-                {isDrainClip && combinedDrainClipQty >= 1000 && (
-                  <span className="text-[10px] font-bold font-mono text-emerald-700 bg-emerald-100/70 border border-emerald-300 px-2 py-0.5 rounded-full">
-                    ✓ Bulk Rate ₹12.75/pc Applied
+                <label className="text-xs font-bold text-slate-800 font-mono flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-[#0054A6]" />
+                  {isB2BUser ? 'Wholesale Quantity (pcs):' : 'Order Quantity (units):'}
+                </label>
+                {isDrainClip && isB2BUser && (
+                  <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full border ${
+                    selectedQty >= 2500 
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                      : selectedQty >= 1000 
+                      ? 'bg-blue-100 text-blue-800 border-blue-300' 
+                      : 'bg-slate-100 text-slate-700 border-slate-300'
+                  }`}>
+                    {selectedQty >= 2500 ? '✓ Mega Bulk ₹10/pc' : selectedQty >= 1000 ? '✓ Bulk ₹15/pc' : 'Standard ₹17/pc'}
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  aria-label="Order quantity in units"
-                  min={1}
-                  max={Math.max(50000, currentVariant.inventory || 50000)}
-                  value={selectedQty}
-                  onChange={(e) => setSelectedQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                  className="w-28 h-10 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-bold text-sm focus:ring-2 focus:ring-[#0054A6]/20 focus:border-[#0054A6] focus:outline-none shadow-sm"
-                  placeholder="Enter Qty"
-                />
-                <span className="text-xs text-slate-500 font-medium">units</span>
-              </div>
 
-              {/* Quick Lots Selector for Drain Clips */}
-              {isDrainClip && (
-                <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                  <span className="text-[10px] text-slate-600 font-mono font-medium">Quick Lots:</span>
-                  {[50, 100, 250, 500, 1000, 2000].map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setSelectedQty(preset)}
-                      className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
-                        selectedQty === preset
-                          ? 'bg-[#0054A6] text-white shadow-xs'
-                          : preset >= 1000
-                          ? 'bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100'
-                          : 'bg-white border border-slate-200 text-slate-700 hover:border-blue-300'
-                      }`}
-                    >
-                      {preset.toLocaleString('en-IN')} pcs {preset >= 1000 ? '(₹12.75)' : ''}
-                    </button>
-                  ))}
+              <div className="flex items-center justify-between gap-3">
+                {/* Stepper Buttons & Numeric Input */}
+                <div className="flex items-center bg-white rounded-xl border border-slate-300 shadow-xs overflow-hidden focus-within:ring-2 focus-within:ring-[#0054A6]/20 focus-within:border-[#0054A6]">
+                  <button
+                    type="button"
+                    aria-label="Decrease quantity"
+                    onClick={() => setSelectedQty(Math.max(1, selectedQty - (isB2BUser ? (selectedQty > 500 ? 100 : (selectedQty > 50 ? 50 : 10)) : 1)))}
+                    className="h-10 px-3 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-bold active:scale-95 transition-all cursor-pointer flex items-center justify-center text-base select-none"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    aria-label="Order quantity in units"
+                    min={1}
+                    max={Math.max(50000, currentVariant.inventory || 50000)}
+                    value={selectedQty}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      setSelectedQty(isNaN(val) ? 1 : Math.max(1, val));
+                    }}
+                    className="w-24 h-10 text-center text-sm font-mono font-black text-slate-900 focus:outline-none bg-transparent"
+                    placeholder="Qty"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Increase quantity"
+                    onClick={() => setSelectedQty(selectedQty + (isB2BUser ? (selectedQty >= 500 ? 100 : (selectedQty >= 50 ? 50 : 10)) : 1))}
+                    className="h-10 px-3 text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-bold active:scale-95 transition-all cursor-pointer flex items-center justify-center text-base select-none"
+                  >
+                    +
+                  </button>
                 </div>
-              )}
+
+                {/* Live Estimated Line Total */}
+                <div className="text-right font-mono">
+                  <span className="text-[10px] text-slate-500 block">Est. Subtotal</span>
+                  <strong className="text-lg font-black text-slate-900">
+                    ₹{(selectedQty * currentUnitPrice).toLocaleString('en-IN')}
+                  </strong>
+                </div>
+              </div>
             </div>
 
             {/* Buy Box Winning Seller Information */}

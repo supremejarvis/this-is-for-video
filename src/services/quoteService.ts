@@ -63,6 +63,7 @@ export interface QuoteRequestPayloadItem {
 export interface CreateQuotePayload {
   items: QuoteRequestPayloadItem[];
   destination_pincode: string;
+  channel?: 'B2C' | 'B2B';
   payment_method?: 'PREPAID' | 'COD';
   base_shipping?: string;
   idempotency_key?: string;

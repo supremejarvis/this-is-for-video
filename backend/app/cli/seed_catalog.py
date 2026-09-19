@@ -68,7 +68,7 @@ async def seed_catalog() -> None:
                 )
                 session.add(pv)
 
-            # Also seed B2B wholesale tier
+            # Also seed B2B wholesale tiers (1-999 @ 17, 1000-2499 @ 15, 2500+ @ 10)
             pv_b2b_stmt = select(PriceVersion).where(
                 PriceVersion.variant_id == variant.id,
                 PriceVersion.channel == "B2B",
@@ -76,20 +76,46 @@ async def seed_catalog() -> None:
             )
             existing_b2b_pv = (await session.execute(pv_b2b_stmt)).scalar_one_or_none()
             if not existing_b2b_pv:
-                pv_b2b = PriceVersion(
+                pv_b2b_1 = PriceVersion(
                     id=uuid.uuid4(),
                     variant_id=variant.id,
                     product_id=product.id,
                     currency="INR",
                     channel="B2B",
-                    min_quantity=100,
-                    unit_price=Decimal("16.00"),
+                    min_quantity=1,
+                    unit_price=Decimal("17.00"),
                     gst_rate=DEFAULT_GST_RATE,
                     hsn_code=product.hsn_code,
-                    tax_mode=TaxMode.GST_EXCLUSIVE,
-                    reason="Initial B2B Wholesale Seed Price",
+                    tax_mode=TaxMode.GST_INCLUSIVE,
+                    reason="Initial B2B Tier 1 Price",
                 )
-                session.add(pv_b2b)
+                pv_b2b_1000 = PriceVersion(
+                    id=uuid.uuid4(),
+                    variant_id=variant.id,
+                    product_id=product.id,
+                    currency="INR",
+                    channel="B2B",
+                    min_quantity=1000,
+                    unit_price=Decimal("15.00"),
+                    gst_rate=DEFAULT_GST_RATE,
+                    hsn_code=product.hsn_code,
+                    tax_mode=TaxMode.GST_INCLUSIVE,
+                    reason="Initial B2B Tier 2 Price",
+                )
+                pv_b2b_2500 = PriceVersion(
+                    id=uuid.uuid4(),
+                    variant_id=variant.id,
+                    product_id=product.id,
+                    currency="INR",
+                    channel="B2B",
+                    min_quantity=2500,
+                    unit_price=Decimal("10.00"),
+                    gst_rate=DEFAULT_GST_RATE,
+                    hsn_code=product.hsn_code,
+                    tax_mode=TaxMode.GST_INCLUSIVE,
+                    reason="Initial B2B Tier 3 Price",
+                )
+                session.add_all([pv_b2b_1, pv_b2b_1000, pv_b2b_2500])
 
         # Seed AE-SPRINKLER product and variants
         stmt_sprinkler = select(Product).where(Product.sku_prefix == "AE-SPRINKLER")

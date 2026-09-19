@@ -1,8 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "vite",
+  "framework": "nextjs",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
   "cleanUrls": true,
   "headers": [
     {
@@ -52,10 +51,6 @@
     {
       "source": "/api/v1/:path*",
       "destination": "https://backend-ten-pi-57.vercel.app/api/v1/:path*"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
     }
   ]
 }

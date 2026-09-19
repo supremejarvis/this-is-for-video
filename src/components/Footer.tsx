@@ -1,7 +1,9 @@
+'use client';
+
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "../lib/navigation";
 import { Mail, Phone, MapPin, Instagram, Youtube, Facebook, Search, Store, Lock } from "lucide-react";
-import { useStore } from "@/src/store/useStore";
+import { useStore } from "../store/useStore";
 
 export function Footer() {
   const [logoError, setLogoError] = useState(false);

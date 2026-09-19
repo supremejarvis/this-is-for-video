@@ -62,6 +62,67 @@ const DEFAULT_SAMPLE_MANUAL_ITEMS: ManualSampleItem[] = [
   { size: '40mm', sku: 'APE-DC-40MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1200, barcode: 'B0GSRSG56R' }
 ];
 
+interface DefaultVariantPackagingOpts {
+  fsnSuffix?: string | number;
+  image?: string;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  hsn?: string;
+  gst?: number;
+  uom?: string;
+  barcode?: string;
+  lowStockThreshold?: number;
+}
+
+function getDefaultVariantPackaging(opts: DefaultVariantPackagingOpts = {}) {
+  return {
+    lowStockThreshold: opts.lowStockThreshold || 50,
+    barcode: opts.barcode || `8908511${Math.floor(100000 + Math.random() * 900000)}`,
+    flipkartFsn: opts.fsnSuffix !== undefined
+      ? `FSN-APE-${opts.fsnSuffix}`
+      : `FSN-APE-${Math.floor(1000 + Math.random() * 9000)}`,
+    images: [opts.image || '/Drain_clips.webp'],
+    weightGrams: opts.weight || 25,
+    dimensionsCm: {
+      length: opts.length || 5,
+      width: opts.width || 5,
+      height: opts.height || 5
+    },
+    hsnCode: opts.hsn || '73269099',
+    gstRatePercent: opts.gst || 18,
+    unitOfMeasure: (opts.uom || 'PCS') as any
+  };
+}
+
+interface TagBadgeListProps {
+  items: string[];
+  onRemove: (idx: number) => void;
+  badgeClassName: string;
+  fontMono?: boolean;
+}
+
+const TagBadgeList: React.FC<TagBadgeListProps> = ({ items, onRemove, badgeClassName, fontMono }) => (
+  <div className="flex flex-wrap gap-2">
+    {items.map((item, idx) => (
+      <span 
+        key={idx} 
+        className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 ${badgeClassName} ${fontMono ? 'font-mono' : ''}`}
+      >
+        {item}
+        <button 
+          type="button"
+          onClick={() => onRemove(idx)}
+          className="text-slate-400 hover:text-rose-600 cursor-pointer"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </span>
+    ))}
+  </div>
+);
+
 interface ImageSlotCardProps {
   slotNumber: number;
   title: string;
@@ -314,15 +375,12 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
         b2cPrice: 20,
         b2bTierPricing: [{ minQty: 50, pricePerUnit: 12.75, discountPercent: 36 }],
         inventory: 500,
-        lowStockThreshold: 50,
-        barcode: `8908511${Math.floor(100000 + Math.random() * 900000)}`,
-        flipkartFsn: `FSN-APE-${Math.floor(1000 + Math.random() * 9000)}`,
-        images: ['/Drain_clips.webp'],
-        weightGrams: 48,
-        dimensionsCm: { length: 8, width: 4, height: 3 },
-        hsnCode: '73269099',
-        gstRatePercent: 18,
-        unitOfMeasure: 'PCS'
+        ...getDefaultVariantPackaging({
+          weight: 48,
+          length: 8,
+          width: 4,
+          height: 3
+        })
       }
     ];
   });
@@ -604,15 +662,18 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
           }
         ],
         inventory: inv,
-        lowStockThreshold: 50,
-        barcode: cleanBarcode,
-        flipkartFsn: `FSN-APE-${cleanSize.replace(/\D/g, '') || (idx + 1).toString()}`,
-        images: [image1 || '/Drain_clips.webp'],
-        weightGrams: itemWeight || 25,
-        dimensionsCm: { length: itemLength || 5, width: itemWidth || 5, height: itemHeight || 5 },
-        hsnCode: hsnCode || '73269099',
-        gstRatePercent: gstRate || 18,
-        unitOfMeasure: (unitOfMeasure || 'PCS') as any
+        ...getDefaultVariantPackaging({
+          barcode: cleanBarcode,
+          fsnSuffix: cleanSize.replace(/\D/g, '') || (idx + 1).toString(),
+          image: image1,
+          weight: itemWeight,
+          length: itemLength,
+          width: itemWidth,
+          height: itemHeight,
+          hsn: hsnCode,
+          gst: gstRate,
+          uom: unitOfMeasure
+        })
       };
     });
 
@@ -632,15 +693,16 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
       b2cPrice: defaultB2cPrice || 22,
       b2bTierPricing: [{ minQty: defaultB2bMinQty || 50, pricePerUnit: defaultB2bPrice || 16, discountPercent: 27 }],
       inventory: 500,
-      lowStockThreshold: 50,
-      barcode: `8908511${Math.floor(100000 + Math.random() * 900000)}`,
-      flipkartFsn: `FSN-APE-${Math.floor(1000 + Math.random() * 9000)}`,
-      images: [image1 || '/Drain_clips.webp'],
-      weightGrams: itemWeight || 25,
-      dimensionsCm: { length: itemLength || 5, width: itemWidth || 5, height: itemHeight || 5 },
-      hsnCode: hsnCode || '73269099',
-      gstRatePercent: gstRate || 18,
-      unitOfMeasure: (unitOfMeasure || 'PCS') as any
+      ...getDefaultVariantPackaging({
+        image: image1,
+        weight: itemWeight,
+        length: itemLength,
+        width: itemWidth,
+        height: itemHeight,
+        hsn: hsnCode,
+        gst: gstRate,
+        uom: unitOfMeasure
+      })
     };
     setVariantsList(prev => [...prev, newVariant]);
     showToast(`Added manual blank row #${nextNum}! Type directly in the matrix table.`, 'success');
@@ -1604,23 +1666,11 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                   <Tag className="w-4 h-4" /> Target Audience & Recommended Applications
                 </h3>
 
-                <div className="flex flex-wrap gap-2">
-                  {targetAudience.map((app, idx) => (
-                    <span 
-                      key={idx} 
-                      className="px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-semibold flex items-center gap-2"
-                    >
-                      {app}
-                      <button 
-                        type="button"
-                        onClick={() => setTargetAudience(targetAudience.filter((_, i) => i !== idx))}
-                        className="text-slate-400 hover:text-rose-600"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
+                <TagBadgeList
+                  items={targetAudience}
+                  onRemove={(idx) => setTargetAudience(targetAudience.filter((_, i) => i !== idx))}
+                  badgeClassName="bg-blue-50 border-blue-200 text-blue-900"
+                />
 
                 <div className="flex gap-2">
                   <input
@@ -2712,23 +2762,12 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                   <Tag className="w-4 h-4" /> APE Store Backend Search Terms (Hidden SEO Keywords)
                 </h3>
 
-                <div className="flex flex-wrap gap-2">
-                  {keywords.map((kw, idx) => (
-                    <span 
-                      key={idx} 
-                      className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-mono font-semibold flex items-center gap-2"
-                    >
-                      {kw}
-                      <button 
-                        type="button"
-                        onClick={() => setKeywords(keywords.filter((_, i) => i !== idx))}
-                        className="text-slate-400 hover:text-rose-600"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
+                <TagBadgeList
+                  items={keywords}
+                  onRemove={(idx) => setKeywords(keywords.filter((_, i) => i !== idx))}
+                  badgeClassName="bg-amber-50 border-amber-200 text-amber-900"
+                  fontMono
+                />
 
                 <div className="flex gap-2">
                   <input

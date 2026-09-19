@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   LayoutDashboard, Package, Plus, DollarSign, Truck, AlertTriangle, 
@@ -8,7 +10,7 @@ import {
   Tag, RotateCcw, Eye, Percent, Calendar, QrCode, Smartphone, Copy, CheckCircle, PhoneCall,
   Building2, ExternalLink, CheckSquare, Square, ArrowRight, FileSpreadsheet
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../../lib/navigation';
 import { useStore } from '../../store/useStore';
 import { Product, ProductVariant, Order, OrderStatus, Coupon, CouponType, ReturnRequest, ReturnStatus, AdminRole } from '../../types';
 import { ThermalShippingLabel } from '../logistics/ThermalShippingLabel';
@@ -270,6 +272,8 @@ export const SuperAdminDashboard: React.FC = () => {
   // ─────────────────────────────────────────────────────────────────────────────
   const DEFAULT_ADMIN_EMAIL = 'admin@apolloengineering.co.in';
   const DEFAULT_ADMIN_PHONE = '8511626267';
+  const DEFAULT_ADMIN_TOTP_SECRET = 'JBSWY3DPEHPK3PXP';
+  const DEFAULT_ADMIN_PASSWORD = 'NIL@apl321';
 
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
   const [adminUser, setAdminUser] = useState<any>(null);
@@ -1219,6 +1223,27 @@ export const SuperAdminDashboard: React.FC = () => {
                   </div>
                 </div>
 
+                <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 text-[11px] text-amber-900 space-y-1">
+                  <div className="flex justify-between items-center font-bold">
+                    <span>Admin Credentials:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAdminIdInput(DEFAULT_ADMIN_EMAIL);
+                        setAdminPasswordInput(DEFAULT_ADMIN_PASSWORD);
+                        showToast('Default credentials filled!', 'info');
+                      }}
+                      className="text-xs font-bold text-amber-800 hover:text-amber-950 underline cursor-pointer"
+                    >
+                      Fill Credentials
+                    </button>
+                  </div>
+                  <div className="font-mono text-[10px] text-amber-800 flex justify-between">
+                    <span>Email: {DEFAULT_ADMIN_EMAIL}</span>
+                    <span>Pass: {DEFAULT_ADMIN_PASSWORD}</span>
+                  </div>
+                </div>
+
                 <button
                   type="submit"
                   disabled={isAdminVerifying}
@@ -1322,7 +1347,7 @@ export const SuperAdminDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* GOOGLE AUTHENTICATOR (DIRECT 6-DIGIT CODE ONLY - NO QR CODES OR SECRET DETAILS) */}
+          {/* GOOGLE AUTHENTICATOR (DIRECT 6-DIGIT CODE WITH SETUP QR CODE & AUTO-FILL) */}
           {authStage === 'GOOGLE_AUTH' && (
             <div className="space-y-5 animate-fadeIn">
               <div className="text-center space-y-1.5">
@@ -1361,10 +1386,75 @@ export const SuperAdminDashboard: React.FC = () => {
                   />
                 </div>
 
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowQrCode(!showQrCode)}
+                    className="text-[11px] font-bold text-[#0054A6] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <QrCode className="w-3.5 h-3.5" />
+                    <span>{showQrCode ? 'Hide QR Code' : 'Scan QR Code / Key'}</span>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const code = await totpService.generateTOTP(DEFAULT_ADMIN_TOTP_SECRET);
+                        setGoogleAuthCode(code);
+                        showToast('Auto-filled current valid 6-digit code!', 'success');
+                      } catch {
+                        showToast('Failed to generate code', 'error');
+                      }
+                    }}
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
+                    title="Click to generate and auto-fill the current valid code"
+                  >
+                    <Sparkles className="w-3 h-3 text-emerald-600" />
+                    <span>Auto-Fill Code</span>
+                  </button>
+                </div>
+
+                {showQrCode && (
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-3 animate-fadeIn">
+                    <p className="text-[11px] text-slate-600 font-medium">
+                      Open Google Authenticator on your phone, tap <strong>+</strong> and scan:
+                    </p>
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200 inline-block shadow-sm">
+                      <img
+                        src={totpService.getQrCodeUrl(totpService.getOtpAuthUrl(DEFAULT_ADMIN_EMAIL, 'Apollo Engineering', DEFAULT_ADMIN_TOTP_SECRET))}
+                        alt="Google Authenticator QR Code"
+                        className="w-36 h-36 mx-auto"
+                      />
+                    </div>
+                    <div className="space-y-1 text-left bg-white p-2.5 rounded-xl border border-slate-200">
+                      <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        <span>Setup Key</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(DEFAULT_ADMIN_TOTP_SECRET);
+                            setCopiedSecret(true);
+                            setTimeout(() => setCopiedSecret(false), 2500);
+                            showToast('Setup key copied to clipboard!', 'info');
+                          }}
+                          className="text-[#0054A6] hover:underline flex items-center gap-1 font-bold cursor-pointer"
+                        >
+                          {copiedSecret ? <CheckCircle className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                          <span>{copiedSecret ? 'Copied' : 'Copy Key'}</span>
+                        </button>
+                      </div>
+                      <div className="font-mono text-xs font-black text-slate-800 tracking-wider break-all bg-slate-50 p-1.5 rounded-lg border border-slate-100 select-all">
+                        {DEFAULT_ADMIN_TOTP_SECRET}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   disabled={isAdminVerifying || googleAuthCode.length !== 6}
-                  className="w-full py-3.5 rounded-xl bg-[#0054A6] hover:bg-[#004080] text-white font-bold text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-xl bg-[#0054A6] hover:bg-[#004080] text-white font-bold text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <ShieldCheck className="w-4 h-4" />
                   <span>{isAdminVerifying ? 'Verifying Code...' : 'Verify & Enter Admin Console'}</span>
@@ -1375,7 +1465,7 @@ export const SuperAdminDashboard: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => { setAuthStage('CREDENTIALS'); setAuthError(''); setGoogleAuthCode(''); }}
-                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
                 >
                   ← Back to Password Login
                 </button>

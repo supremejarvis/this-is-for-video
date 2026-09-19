@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { X, MapPin, Building2, Check, AlertCircle, Sparkles, Navigation, ShieldCheck, Trash2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';

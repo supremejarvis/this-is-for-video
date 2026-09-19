@@ -1,0 +1,2147 @@
+{
+  "duplicates": [
+    {
+      "firstFile": {
+        "end": 32,
+        "endLoc": {
+          "column": 70,
+          "line": 32,
+          "position": 1135
+        },
+        "name": "components\\ProductCard.tsx",
+        "start": 23,
+        "startLoc": {
+          "column": 19,
+          "line": 23,
+          "position": 814
+        }
+      },
+      "format": "tsx",
+      "fragment": "  reverse?: boolean;\n  price?: string;\n  sku?: string;\n  returnDays?: number;\n  shippingHandlingMin?: number;\n  shippingHandlingMax?: number;\n  shippingTransitMin?: number;\n  shippingTransitMax?: number;\n  aggregateRating?: { ratingValue: string; reviewCount: string };\n  review?: { author: string; ratingValue: string; reviewBody: string };",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 10,
+      "secondFile": {
+        "end": 43,
+        "endLoc": {
+          "column": 134,
+          "line": 43,
+          "position": 1929
+        },
+        "name": "components\\ProductCard.tsx",
+        "start": 40,
+        "startLoc": {
+          "column": 122,
+          "line": 40,
+          "position": 1620
+        }
+      },
+      "tokens": 65
+    },
+    {
+      "firstFile": {
+        "end": 320,
+        "endLoc": {
+          "column": 17,
+          "line": 320,
+          "position": 15181
+        },
+        "name": "components\\admin\\ApeProductListingWizard.tsx",
+        "start": 315,
+        "startLoc": {
+          "column": 80,
+          "line": 315,
+          "position": 14951
+        }
+      },
+      "format": "tsx",
+      "fragment": "        b2bTierPricing: [{ minQty: 50, pricePerUnit: 12.75, discountPercent: 36 }],\n        inventory: 500,\n        lowStockThreshold: 50,\n        barcode: `8908511${Math.floor(100000 + Math.random() * 900000)}`,\n        flipkartFsn: `FSN-APE-${Math.floor(1000 + Math.random() * 9000)}`,\n        images: ['/Drain_clips.webp'],",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 6,
+      "secondFile": {
+        "end": 638,
+        "endLoc": {
+          "column": 15,
+          "line": 638,
+          "position": 29129
+        },
+        "name": "components\\admin\\ApeProductListingWizard.tsx",
+        "start": 633,
+        "startLoc": {
+          "column": 114,
+          "line": 633,
+          "position": 28909
+        }
+      },
+      "tokens": 52
+    },
+    {
+      "firstFile": {
+        "end": 616,
+        "endLoc": {
+          "column": 8,
+          "line": 616,
+          "position": 28080
+        },
+        "name": "components\\admin\\ApeProductListingWizard.tsx",
+        "start": 609,
+        "startLoc": {
+          "column": 83,
+          "line": 609,
+          "position": 27739
+        }
+      },
+      "format": "tsx",
+      "fragment": "        flipkartFsn: `FSN-APE-${cleanSize.replace(/\\D/g, '') || (idx + 1).toString()}`,\n        images: [image1 || '/Drain_clips.webp'],\n        weightGrams: itemWeight || 25,\n        dimensionsCm: { length: itemLength || 5, width: itemWidth || 5, height: itemHeight || 5 },\n        hsnCode: hsnCode || '73269099',\n        gstRatePercent: gstRate || 18,\n        unitOfMeasure: (unitOfMeasure || 'PCS') as any\n      };",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 8,
+      "secondFile": {
+        "end": 644,
+        "endLoc": {
+          "column": 6,
+          "line": 644,
+          "position": 29435
+        },
+        "name": "components\\admin\\ApeProductListingWizard.tsx",
+        "start": 637,
+        "startLoc": {
+          "column": 68,
+          "line": 637,
+          "position": 29108
+        }
+      },
+      "tokens": 62
+    },
+    {
+      "firstFile": {
+        "end": 1628,
+        "endLoc": {
+          "column": 32,
+          "line": 1628,
+          "position": 81643
+        },
+        "name": "components\\admin\\ApeProductListingWizard.tsx",
+        "start": 1616,
+        "startLoc": {
+          "column": 71,
+          "line": 1616,
+          "position": 81211
+        }
+      },
+      "format": "tsx",
+      "fragment": "                        onClick={() => setTargetAudience(targetAudience.filter((_, i) => i !== idx))}\n                        className=\"text-slate-400 hover:text-rose-600\"\n                      >\n                        <X className=\"w-3.5 h-3.5\" />\n                      </button>\n                    </span>\n                  ))}\n                </div>\n\n                <div className=\"flex gap-2\">\n                  <input\n                    type=\"text\"\n                    placeholder=\"Add target application (e.g. Floating Solar, Agrivoltaics)...\"",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 13,
+      "secondFile": {
+        "end": 2736,
+        "endLoc": {
+          "column": 32,
+          "line": 2736,
+          "position": 148353
+        },
+        "name": "components\\admin\\ApeProductListingWizard.tsx",
+        "start": 2724,
+        "startLoc": {
+          "column": 59,
+          "line": 2724,
+          "position": 147921
+        }
+      },
+      "tokens": 60
+    },
+    {
+      "firstFile": {
+        "end": 254,
+        "endLoc": {
+          "column": 24,
+          "line": 254,
+          "position": 9553
+        },
+        "name": "components\\admin\\CustomerManagementPanel.tsx",
+        "start": 238,
+        "startLoc": {
+          "column": 27,
+          "line": 238,
+          "position": 9015
+        }
+      },
+      "format": "tsx",
+      "fragment": "                filterType === tab.id\n                  ? 'bg-amber-500 text-slate-950 shadow-xs'\n                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'\n              }`}\n            >\n              {tab.label}\n            </button>\n          ))}\n        </div>\n\n        <div className=\"relative w-full sm:w-72\">\n          <Search className=\"w-4 h-4 text-slate-400 absolute left-3 top-2.5\" />\n          <input\n            type=\"text\"\n            value={searchQuery}\n            onChange={(e) => setSearchQuery(e.target.value)}\n            placeholder=\"Search by name, GSTIN, phone, or company...\"",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 17,
+      "secondFile": {
+        "end": 216,
+        "endLoc": {
+          "column": 24,
+          "line": 216,
+          "position": 9326
+        },
+        "name": "components\\admin\\PaymentReconciliationPanel.tsx",
+        "start": 200,
+        "startLoc": {
+          "column": 29,
+          "line": 200,
+          "position": 8788
+        }
+      },
+      "tokens": 74
+    },
+    {
+      "firstFile": {
+        "end": 266,
+        "endLoc": {
+          "column": 38,
+          "line": 266,
+          "position": 10226
+        },
+        "name": "components\\admin\\CustomerManagementPanel.tsx",
+        "start": 255,
+        "startLoc": {
+          "column": 12,
+          "line": 255,
+          "position": 9611
+        }
+      },
+      "format": "tsx",
+      "fragment": "            className=\"w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:border-amber-500 focus:outline-none\"\n          />\n        </div>\n      </div>\n\n      {/* Customers Table */}\n      <div className=\"bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden\">\n        <div className=\"overflow-x-auto\">\n          <table className=\"w-full text-left text-xs border-collapse\">\n            <thead className=\"bg-slate-50 text-slate-600 uppercase font-mono text-[10px] tracking-wider border-b border-slate-200\">\n              <tr>\n                <th className=\"p-3.5\">Customer / Contact</th>",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 12,
+      "secondFile": {
+        "end": 228,
+        "endLoc": {
+          "column": 38,
+          "line": 228,
+          "position": 10001
+        },
+        "name": "components\\admin\\PaymentReconciliationPanel.tsx",
+        "start": 217,
+        "startLoc": {
+          "column": 12,
+          "line": 217,
+          "position": 9381
+        }
+      },
+      "tokens": 57
+    },
+    {
+      "firstFile": {
+        "end": 509,
+        "endLoc": {
+          "column": 14,
+          "line": 509,
+          "position": 22692
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 504,
+        "startLoc": {
+          "column": 119,
+          "line": 504,
+          "position": 22424
+        }
+      },
+      "format": "tsx",
+      "fragment": "  const getInitialAdminTab = (): 'PRODUCTS' | 'ORDERS' | 'CUSTOMERS' | 'INQUIRIES' | 'COUPONS' | 'RETURNS' | 'REPORTS' => {\n    try {\n      const params = new URLSearchParams(window.location.search);\n      const tab = params.get('tab')?.toUpperCase();\n      if (tab && ['PRODUCTS', 'ORDERS', 'CUSTOMERS', 'INQUIRIES', 'COUPONS', 'RETURNS', 'REPORTS'].includes(tab)) {\n        return tab as any;",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 6,
+      "secondFile": {
+        "end": 560,
+        "endLoc": {
+          "column": 27,
+          "line": 560,
+          "position": 24896
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 555,
+        "startLoc": {
+          "column": 30,
+          "line": 555,
+          "position": 24607
+        }
+      },
+      "tokens": 57
+    },
+    {
+      "firstFile": {
+        "end": 728,
+        "endLoc": {
+          "column": 18,
+          "line": 728,
+          "position": 32331
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 721,
+        "startLoc": {
+          "column": 59,
+          "line": 721,
+          "position": 32009
+        }
+      },
+      "format": "tsx",
+      "fragment": "      const excelBytes = await generateGstr1MultiSheetExcel(gstr1PeriodOrders, gstr1FromDate, gstr1ToDate);\n      const blob = new Blob([excelBytes], { \n        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' \n      });\n      const url = URL.createObjectURL(blob);\n      const a = document.createElement('a');\n      a.href = url;\n      a.download = `GSTR1_Full_18Sheets_Report_ApolloEngineering_${gstr1FromDate}_to_${gstr1ToDate}.xlsx`;",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 8,
+      "secondFile": {
+        "end": 791,
+        "endLoc": {
+          "column": 18,
+          "line": 791,
+          "position": 35157
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 784,
+        "startLoc": {
+          "column": 54,
+          "line": 784,
+          "position": 34835
+        }
+      },
+      "tokens": 55
+    },
+    {
+      "firstFile": {
+        "end": 728,
+        "endLoc": {
+          "column": 18,
+          "line": 728,
+          "position": 32331
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 721,
+        "startLoc": {
+          "column": 59,
+          "line": 721,
+          "position": 32009
+        }
+      },
+      "format": "tsx",
+      "fragment": "      const excelBytes = await generateGstr1MultiSheetExcel(gstr1PeriodOrders, gstr1FromDate, gstr1ToDate);\n      const blob = new Blob([excelBytes], { \n        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' \n      });\n      const url = URL.createObjectURL(blob);\n      const a = document.createElement('a');\n      a.href = url;\n      a.download = `GSTR1_Full_18Sheets_Report_ApolloEngineering_${gstr1FromDate}_to_${gstr1ToDate}.xlsx`;",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 8,
+      "secondFile": {
+        "end": 812,
+        "endLoc": {
+          "column": 18,
+          "line": 812,
+          "position": 36087
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 805,
+        "startLoc": {
+          "column": 54,
+          "line": 805,
+          "position": 35765
+        }
+      },
+      "tokens": 55
+    },
+    {
+      "firstFile": {
+        "end": 749,
+        "endLoc": {
+          "column": 18,
+          "line": 749,
+          "position": 33287
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 742,
+        "startLoc": {
+          "column": 53,
+          "line": 742,
+          "position": 32993
+        }
+      },
+      "format": "tsx",
+      "fragment": "      const excelBytes = await generateAllOrdersExcel(gstr1PeriodOrders);\n      const blob = new Blob([excelBytes], { \n        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' \n      });\n      const url = URL.createObjectURL(blob);\n      const a = document.createElement('a');\n      a.href = url;\n      a.download = `GSTR1_All_Orders_Master_ApolloEngineering_${gstr1FromDate}_to_${gstr1ToDate}.xlsx`;",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 8,
+      "secondFile": {
+        "end": 770,
+        "endLoc": {
+          "column": 18,
+          "line": 770,
+          "position": 34213
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 763,
+        "startLoc": {
+          "column": 61,
+          "line": 763,
+          "position": 33919
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 749,
+        "endLoc": {
+          "column": 18,
+          "line": 749,
+          "position": 33287
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 742,
+        "startLoc": {
+          "column": 53,
+          "line": 742,
+          "position": 32993
+        }
+      },
+      "format": "tsx",
+      "fragment": "      const excelBytes = await generateAllOrdersExcel(gstr1PeriodOrders);\n      const blob = new Blob([excelBytes], { \n        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' \n      });\n      const url = URL.createObjectURL(blob);\n      const a = document.createElement('a');\n      a.href = url;\n      a.download = `GSTR1_All_Orders_Master_ApolloEngineering_${gstr1FromDate}_to_${gstr1ToDate}.xlsx`;",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 8,
+      "secondFile": {
+        "end": 833,
+        "endLoc": {
+          "column": 18,
+          "line": 833,
+          "position": 36975
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 826,
+        "startLoc": {
+          "column": 49,
+          "line": 826,
+          "position": 36681
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 749,
+        "endLoc": {
+          "column": 18,
+          "line": 749,
+          "position": 33287
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 742,
+        "startLoc": {
+          "column": 53,
+          "line": 742,
+          "position": 32993
+        }
+      },
+      "format": "tsx",
+      "fragment": "      const excelBytes = await generateAllOrdersExcel(gstr1PeriodOrders);\n      const blob = new Blob([excelBytes], { \n        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' \n      });\n      const url = URL.createObjectURL(blob);\n      const a = document.createElement('a');\n      a.href = url;\n      a.download = `GSTR1_All_Orders_Master_ApolloEngineering_${gstr1FromDate}_to_${gstr1ToDate}.xlsx`;",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 8,
+      "secondFile": {
+        "end": 854,
+        "endLoc": {
+          "column": 18,
+          "line": 854,
+          "position": 37818
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 847,
+        "startLoc": {
+          "column": 47,
+          "line": 847,
+          "position": 37524
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 749,
+        "endLoc": {
+          "column": 18,
+          "line": 749,
+          "position": 33287
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 742,
+        "startLoc": {
+          "column": 53,
+          "line": 742,
+          "position": 32993
+        }
+      },
+      "format": "tsx",
+      "fragment": "      const excelBytes = await generateAllOrdersExcel(gstr1PeriodOrders);\n      const blob = new Blob([excelBytes], { \n        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' \n      });\n      const url = URL.createObjectURL(blob);\n      const a = document.createElement('a');\n      a.href = url;\n      a.download = `GSTR1_All_Orders_Master_ApolloEngineering_${gstr1FromDate}_to_${gstr1ToDate}.xlsx`;",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 8,
+      "secondFile": {
+        "end": 875,
+        "endLoc": {
+          "column": 18,
+          "line": 875,
+          "position": 38659
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 868,
+        "startLoc": {
+          "column": 47,
+          "line": 868,
+          "position": 38365
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 749,
+        "endLoc": {
+          "column": 18,
+          "line": 749,
+          "position": 33287
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 742,
+        "startLoc": {
+          "column": 53,
+          "line": 742,
+          "position": 32993
+        }
+      },
+      "format": "tsx",
+      "fragment": "      const excelBytes = await generateAllOrdersExcel(gstr1PeriodOrders);\n      const blob = new Blob([excelBytes], { \n        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' \n      });\n      const url = URL.createObjectURL(blob);\n      const a = document.createElement('a');\n      a.href = url;\n      a.download = `GSTR1_All_Orders_Master_ApolloEngineering_${gstr1FromDate}_to_${gstr1ToDate}.xlsx`;",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 8,
+      "secondFile": {
+        "end": 896,
+        "endLoc": {
+          "column": 18,
+          "line": 896,
+          "position": 39521
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 889,
+        "startLoc": {
+          "column": 52,
+          "line": 889,
+          "position": 39227
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 1257,
+        "endLoc": {
+          "column": 30,
+          "line": 1257,
+          "position": 56726
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 1247,
+        "startLoc": {
+          "column": 16,
+          "line": 1247,
+          "position": 56334
+        }
+      },
+      "format": "tsx",
+      "fragment": "                </p>\n              </div>\n\n              {authError && (\n                <div className=\"p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2\">\n                  <AlertCircle className=\"w-4 h-4 flex-shrink-0 text-rose-600\" />\n                  <span>{authError}</span>\n                </div>\n              )}\n\n              <form onSubmit={handleVerifyMobileOtp} className=\"space-y-4\">",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 11,
+      "secondFile": {
+        "end": 1349,
+        "endLoc": {
+          "column": 30,
+          "line": 1349,
+          "position": 61781
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 1339,
+        "startLoc": {
+          "column": 16,
+          "line": 1339,
+          "position": 61389
+        }
+      },
+      "tokens": 52
+    },
+    {
+      "firstFile": {
+        "end": 1257,
+        "endLoc": {
+          "column": 30,
+          "line": 1257,
+          "position": 56726
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 1247,
+        "startLoc": {
+          "column": 16,
+          "line": 1247,
+          "position": 56334
+        }
+      },
+      "format": "tsx",
+      "fragment": "                </p>\n              </div>\n\n              {authError && (\n                <div className=\"p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2\">\n                  <AlertCircle className=\"w-4 h-4 flex-shrink-0 text-rose-600\" />\n                  <span>{authError}</span>\n                </div>\n              )}\n\n              <form onSubmit={handleVerifyMobileOtp} className=\"space-y-4\">",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 11,
+      "secondFile": {
+        "end": 1410,
+        "endLoc": {
+          "column": 30,
+          "line": 1410,
+          "position": 64804
+        },
+        "name": "components\\admin\\SuperAdminDashboard.tsx",
+        "start": 1400,
+        "startLoc": {
+          "column": 16,
+          "line": 1400,
+          "position": 64412
+        }
+      },
+      "tokens": 52
+    },
+    {
+      "firstFile": {
+        "end": 404,
+        "endLoc": {
+          "column": 32,
+          "line": 404,
+          "position": 19831
+        },
+        "name": "components\\auth\\AddressModal.tsx",
+        "start": 398,
+        "startLoc": {
+          "column": 20,
+          "line": 398,
+          "position": 19480
+        }
+      },
+      "format": "tsx",
+      "fragment": "                    <select\n                      value={selectedPostOffice?.facilityId || ''}\n                      onChange={(e) => {\n                        const found = availablePostOffices.find((po) => po.facilityId === e.target.value);\n                        if (found) setSelectedPostOffice(found);\n                      }}\n                      className=\"w-full h-9 px-3 bg-slate-900 border border-amber-500 rounded-lg text-amber-400 font-bold text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none\"",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 7,
+      "secondFile": {
+        "end": 291,
+        "endLoc": {
+          "column": 40,
+          "line": 291,
+          "position": 15323
+        },
+        "name": "components\\auth\\CustomerAccountModal.tsx",
+        "start": 285,
+        "startLoc": {
+          "column": 28,
+          "line": 285,
+          "position": 14924
+        }
+      },
+      "tokens": 54
+    },
+    {
+      "firstFile": {
+        "end": 205,
+        "endLoc": {
+          "column": 7,
+          "line": 205,
+          "position": 8112
+        },
+        "name": "components\\auth\\AuthModal.tsx",
+        "start": 180,
+        "startLoc": {
+          "column": 53,
+          "line": 180,
+          "position": 6858
+        }
+      },
+      "format": "tsx",
+      "fragment": "      const data = await authApi.sendOtp(mobileNumber);\n      setIsSendingOtp(false);\n\n      if (data && (data.success || data.type === 'success')) {\n        setOtpStep(true);\n        setCountdown(30);\n        setOtpDigits(['', '', '', '']);\n        setDevOtpCode(data.dev_code || null);\n        showToast('Secure 4-digit OTP dispatched to your mobile number.', 'info');\n      } else {\n        const msg = data?.detail || data?.message || 'We couldn’t send the OTP. Please try again.';\n        setErrorMessage(msg);\n        showToast(msg, 'error');\n      }\n    } catch (err: any) {\n      setIsSendingOtp(false);\n      const msg = err.message || 'We couldn’t send the OTP. Please check your connection.';\n      setErrorMessage(msg);\n      showToast(msg, 'error');\n    }\n  };\n\n  // ──────────────────────────────────────────────────────────────────────────\n  // 2. Send OTP (Sign Up Registration)\n  // ──────────────────────────────────────────────────────────────────────────\n  const handleSendSignUpOtp = async (e: React.FormEvent) => {",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 26,
+      "secondFile": {
+        "end": 284,
+        "endLoc": {
+          "column": 7,
+          "line": 284,
+          "position": 11618
+        },
+        "name": "components\\auth\\AuthModal.tsx",
+        "start": 259,
+        "startLoc": {
+          "column": 53,
+          "line": 259,
+          "position": 10369
+        }
+      },
+      "tokens": 130
+    },
+    {
+      "firstFile": {
+        "end": 343,
+        "endLoc": {
+          "column": 11,
+          "line": 343,
+          "position": 15234
+        },
+        "name": "components\\checkout\\CheckoutModal.tsx",
+        "start": 329,
+        "startLoc": {
+          "column": 14,
+          "line": 329,
+          "position": 14774
+        }
+      },
+      "format": "tsx",
+      "fragment": "              );\n\n              confetti({\n                particleCount: 100,\n                spread: 70,\n                origin: { y: 0.6 }\n              });\n\n              setActiveTab('orders');\n            } catch (err: any) {\n              setIsProcessing(false);\n              const msg = err?.message || 'We couldn’t confirm your order right now. Your cart is safe. Please try again.';\n              showToast(msg, 'error');\n            }\n          },",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 15,
+      "secondFile": {
+        "end": 413,
+        "endLoc": {
+          "column": 3,
+          "line": 413,
+          "position": 17950
+        },
+        "name": "components\\checkout\\CheckoutModal.tsx",
+        "start": 401,
+        "startLoc": {
+          "column": 92,
+          "line": 401,
+          "position": 17590
+        }
+      },
+      "tokens": 59
+    },
+    {
+      "firstFile": {
+        "end": 343,
+        "endLoc": {
+          "column": 11,
+          "line": 343,
+          "position": 15234
+        },
+        "name": "components\\checkout\\CheckoutModal.tsx",
+        "start": 329,
+        "startLoc": {
+          "column": 14,
+          "line": 329,
+          "position": 14774
+        }
+      },
+      "format": "tsx",
+      "fragment": "              );\n\n              confetti({\n                particleCount: 100,\n                spread: 70,\n                origin: { y: 0.6 }\n              });\n\n              setActiveTab('orders');\n            } catch (err: any) {\n              setIsProcessing(false);\n              const msg = err?.message || 'We couldn’t confirm your order right now. Your cart is safe. Please try again.';\n              showToast(msg, 'error');\n            }\n          },",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 15,
+      "secondFile": {
+        "end": 470,
+        "endLoc": {
+          "column": 3,
+          "line": 470,
+          "position": 19923
+        },
+        "name": "components\\checkout\\CheckoutModal.tsx",
+        "start": 456,
+        "startLoc": {
+          "column": 6,
+          "line": 456,
+          "position": 19559
+        }
+      },
+      "tokens": 59
+    },
+    {
+      "firstFile": {
+        "end": 415,
+        "endLoc": {
+          "column": 7,
+          "line": 415,
+          "position": 17962
+        },
+        "name": "components\\checkout\\CheckoutModal.tsx",
+        "start": 404,
+        "startLoc": {
+          "column": 14,
+          "line": 404,
+          "position": 17655
+        }
+      },
+      "format": "tsx",
+      "fragment": "        spread: 70,\n        origin: { y: 0.6 }\n      });\n      setActiveTab('orders');\n    } catch (err: any) {\n      setIsProcessing(false);\n      const msg = err?.message || 'We couldn’t confirm your order right now. Your cart is safe. Please try again.';\n      showToast(msg, 'error');\n    }\n  };\n\n  const handleVerifyCodAndPlaceOrder = async (e: React.FormEvent) => {",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 12,
+      "secondFile": {
+        "end": 472,
+        "endLoc": {
+          "column": 7,
+          "line": 472,
+          "position": 19935
+        },
+        "name": "components\\checkout\\CheckoutModal.tsx",
+        "start": 460,
+        "startLoc": {
+          "column": 14,
+          "line": 460,
+          "position": 19626
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 135,
+        "endLoc": {
+          "column": 31,
+          "line": 135,
+          "position": 7944
+        },
+        "name": "components\\logistics\\GstInvoice.tsx",
+        "start": 127,
+        "startLoc": {
+          "column": 93,
+          "line": 127,
+          "position": 7501
+        }
+      },
+      "format": "tsx",
+      "fragment": "                  {order.deliveryAddress?.fullName || order.customerName || 'Valued Customer'}\n                </div>\n                <div className=\"text-slate-700 leading-snug\">\n                  {order.deliveryAddress?.flatBuilding}, {order.deliveryAddress?.streetArea}\n                </div>\n                <div className=\"text-slate-700 font-semibold\">\n                  {order.deliveryAddress?.city}, {order.deliveryAddress?.state} - {order.deliveryAddress?.pincode}\n                </div>\n                <div className=\"text-slate-600 font-mono text-[11px]\">",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 9,
+      "secondFile": {
+        "end": 163,
+        "endLoc": {
+          "column": 31,
+          "line": 163,
+          "position": 9702
+        },
+        "name": "components\\logistics\\GstInvoice.tsx",
+        "start": 155,
+        "startLoc": {
+          "column": 99,
+          "line": 155,
+          "position": 9259
+        }
+      },
+      "tokens": 75
+    },
+    {
+      "firstFile": {
+        "end": 67,
+        "endLoc": {
+          "column": 13,
+          "line": 67,
+          "position": 3678
+        },
+        "name": "components\\pages\\ContactPage.tsx",
+        "start": 55,
+        "startLoc": {
+          "column": 2,
+          "line": 55,
+          "position": 2715
+        }
+      },
+      "format": "tsx",
+      "fragment": "  ];\n\n  return (\n    <div className=\"min-h-screen py-10 px-4 md:px-8 space-y-16 max-w-7xl mx-auto animate-fadeIn\">\n      {/* Signature Solar Engineered Header Banner */}\n      <div className=\"relative overflow-hidden bg-white/90 backdrop-blur-xl border border-solar-gold/30 rounded-3xl p-8 md:p-12 text-slate-900 shadow-xl space-y-4\">\n        {/* Warm Ambient Flares */}\n        <div className=\"absolute top-0 right-0 w-80 h-80 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.15)_0%,transparent_70%)] pointer-events-none\" />\n        <div className=\"absolute bottom-0 left-0 w-80 h-80 bg-[radial-gradient(circle_at_center,rgba(0,84,166,0.08)_0%,transparent_70%)] pointer-events-none\" />\n\n        <div className=\"relative z-10 space-y-4\">\n          <div className=\"inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-solar-gold/50 bg-solar-gold/[0.08] backdrop-blur-md text-slate-900 text-xs font-mono font-extrabold shadow-sm\">\n            <Phone className=\"w-3.5 h-3.5 text-solar-gold\" />",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 13,
+      "secondFile": {
+        "end": 63,
+        "endLoc": {
+          "column": 13,
+          "line": 63,
+          "position": 3022
+        },
+        "name": "components\\pages\\InstallationPage.tsx",
+        "start": 51,
+        "startLoc": {
+          "column": 2,
+          "line": 51,
+          "position": 2060
+        }
+      },
+      "tokens": 55
+    },
+    {
+      "firstFile": {
+        "end": 814,
+        "endLoc": {
+          "column": 28,
+          "line": 814,
+          "position": 46270
+        },
+        "name": "components\\pages\\CustomerAccountPage.tsx",
+        "start": 808,
+        "startLoc": {
+          "column": 82,
+          "line": 808,
+          "position": 45843
+        }
+      },
+      "format": "tsx",
+      "fragment": "                              <MapPin className=\"w-4 h-4 text-[#0054A6] shrink-0\" />\n                              <span>{billingAddress.postOffice?.name || 'Delivery Hub'} ({billingAddress.pincode})</span>\n                            </div>\n                            <div className=\"text-slate-500 text-[11px]\">\n                              {billingAddress.city}, {billingAddress.state} (State Code: {billingAddress.stateCode || '24'})\n                            </div>\n                            {billingAddress.gstin && (",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 7,
+      "secondFile": {
+        "end": 1014,
+        "endLoc": {
+          "column": 28,
+          "line": 1014,
+          "position": 59128
+        },
+        "name": "components\\pages\\CustomerAccountPage.tsx",
+        "start": 1008,
+        "startLoc": {
+          "column": 84,
+          "line": 1008,
+          "position": 58701
+        }
+      },
+      "tokens": 64
+    },
+    {
+      "firstFile": {
+        "end": 921,
+        "endLoc": {
+          "column": 108,
+          "line": 921,
+          "position": 53029
+        },
+        "name": "components\\pages\\CustomerAccountPage.tsx",
+        "start": 912,
+        "startLoc": {
+          "column": 51,
+          "line": 912,
+          "position": 52537
+        }
+      },
+      "format": "tsx",
+      "fragment": "                                {billingPostOffices.map((po) => (\n                                  <option key={po.facilityId || po.name} value={po.facilityId || po.name}>\n                                    {po.name} ({po.branchType})\n                                  </option>\n                                ))}\n                              </select>\n                            </div>\n                          </div>\n\n                          <div className=\"p-2 rounded-xl bg-slate-100 text-[11px] text-slate-600 font-mono\">",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 10,
+      "secondFile": {
+        "end": 1189,
+        "endLoc": {
+          "column": 108,
+          "line": 1189,
+          "position": 70551
+        },
+        "name": "components\\pages\\CustomerAccountPage.tsx",
+        "start": 1180,
+        "startLoc": {
+          "column": 52,
+          "line": 1180,
+          "position": 70059
+        }
+      },
+      "tokens": 75
+    },
+    {
+      "firstFile": {
+        "end": 94,
+        "endLoc": {
+          "column": 34,
+          "line": 94,
+          "position": 4635
+        },
+        "name": "components\\reports\\ReportingSuite.tsx",
+        "start": 88,
+        "startLoc": {
+          "column": 83,
+          "line": 88,
+          "position": 4350
+        }
+      },
+      "format": "tsx",
+      "fragment": "                  <th className=\"p-3 font-bold text-white text-right\">Invoice Total</th>\n                </tr>\n              </thead>\n              <tbody className=\"divide-y divide-slate-800/60 font-mono\">\n                {orders.map((ord) => (\n                  <tr key={ord.id} className=\"hover:bg-slate-950/60 transition-colors\">\n                    <td className=\"p-3 font-bold text-amber-400\">{ord.invoiceNumber}</td>",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 7,
+      "secondFile": {
+        "end": 138,
+        "endLoc": {
+          "column": 34,
+          "line": 138,
+          "position": 7367
+        },
+        "name": "components\\reports\\ReportingSuite.tsx",
+        "start": 132,
+        "startLoc": {
+          "column": 68,
+          "line": 132,
+          "position": 7082
+        }
+      },
+      "tokens": 50
+    },
+    {
+      "firstFile": {
+        "end": 128,
+        "endLoc": {
+          "column": 40,
+          "line": 128,
+          "position": 5894
+        },
+        "name": "components\\storefront\\ProductDetail.tsx",
+        "start": 121,
+        "startLoc": {
+          "column": 27,
+          "line": 121,
+          "position": 5596
+        }
+      },
+      "format": "tsx",
+      "fragment": "  const executeAddToCart = () => {\n    addToCart({\n      sku: currentVariant.sku,\n      parentAsin: selectedProduct.asin,\n      productTitle: selectedProduct.title,\n      variantTitle: currentVariant.title,\n      attributes: currentVariant.attributes as Record<string, string>,\n      imageUrl: currentVariant.images[0] || 'https://images.unsplash.com/photo-1580481077197-76c79a42f65a?w=800&auto=format&fit=crop&q=80',",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 8,
+      "secondFile": {
+        "end": 974,
+        "endLoc": {
+          "column": 60,
+          "line": 974,
+          "position": 55716
+        },
+        "name": "components\\storefront\\ProductDetail.tsx",
+        "start": 967,
+        "startLoc": {
+          "column": 31,
+          "line": 967,
+          "position": 55278
+        }
+      },
+      "tokens": 52
+    },
+    {
+      "firstFile": {
+        "end": 364,
+        "endLoc": {
+          "column": 5,
+          "line": 364,
+          "position": 15536
+        },
+        "name": "components\\storefront\\SolarBOMCalculator.tsx",
+        "start": 354,
+        "startLoc": {
+          "column": 32,
+          "line": 354,
+          "position": 15071
+        }
+      },
+      "format": "tsx",
+      "fragment": "  const handleAddComboKitToCart = () => {\n    if (!selectedFrameSize) {\n      setSizeErrorShake(true);\n      setTimeout(() => setSizeErrorShake(false), 1500);\n      showToast('⚠️ Please select solar panel frame thickness size (28mm, 30mm, 33mm, 35mm, or 40mm). Size selection is compulsory!', 'error');\n      const el = document.getElementById('bom-frame-size-selector');\n      if (el) {\n        el.scrollIntoView({ behavior: 'smooth', block: 'center' });\n      }\n      return;\n    }",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 11,
+      "secondFile": {
+        "end": 417,
+        "endLoc": {
+          "column": 5,
+          "line": 417,
+          "position": 17979
+        },
+        "name": "components\\storefront\\SolarBOMCalculator.tsx",
+        "start": 407,
+        "startLoc": {
+          "column": 33,
+          "line": 407,
+          "position": 17514
+        }
+      },
+      "tokens": 70
+    },
+    {
+      "firstFile": {
+        "end": 97,
+        "endLoc": {
+          "column": 19,
+          "line": 97,
+          "position": 3275
+        },
+        "name": "data\\mockData.ts",
+        "start": 81,
+        "startLoc": {
+          "column": 25,
+          "line": 81,
+          "position": 2795
+        }
+      },
+      "format": "typescript",
+      "fragment": "    addressType: 'OFFICE',\n    flatBuilding: 'Plot 100, Gopinath Industrial Landmark',\n    streetArea: 'Kathwada GIDC Phase 2, Near Ring Road',\n    pincode: '382430',\n    postOffice: {\n      name: 'KATHWADA GIDC S.O.',\n      branchType: 'Sub Post Office',\n      deliveryStatus: 'Delivery',\n      circle: 'Gujarat',\n      district: 'Ahmedabad',\n      state: 'Gujarat',\n      facilityId: '21260024'\n    },\n    city: 'Ahmedabad',\n    state: 'Gujarat',\n    stateCode: '24',\n    isDefault: true,",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 17,
+      "secondFile": {
+        "end": 121,
+        "endLoc": {
+          "column": 19,
+          "line": 121,
+          "position": 3949
+        },
+        "name": "data\\mockData.ts",
+        "start": 105,
+        "startLoc": {
+          "column": 23,
+          "line": 105,
+          "position": 3469
+        }
+      },
+      "tokens": 60
+    },
+    {
+      "firstFile": {
+        "end": 242,
+        "endLoc": {
+          "column": 16,
+          "line": 242,
+          "position": 9471
+        },
+        "name": "data\\mockData.ts",
+        "start": 234,
+        "startLoc": {
+          "column": 59,
+          "line": 234,
+          "position": 9194
+        }
+      },
+      "format": "typescript",
+      "fragment": "        attributes: { material: 'AISI SS304', size: '28mm' },\n        mrp: 35,\n        b2cPrice: 20,\n        b2bTierPricing: [\n          { minQty: 1, maxQty: 999, pricePerUnit: 20, discountPercent: 0 },\n          { minQty: 1000, pricePerUnit: 12.75, discountPercent: 36.25 }\n        ],\n        inventory: 50000,\n        barcode: 'B0GSSF4SBB',",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 9,
+      "secondFile": {
+        "end": 262,
+        "endLoc": {
+          "column": 16,
+          "line": 262,
+          "position": 10193
+        },
+        "name": "data\\mockData.ts",
+        "start": 254,
+        "startLoc": {
+          "column": 59,
+          "line": 254,
+          "position": 9916
+        }
+      },
+      "tokens": 52
+    },
+    {
+      "firstFile": {
+        "end": 242,
+        "endLoc": {
+          "column": 16,
+          "line": 242,
+          "position": 9471
+        },
+        "name": "data\\mockData.ts",
+        "start": 234,
+        "startLoc": {
+          "column": 59,
+          "line": 234,
+          "position": 9194
+        }
+      },
+      "format": "typescript",
+      "fragment": "        attributes: { material: 'AISI SS304', size: '28mm' },\n        mrp: 35,\n        b2cPrice: 20,\n        b2bTierPricing: [\n          { minQty: 1, maxQty: 999, pricePerUnit: 20, discountPercent: 0 },\n          { minQty: 1000, pricePerUnit: 12.75, discountPercent: 36.25 }\n        ],\n        inventory: 50000,\n        barcode: 'B0GSSF4SBB',",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 9,
+      "secondFile": {
+        "end": 282,
+        "endLoc": {
+          "column": 16,
+          "line": 282,
+          "position": 10915
+        },
+        "name": "data\\mockData.ts",
+        "start": 274,
+        "startLoc": {
+          "column": 59,
+          "line": 274,
+          "position": 10638
+        }
+      },
+      "tokens": 52
+    },
+    {
+      "firstFile": {
+        "end": 242,
+        "endLoc": {
+          "column": 16,
+          "line": 242,
+          "position": 9471
+        },
+        "name": "data\\mockData.ts",
+        "start": 234,
+        "startLoc": {
+          "column": 59,
+          "line": 234,
+          "position": 9194
+        }
+      },
+      "format": "typescript",
+      "fragment": "        attributes: { material: 'AISI SS304', size: '28mm' },\n        mrp: 35,\n        b2cPrice: 20,\n        b2bTierPricing: [\n          { minQty: 1, maxQty: 999, pricePerUnit: 20, discountPercent: 0 },\n          { minQty: 1000, pricePerUnit: 12.75, discountPercent: 36.25 }\n        ],\n        inventory: 50000,\n        barcode: 'B0GSSF4SBB',",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 9,
+      "secondFile": {
+        "end": 302,
+        "endLoc": {
+          "column": 16,
+          "line": 302,
+          "position": 11637
+        },
+        "name": "data\\mockData.ts",
+        "start": 294,
+        "startLoc": {
+          "column": 59,
+          "line": 294,
+          "position": 11360
+        }
+      },
+      "tokens": 52
+    },
+    {
+      "firstFile": {
+        "end": 242,
+        "endLoc": {
+          "column": 16,
+          "line": 242,
+          "position": 9471
+        },
+        "name": "data\\mockData.ts",
+        "start": 234,
+        "startLoc": {
+          "column": 59,
+          "line": 234,
+          "position": 9194
+        }
+      },
+      "format": "typescript",
+      "fragment": "        attributes: { material: 'AISI SS304', size: '28mm' },\n        mrp: 35,\n        b2cPrice: 20,\n        b2bTierPricing: [\n          { minQty: 1, maxQty: 999, pricePerUnit: 20, discountPercent: 0 },\n          { minQty: 1000, pricePerUnit: 12.75, discountPercent: 36.25 }\n        ],\n        inventory: 50000,\n        barcode: 'B0GSSF4SBB',",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 9,
+      "secondFile": {
+        "end": 322,
+        "endLoc": {
+          "column": 16,
+          "line": 322,
+          "position": 12359
+        },
+        "name": "data\\mockData.ts",
+        "start": 314,
+        "startLoc": {
+          "column": 59,
+          "line": 314,
+          "position": 12082
+        }
+      },
+      "tokens": 52
+    },
+    {
+      "firstFile": {
+        "end": 646,
+        "endLoc": {
+          "column": 64,
+          "line": 646,
+          "position": 24301
+        },
+        "name": "data\\mockData.ts",
+        "start": 632,
+        "startLoc": {
+          "column": 60,
+          "line": 632,
+          "position": 23747
+        }
+      },
+      "format": "typescript",
+      "fragment": "              specs: { 'Ratio': '1 Clamp per Panel (6 Pcs)' }\n            }\n          },\n          {\n            asin: 'AP-TIMER-07',\n            sku: 'AE-TIMER-DIGITAL',\n            productTitle: 'Apollo Digital Programmable Solar Cleaning Automation Controller',\n            imageUrl: '/auto_timer.webp',\n            quantity: 1,\n            unitPrice: 850,\n            unitOfMeasure: 'PCS',\n            technicalDetails: {\n              material: 'IP65 Weatherproof Enclosure',\n              electricalPhase: 'Single Phase 220V AC',\n              specs: { 'Operation': '1 Timer Unit per Plant Kit', 'Program': 'Daily Auto Cycle' }",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 15,
+      "secondFile": {
+        "end": 769,
+        "endLoc": {
+          "column": 64,
+          "line": 769,
+          "position": 29172
+        },
+        "name": "data\\mockData.ts",
+        "start": 755,
+        "startLoc": {
+          "column": 61,
+          "line": 755,
+          "position": 28618
+        }
+      },
+      "tokens": 50
+    },
+    {
+      "firstFile": {
+        "end": 646,
+        "endLoc": {
+          "column": 64,
+          "line": 646,
+          "position": 24301
+        },
+        "name": "data\\mockData.ts",
+        "start": 632,
+        "startLoc": {
+          "column": 60,
+          "line": 632,
+          "position": 23747
+        }
+      },
+      "format": "typescript",
+      "fragment": "              specs: { 'Ratio': '1 Clamp per Panel (6 Pcs)' }\n            }\n          },\n          {\n            asin: 'AP-TIMER-07',\n            sku: 'AE-TIMER-DIGITAL',\n            productTitle: 'Apollo Digital Programmable Solar Cleaning Automation Controller',\n            imageUrl: '/auto_timer.webp',\n            quantity: 1,\n            unitPrice: 850,\n            unitOfMeasure: 'PCS',\n            technicalDetails: {\n              material: 'IP65 Weatherproof Enclosure',\n              electricalPhase: 'Single Phase 220V AC',\n              specs: { 'Operation': '1 Timer Unit per Plant Kit', 'Program': 'Daily Auto Cycle' }",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 15,
+      "secondFile": {
+        "end": 886,
+        "endLoc": {
+          "column": 64,
+          "line": 886,
+          "position": 33700
+        },
+        "name": "data\\mockData.ts",
+        "start": 872,
+        "startLoc": {
+          "column": 61,
+          "line": 872,
+          "position": 33146
+        }
+      },
+      "tokens": 50
+    },
+    {
+      "firstFile": {
+        "end": 775,
+        "endLoc": {
+          "column": 25,
+          "line": 775,
+          "position": 29310
+        },
+        "name": "data\\mockData.ts",
+        "start": 756,
+        "startLoc": {
+          "column": 12,
+          "line": 756,
+          "position": 28633
+        }
+      },
+      "format": "typescript",
+      "fragment": "            }\n          },\n          {\n            asin: 'AP-TIMER-07',\n            sku: 'AE-TIMER-DIGITAL',\n            productTitle: 'Apollo Digital Programmable Solar Cleaning Automation Controller',\n            imageUrl: '/auto_timer.webp',\n            quantity: 1,\n            unitPrice: 850,\n            unitOfMeasure: 'PCS',\n            technicalDetails: {\n              material: 'IP65 Weatherproof Enclosure',\n              electricalPhase: 'Single Phase 220V AC',\n              specs: { 'Operation': '1 Timer Unit per Plant Kit' }\n            }\n          },\n          {\n            asin: 'AP-PUMP-06',\n            sku: 'AE-PUMP-05HP',\n            productTitle: 'High-Pressure Booster Motor (70 LPM · 1.0 HP · Single Phase)',",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 20,
+      "secondFile": {
+        "end": 892,
+        "endLoc": {
+          "column": 25,
+          "line": 892,
+          "position": 33838
+        },
+        "name": "data\\mockData.ts",
+        "start": 873,
+        "startLoc": {
+          "column": 12,
+          "line": 873,
+          "position": 33161
+        }
+      },
+      "tokens": 64
+    },
+    {
+      "firstFile": {
+        "end": 22,
+        "endLoc": {
+          "column": 21,
+          "line": 22,
+          "position": 646
+        },
+        "name": "index.css",
+        "start": 16,
+        "startLoc": {
+          "column": 25,
+          "line": 16,
+          "position": 488
+        }
+      },
+      "format": "css",
+      "fragment": "  --color-danger: #E11D48;\n  \n  --color-bg-deep: #FFFFFF;\n  --color-bg-card: #F8FAFC;\n  --color-border-dim: rgba(10, 15, 28, 0.08);\n  --color-text-main: #0A0F1C;\n  --color-text-dim: #334155;",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 7,
+      "secondFile": {
+        "end": 178,
+        "endLoc": {
+          "column": 23,
+          "line": 178,
+          "position": 5355
+        },
+        "name": "index.css",
+        "start": 173,
+        "startLoc": {
+          "column": 30,
+          "line": 173,
+          "position": 5190
+        }
+      },
+      "tokens": 63
+    },
+    {
+      "firstFile": {
+        "end": 207,
+        "endLoc": {
+          "column": 7,
+          "line": 207,
+          "position": 6451
+        },
+        "name": "index.css",
+        "start": 202,
+        "startLoc": {
+          "column": 11,
+          "line": 202,
+          "position": 6187
+        }
+      },
+      "format": "css",
+      "fragment": "           transition-all duration-200 inline-flex items-center justify-center gap-2\n           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2\n           disabled:opacity-50 disabled:pointer-events-none;\n  }\n\n  .btn-secondary {",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 6,
+      "secondFile": {
+        "end": 215,
+        "endLoc": {
+          "column": 7,
+          "line": 215,
+          "position": 6880
+        },
+        "name": "index.css",
+        "start": 209,
+        "startLoc": {
+          "column": 45,
+          "line": 209,
+          "position": 6605
+        }
+      },
+      "tokens": 67
+    },
+    {
+      "firstFile": {
+        "end": 215,
+        "endLoc": {
+          "column": 7,
+          "line": 215,
+          "position": 6880
+        },
+        "name": "index.css",
+        "start": 209,
+        "startLoc": {
+          "column": 35,
+          "line": 209,
+          "position": 6595
+        }
+      },
+      "format": "css",
+      "fragment": "           border border-slate-200 shadow-sm transition-all duration-200\n           inline-flex items-center justify-center gap-2\n           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2\n           disabled:opacity-50 disabled:pointer-events-none;\n  }\n\n  .btn-outline {",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 7,
+      "secondFile": {
+        "end": 223,
+        "endLoc": {
+          "column": 7,
+          "line": 223,
+          "position": 7302
+        },
+        "name": "index.css",
+        "start": 217,
+        "startLoc": {
+          "column": 35,
+          "line": 217,
+          "position": 7017
+        }
+      },
+      "tokens": 70
+    },
+    {
+      "firstFile": {
+        "end": 215,
+        "endLoc": {
+          "column": 7,
+          "line": 215,
+          "position": 6880
+        },
+        "name": "index.css",
+        "start": 209,
+        "startLoc": {
+          "column": 41,
+          "line": 209,
+          "position": 6601
+        }
+      },
+      "format": "css",
+      "fragment": "           border border-slate-200 shadow-sm transition-all duration-200\n           inline-flex items-center justify-center gap-2\n           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2\n           disabled:opacity-50 disabled:pointer-events-none;\n  }\n\n  .btn-outline {",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 7,
+      "secondFile": {
+        "end": 230,
+        "endLoc": {
+          "column": 7,
+          "line": 230,
+          "position": 7684
+        },
+        "name": "index.css",
+        "start": 224,
+        "startLoc": {
+          "column": 95,
+          "line": 224,
+          "position": 7405
+        }
+      },
+      "tokens": 69
+    },
+    {
+      "firstFile": {
+        "end": 119,
+        "endLoc": {
+          "column": 26,
+          "line": 119,
+          "position": 3511
+        },
+        "name": "services\\api\\authApi.ts",
+        "start": 112,
+        "startLoc": {
+          "column": 22,
+          "line": 112,
+          "position": 3045
+        }
+      },
+      "format": "typescript",
+      "fragment": "  public async sendOtp(\n    phoneOrMobile: string | ({ phone?: string; mobile?: string; channel?: string } & Record<string, any>),\n    channel: 'SMS' | 'WHATSAPP' | 'VOICE' = 'SMS'\n  ): Promise<any> {\n    const payload = typeof phoneOrMobile === 'string'\n      ? { phone: phoneOrMobile, mobile: phoneOrMobile, channel }\n      : { phone: phoneOrMobile.phone || phoneOrMobile.mobile, mobile: phoneOrMobile.mobile || phoneOrMobile.phone, ...phoneOrMobile };\n    return apiClient.post('/auth/otp/send', payload);",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 8,
+      "secondFile": {
+        "end": 145,
+        "endLoc": {
+          "column": 26,
+          "line": 145,
+          "position": 4588
+        },
+        "name": "services\\api\\authApi.ts",
+        "start": 138,
+        "startLoc": {
+          "column": 23,
+          "line": 138,
+          "position": 4122
+        }
+      },
+      "tokens": 97
+    },
+    {
+      "firstFile": {
+        "end": 1191,
+        "endLoc": {
+          "column": 9,
+          "line": 1191,
+          "position": 42922
+        },
+        "name": "services\\gstr1CsvService.ts",
+        "start": 1186,
+        "startLoc": {
+          "column": 113,
+          "line": 1186,
+          "position": 42619
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const custName = `\"${(ord.customerName || ord.deliveryAddress?.fullName || 'Customer').replace(/\"/g, '\"\"')}\"`;\n    const custPhone = ord.customerPhone || ord.deliveryAddress?.phone || '';\n    const custEmail = ord.customerEmail || '';\n    const custGstin = ord.deliveryAddress?.gstin || ord.gstin || 'UNREGISTERED';\n    const orderType = ord.orderType || (custGstin !== 'UNREGISTERED' ? 'B2B' : 'B2C');\n    const state = ord.deliveryAddress?.state || 'Gujarat';",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 6,
+      "secondFile": {
+        "end": 1770,
+        "endLoc": {
+          "column": 9,
+          "line": 1770,
+          "position": 59555
+        },
+        "name": "services\\gstr1CsvService.ts",
+        "start": 1765,
+        "startLoc": {
+          "column": 84,
+          "line": 1765,
+          "position": 59252
+        }
+      },
+      "tokens": 58
+    },
+    {
+      "firstFile": {
+        "end": 1206,
+        "endLoc": {
+          "column": 13,
+          "line": 1206,
+          "position": 43815
+        },
+        "name": "services\\gstr1CsvService.ts",
+        "start": 1187,
+        "startLoc": {
+          "column": 46,
+          "line": 1187,
+          "position": 42667
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const custPhone = ord.customerPhone || ord.deliveryAddress?.phone || '';\n    const custEmail = ord.customerEmail || '';\n    const custGstin = ord.deliveryAddress?.gstin || ord.gstin || 'UNREGISTERED';\n    const orderType = ord.orderType || (custGstin !== 'UNREGISTERED' ? 'B2B' : 'B2C');\n    const state = ord.deliveryAddress?.state || 'Gujarat';\n    const isGujarat = state.toLowerCase().includes('gujarat');\n    const pos = ord.deliveryAddress?.stateCode || (isGujarat ? '24' : '27');\n    const payMode = ord.paymentDetail?.method || 'PREPAID';\n    const payStatus = ord.paymentDetail?.paymentStatus || 'PAID';\n    const grandTotal = ord.pricingSummary?.grandTotal || 0;\n    const shippingTotal = ord.pricingSummary?.shippingTotal || 0;\n    const shippingBase = shippingTotal > 0 ? round2(shippingTotal / 1.18) : 0;\n    const shippingGst = shippingTotal > 0 ? round2(shippingTotal - shippingBase) : 0;\n\n    let hasLineItems = false;\n    ord.shipments?.forEach(s => {\n      s.items?.forEach(item => {\n        hasLineItems = true;\n        const rawHsn = (item.hsnCode || '').replace(/\\D/g, '') || (item.productTitle?.toLowerCase().includes('drain') ? '73269099' : '84248990');\n        const itemTitle = `\"${(item.productTitle || item.variantTitle || 'Industrial Hardware').replace(/\"/g, '\"\"')}\"`;",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 20,
+      "secondFile": {
+        "end": 1922,
+        "endLoc": {
+          "column": 13,
+          "line": 1922,
+          "position": 65029
+        },
+        "name": "services\\gstr1CsvService.ts",
+        "start": 1903,
+        "startLoc": {
+          "column": 46,
+          "line": 1903,
+          "position": 63881
+        }
+      },
+      "tokens": 231
+    },
+    {
+      "firstFile": {
+        "end": 1216,
+        "endLoc": {
+          "column": 46,
+          "line": 1216,
+          "position": 44523
+        },
+        "name": "services\\gstr1CsvService.ts",
+        "start": 1206,
+        "startLoc": {
+          "column": 118,
+          "line": 1206,
+          "position": 43920
+        }
+      },
+      "format": "typescript",
+      "fragment": "        const itemTitle = `\"${(item.productTitle || item.variantTitle || 'Industrial Hardware').replace(/\"/g, '\"\"')}\"`;\n        const uqc = item.unitOfMeasure || 'PCS';\n        const qty = item.quantity || 1;\n        const unitPrice = item.unitPrice || 0;\n        const lineGross = round2(qty * unitPrice);\n        const ratePct = item.gstRate ? (item.gstRate > 1 ? Math.round(item.gstRate) : Math.round(item.gstRate * 100)) : 18;\n        const lineTaxable = round2(lineGross / (1 + (ratePct / 100)));\n        const lineTax = round2(lineGross - lineTaxable);\n        const cgst = isGujarat ? round2(lineTax / 2) : 0;\n        const sgst = isGujarat ? round2(lineTax / 2) : 0;\n        const igst = !isGujarat ? lineTax : 0;",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 11,
+      "secondFile": {
+        "end": 1934,
+        "endLoc": {
+          "column": 46,
+          "line": 1934,
+          "position": 65832
+        },
+        "name": "services\\gstr1CsvService.ts",
+        "start": 1924,
+        "startLoc": {
+          "column": 75,
+          "line": 1924,
+          "position": 65229
+        }
+      },
+      "tokens": 141
+    },
+    {
+      "firstFile": {
+        "end": 1227,
+        "endLoc": {
+          "column": 40,
+          "line": 1227,
+          "position": 45281
+        },
+        "name": "services\\gstr1CsvService.ts",
+        "start": 1218,
+        "startLoc": {
+          "column": 410,
+          "line": 1218,
+          "position": 44935
+        }
+      },
+      "format": "typescript",
+      "fragment": "        csv += `${ord.id},${invNo},${invDate},${custName},${custPhone},${custEmail},${custGstin},${orderType},${state},${pos},${rawHsn},${itemTitle},${uqc},${qty},${unitPrice.toFixed(2)},${lineGross.toFixed(2)},${ratePct}%,${lineTaxable.toFixed(2)},${cgst.toFixed(2)},${sgst.toFixed(2)},${igst.toFixed(2)},${shippingBase.toFixed(2)},${shippingGst.toFixed(2)},${grandTotal.toFixed(2)},${payMode},${payStatus}\\n`;\n      });\n    });\n\n    if (!hasLineItems) {\n      const taxable = ord.pricingSummary?.taxableValue || (grandTotal > 0 ? round2(grandTotal / 1.18) : 0);\n      const tax = round2(grandTotal - taxable);\n      const cgst = isGujarat ? round2(tax / 2) : 0;\n      const sgst = isGujarat ? round2(tax / 2) : 0;\n      const igst = !isGujarat ? tax : 0;",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 10,
+      "secondFile": {
+        "end": 1974,
+        "endLoc": {
+          "column": 40,
+          "line": 1974,
+          "position": 66766
+        },
+        "name": "services\\gstr1CsvService.ts",
+        "start": 1965,
+        "startLoc": {
+          "column": 10,
+          "line": 1965,
+          "position": 66420
+        }
+      },
+      "tokens": 85
+    },
+    {
+      "firstFile": {
+        "end": 1770,
+        "endLoc": {
+          "column": 9,
+          "line": 1770,
+          "position": 59555
+        },
+        "name": "services\\gstr1CsvService.ts",
+        "start": 1764,
+        "startLoc": {
+          "column": 138,
+          "line": 1764,
+          "position": 59166
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const invDate = ord.createdAt ? ord.createdAt.replace('T', ' ').slice(0, 19) : new Date().toISOString().replace('T', ' ').slice(0, 19);\n    const custName = ord.customerName || ord.deliveryAddress?.fullName || 'Customer';\n    const custPhone = ord.customerPhone || ord.deliveryAddress?.phone || '';\n    const custEmail = ord.customerEmail || '';\n    const custGstin = ord.deliveryAddress?.gstin || ord.gstin || 'UNREGISTERED';\n    const orderType = ord.orderType || (custGstin !== 'UNREGISTERED' ? 'B2B' : 'B2C');\n    const itcClaim = ord.isInputTaxCreditClaimed ? 'YES' : 'NO';",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 7,
+      "secondFile": {
+        "end": 1907,
+        "endLoc": {
+          "column": 9,
+          "line": 1907,
+          "position": 64136
+        },
+        "name": "services\\gstr1CsvService.ts",
+        "start": 1901,
+        "startLoc": {
+          "column": 67,
+          "line": 1901,
+          "position": 63747
+        }
+      },
+      "tokens": 73
+    },
+    {
+      "firstFile": {
+        "end": 377,
+        "endLoc": {
+          "column": 21,
+          "line": 377,
+          "position": 14464
+        },
+        "name": "store\\useStore.ts",
+        "start": 357,
+        "startLoc": {
+          "column": 37,
+          "line": 357,
+          "position": 13746
+        }
+      },
+      "format": "typescript",
+      "fragment": "          barcode128: 'EK382430011IN',\n          manifestId: 'MNF-PENDING',\n          carrier: 'INDIA_POST_SPEED_POST'\n        },\n        items: [\n          {\n            sku: 'AE-SPRINKLER-SS304',\n            parentAsin: 'AP-SPRINKLER-01',\n            productTitle: 'SS304 Solar Panel Sprinkler',\n            variantTitle: '180° Uniform Curtain / ½\" BSP Male',\n            attributes: { material: 'SS304' },\n            imageUrl: '/solar_sprinkler.webp',\n            unitPrice: 220,\n            mrp: 350,\n            gstRate: 18,\n            hsnCode: '84248990',\n            sellerId: 'apollo_mfg',\n            sellerName: 'Apollo Engineering',\n            fulfillmentType: 'FBF',\n            weightGrams: 180,\n            quantity: 2,",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 21,
+      "secondFile": {
+        "end": 600,
+        "endLoc": {
+          "column": 21,
+          "line": 600,
+          "position": 21540
+        },
+        "name": "store\\useStore.ts",
+        "start": 580,
+        "startLoc": {
+          "column": 37,
+          "line": 580,
+          "position": 20822
+        }
+      },
+      "tokens": 76
+    },
+    {
+      "firstFile": {
+        "end": 377,
+        "endLoc": {
+          "column": 21,
+          "line": 377,
+          "position": 14464
+        },
+        "name": "store\\useStore.ts",
+        "start": 358,
+        "startLoc": {
+          "column": 35,
+          "line": 358,
+          "position": 13784
+        }
+      },
+      "format": "typescript",
+      "fragment": "          manifestId: 'MNF-PENDING',\n          carrier: 'INDIA_POST_SPEED_POST'\n        },\n        items: [\n          {\n            sku: 'AE-SPRINKLER-SS304',\n            parentAsin: 'AP-SPRINKLER-01',\n            productTitle: 'SS304 Solar Panel Sprinkler',\n            variantTitle: '180° Uniform Curtain / ½\" BSP Male',\n            attributes: { material: 'SS304' },\n            imageUrl: '/solar_sprinkler.webp',\n            unitPrice: 220,\n            mrp: 350,\n            gstRate: 18,\n            hsnCode: '84248990',\n            sellerId: 'apollo_mfg',\n            sellerName: 'Apollo Engineering',\n            fulfillmentType: 'FBF',\n            weightGrams: 180,\n            quantity: 2,",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 20,
+      "secondFile": {
+        "end": 831,
+        "endLoc": {
+          "column": 21,
+          "line": 831,
+          "position": 29200
+        },
+        "name": "store\\useStore.ts",
+        "start": 812,
+        "startLoc": {
+          "column": 44,
+          "line": 812,
+          "position": 28520
+        }
+      },
+      "tokens": 72
+    },
+    {
+      "firstFile": {
+        "end": 1476,
+        "endLoc": {
+          "column": 45,
+          "line": 1476,
+          "position": 57294
+        },
+        "name": "store\\useStore.ts",
+        "start": 1467,
+        "startLoc": {
+          "column": 4,
+          "line": 1467,
+          "position": 56817
+        }
+      },
+      "format": "typescript",
+      "fragment": "    saveStored('apollo_current_user', user);\n    const existingUsers = get().allUsers;\n    const index = existingUsers.findIndex(u => u.id === user.id || (u.phone && user.phone && u.phone.slice(-10) === user.phone.slice(-10)));\n    let updatedUsers: UserProfile[];\n    if (index >= 0) {\n      updatedUsers = existingUsers.map((u, i) => i === index ? user : u);\n    } else {\n      updatedUsers = [user, ...existingUsers];\n    }\n    saveStored('apollo_users', updatedUsers);",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 10,
+      "secondFile": {
+        "end": 1499,
+        "endLoc": {
+          "column": 45,
+          "line": 1499,
+          "position": 58281
+        },
+        "name": "store\\useStore.ts",
+        "start": 1490,
+        "startLoc": {
+          "column": 4,
+          "line": 1490,
+          "position": 57804
+        }
+      },
+      "tokens": 119
+    },
+    {
+      "firstFile": {
+        "end": 1535,
+        "endLoc": {
+          "column": 16,
+          "line": 1535,
+          "position": 59993
+        },
+        "name": "store\\useStore.ts",
+        "start": 1529,
+        "startLoc": {
+          "column": 6,
+          "line": 1529,
+          "position": 59633
+        }
+      },
+      "format": "typescript",
+      "fragment": "      };\n      saveStored('apollo_current_user', updatedUser);\n      const updatedUsers = state.allUsers.map(u => (u.id === updatedUser.id || (u.phone && updatedUser.phone && u.phone.slice(-10) === updatedUser.phone.slice(-10))) ? updatedUser : u);\n      saveStored('apollo_users', updatedUsers);\n      return {\n        currentOrg: updatedOrg,\n        appMode: 'B2B',",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 7,
+      "secondFile": {
+        "end": 1551,
+        "endLoc": {
+          "column": 16,
+          "line": 1551,
+          "position": 60756
+        },
+        "name": "store\\useStore.ts",
+        "start": 1545,
+        "startLoc": {
+          "column": 6,
+          "line": 1545,
+          "position": 60396
+        }
+      },
+      "tokens": 80
+    },
+    {
+      "firstFile": {
+        "end": 1618,
+        "endLoc": {
+          "column": 13,
+          "line": 1618,
+          "position": 63171
+        },
+        "name": "store\\useStore.ts",
+        "start": 1612,
+        "startLoc": {
+          "column": 20,
+          "line": 1612,
+          "position": 62799
+        }
+      },
+      "format": "typescript",
+      "fragment": "          ...billing,\n          id: get().shippingAddress?.id || `addr_shipping_${Date.now()}`,\n          addressType: get().currentUser.role.includes('B2B') ? 'WAREHOUSE' : 'HOME'\n        };\n        saveStored('apollo_shipping_address', syncedShipping);\n        saveStored('apollo_addresses', [syncedShipping, ...get().addresses.filter(a => a.id !== syncedShipping.id)]);\n        set({ isShippingSameAsBilling: true, shippingAddress: syncedShipping, activeAddress: syncedShipping });",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 7,
+      "secondFile": {
+        "end": 1635,
+        "endLoc": {
+          "column": 11,
+          "line": 1635,
+          "position": 63989
+        },
+        "name": "store\\useStore.ts",
+        "start": 1629,
+        "startLoc": {
+          "column": 15,
+          "line": 1629,
+          "position": 63629
+        }
+      },
+      "tokens": 78
+    },
+    {
+      "firstFile": {
+        "end": 1835,
+        "endLoc": {
+          "column": 20,
+          "line": 1835,
+          "position": 72026
+        },
+        "name": "store\\useStore.ts",
+        "start": 1827,
+        "startLoc": {
+          "column": 88,
+          "line": 1827,
+          "position": 71580
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const updated = get().products.map((p) => p.asin === asin ? { ...p, ...updates } : p);\n    saveStored('apollo_products', updated);\n    const currSelected = get().selectedProduct;\n    const updatedSelected = (currSelected && currSelected.asin === asin)\n      ? updated.find(p => p.asin === asin) || null\n      : currSelected;\n    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);\n    set({ products: updated, selectedProduct: updatedSelected, apiCatalogProducts: updatedApi });\n    get().showToast(`Product ${asin} updated successfully`, 'success');",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 9,
+      "secondFile": {
+        "end": 1932,
+        "endLoc": {
+          "column": 20,
+          "line": 1932,
+          "position": 76256
+        },
+        "name": "store\\useStore.ts",
+        "start": 1924,
+        "startLoc": {
+          "column": 5,
+          "line": 1924,
+          "position": 75810
+        }
+      },
+      "tokens": 85
+    },
+    {
+      "firstFile": {
+        "end": 2225,
+        "endLoc": {
+          "column": 6,
+          "line": 2225,
+          "position": 87633
+        },
+        "name": "store\\useStore.ts",
+        "start": 2220,
+        "startLoc": {
+          "column": 4,
+          "line": 2220,
+          "position": 87217
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const isDrainClipCartItem = (i: { sku?: string; parentAsin?: string; productTitle?: string }) => {\n      const s = (i.sku || '').toUpperCase();\n      const p = (i.parentAsin || '').toUpperCase();\n      const t = (i.productTitle || '').toLowerCase();\n      return s.startsWith('APE-SC') || s.includes('CLIP') || s.includes('DRAIN') || p.includes('CLIP') || p === 'AP-DRAIN-02' || t.includes('drain clip');\n    };",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 6,
+      "secondFile": {
+        "end": 2302,
+        "endLoc": {
+          "column": 6,
+          "line": 2302,
+          "position": 90655
+        },
+        "name": "store\\useStore.ts",
+        "start": 2297,
+        "startLoc": {
+          "column": 4,
+          "line": 2297,
+          "position": 90239
+        }
+      },
+      "tokens": 112
+    },
+    {
+      "firstFile": {
+        "end": 2225,
+        "endLoc": {
+          "column": 6,
+          "line": 2225,
+          "position": 87633
+        },
+        "name": "store\\useStore.ts",
+        "start": 2220,
+        "startLoc": {
+          "column": 4,
+          "line": 2220,
+          "position": 87217
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const isDrainClipCartItem = (i: { sku?: string; parentAsin?: string; productTitle?: string }) => {\n      const s = (i.sku || '').toUpperCase();\n      const p = (i.parentAsin || '').toUpperCase();\n      const t = (i.productTitle || '').toLowerCase();\n      return s.startsWith('APE-SC') || s.includes('CLIP') || s.includes('DRAIN') || p.includes('CLIP') || p === 'AP-DRAIN-02' || t.includes('drain clip');\n    };",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 6,
+      "secondFile": {
+        "end": 2323,
+        "endLoc": {
+          "column": 6,
+          "line": 2323,
+          "position": 91733
+        },
+        "name": "store\\useStore.ts",
+        "start": 2318,
+        "startLoc": {
+          "column": 4,
+          "line": 2318,
+          "position": 91317
+        }
+      },
+      "tokens": 112
+    },
+    {
+      "firstFile": {
+        "end": 2776,
+        "endLoc": {
+          "column": 22,
+          "line": 2776,
+          "position": 111919
+        },
+        "name": "store\\useStore.ts",
+        "start": 2761,
+        "startLoc": {
+          "column": 86,
+          "line": 2761,
+          "position": 111440
+        }
+      },
+      "format": "typescript",
+      "fragment": "    const updatedOrders = updateOrderShipmentHelper(get().orders, orderId, packageId, (shp) => ({\n      ...shp,\n      status: 'PROCESSING_PICK_PACK' as OrderStatus,\n      pickupDetail: {\n        slot,\n        date,\n        courier,\n        scheduledAt: new Date().toISOString()\n      },\n      milestones: [\n        ...shp.milestones,\n        {\n          status: 'PICKUP_SCHEDULED',\n          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),\n          location: 'Kathwada GIDC Hub (382430)',\n          description: `Pickup scheduled for ${date} (${slot}) with ${courier}`,",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 16,
+      "secondFile": {
+        "end": 2856,
+        "endLoc": {
+          "column": 28,
+          "line": 2856,
+          "position": 115001
+        },
+        "name": "store\\useStore.ts",
+        "start": 2841,
+        "startLoc": {
+          "column": 39,
+          "line": 2841,
+          "position": 114432
+        }
+      },
+      "tokens": 78
+    }
+  ],
+  "statistics": {
+    "detectionDate": "2026-09-18T19:11:10.528Z",
+    "formats": {
+      "css": {
+        "clones": 4,
+        "duplicatedLines": 23,
+        "duplicatedTokens": 269,
+        "lines": 275,
+        "newClones": 0,
+        "newDuplicatedLines": 0,
+        "percentage": 8.363636363636363,
+        "percentageTokens": 9.314404432132964,
+        "sources": 1,
+        "tokens": 2888
+      },
+      "tsx": {
+        "clones": 28,
+        "duplicatedLines": 262,
+        "duplicatedTokens": 1690,
+        "lines": 27597,
+        "newClones": 0,
+        "newDuplicatedLines": 0,
+        "percentage": 0.9493785556401059,
+        "percentageTokens": 0.9960922534671672,
+        "sources": 51,
+        "tokens": 169663
+      },
+      "typescript": {
+        "clones": 23,
+        "duplicatedLines": 244,
+        "duplicatedTokens": 1929,
+        "lines": 12541,
+        "newClones": 0,
+        "newDuplicatedLines": 0,
+        "percentage": 1.9456183717406907,
+        "percentageTokens": 2.900054122316435,
+        "sources": 41,
+        "tokens": 66516
+      }
+    },
+    "total": {
+      "clones": 55,
+      "duplicatedLines": 529,
+      "duplicatedTokens": 3888,
+      "lines": 40413,
+      "newClones": 0,
+      "newDuplicatedLines": 0,
+      "percentage": 1.308984732635538,
+      "percentageTokens": 1.6263223280502954,
+      "sources": 93,
+      "tokens": 239067
+    }
+  }
+}

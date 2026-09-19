@@ -17,7 +17,7 @@ import { ApiProduct, CatalogService } from '../services/catalogService';
 import { SupportedLanguage } from '../utils/i18n';
 import { runStorageMigration } from '../utils/storageMigration';
 import { apiService } from '../services/apiService';
-import { authApi, catalogApi, quoteApi, orderApi, paymentApi } from '../services/api';
+import { authApi, catalogApi, quoteApi, orderApi, paymentApi, inventoryApi } from '../services/api';
 
 // Run storage migration immediately
 runStorageMigration();
@@ -291,6 +291,105 @@ export const saveSessionCart = (cart: CartItem[]): void => {
   } catch {}
 };
 
+export const isDrainClipCartItem = (i: { sku?: string; parentAsin?: string; productTitle?: string }) => {
+  const s = (i.sku || '').toUpperCase();
+  const p = (i.parentAsin || '').toUpperCase();
+  const t = (i.productTitle || '').toLowerCase();
+  return s.startsWith('APE-SC') || s.includes('CLIP') || s.includes('DRAIN') || p.includes('CLIP') || p === 'AP-DRAIN-02' || t.includes('drain clip');
+};
+
+export const recalculateCartVolumeTiers = (cartItems: CartItem[]) => {
+  const totalDrainClipQty = cartItems
+    .filter(isDrainClipCartItem)
+    .reduce((sum, i) => sum + (i.quantity || 0), 0);
+
+  const drainTierPrice = totalDrainClipQty >= 1000 ? 12.75 : 20.00;
+
+  return cartItems.map((item) => {
+    if (isDrainClipCartItem(item)) {
+      return {
+        ...item,
+        unitPrice: drainTierPrice,
+      };
+    }
+    return item;
+  });
+};
+
+export const syncUserToList = (user: UserProfile, existingUsers: UserProfile[]): UserProfile[] => {
+  const index = existingUsers.findIndex(u => u.id === user.id || (u.phone && user.phone && u.phone.slice(-10) === user.phone.slice(-10)));
+  if (index >= 0) {
+    return existingUsers.map((u, i) => i === index ? user : u);
+  }
+  return [user, ...existingUsers];
+};
+
+export const createMockSprinklerItem = (quantity = 2) => ({
+  sku: 'AE-SPRINKLER-SS304',
+  parentAsin: 'AP-SPRINKLER-01',
+  productTitle: 'SS304 Solar Panel Sprinkler',
+  variantTitle: '180° Uniform Curtain / ½" BSP Male',
+  attributes: { material: 'SS304' },
+  imageUrl: '/solar_sprinkler.webp',
+  unitPrice: 220,
+  mrp: 350,
+  gstRate: 18,
+  hsnCode: '84248990',
+  sellerId: 'apollo_mfg',
+  sellerName: 'Apollo Engineering',
+  fulfillmentType: 'FBF' as const,
+  weightGrams: 180,
+  quantity,
+  isB2BPricingApplied: false
+});
+
+export const createScheduledPickupShipment = (
+  shp: Order['shipments'][number],
+  slot: string,
+  courier: string,
+  date: string,
+  isBatch = false
+): Order['shipments'][number] => ({
+  ...shp,
+  status: 'PROCESSING_PICK_PACK' as OrderStatus,
+  pickupDetail: {
+    slot,
+    date,
+    courier,
+    scheduledAt: new Date().toISOString()
+  },
+  milestones: [
+    ...shp.milestones,
+    {
+      status: 'PICKUP_SCHEDULED',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      location: 'Kathwada GIDC Hub (382430)',
+      description: isBatch
+        ? `Batch pickup scheduled for ${date} (${slot}) with ${courier}`
+        : `Pickup scheduled for ${date} (${slot}) with ${courier}`,
+      isCompleted: true
+    }
+  ]
+});
+
+export const syncBillingToShipping = (
+  billing: DeliveryAddress,
+  existingShippingId?: string,
+  isB2B = false
+): DeliveryAddress => ({
+  ...billing,
+  id: existingShippingId || `addr_shipping_${Date.now()}`,
+  addressType: isB2B ? 'WAREHOUSE' : 'HOME'
+});
+
+export const persistShippingAddress = (
+  addr: DeliveryAddress,
+  existingAddresses: DeliveryAddress[]
+): void => {
+  saveStored('apollo_shipping_address', addr);
+  saveStored('apollo_addresses', [addr, ...existingAddresses.filter(a => a.id !== addr.id)]);
+};
+
 export const GUEST_USER: UserProfile = {
   id: 'usr_guest',
   name: '',
@@ -358,26 +457,7 @@ const DEFAULT_SAMPLE_ORDERS: Order[] = [
           manifestId: 'MNF-PENDING',
           carrier: 'INDIA_POST_SPEED_POST'
         },
-        items: [
-          {
-            sku: 'AE-SPRINKLER-SS304',
-            parentAsin: 'AP-SPRINKLER-01',
-            productTitle: 'SS304 Solar Panel Sprinkler',
-            variantTitle: '180° Uniform Curtain / ½" BSP Male',
-            attributes: { material: 'SS304' },
-            imageUrl: '/solar_sprinkler.webp',
-            unitPrice: 220,
-            mrp: 350,
-            gstRate: 18,
-            hsnCode: '84248990',
-            sellerId: 'apollo_mfg',
-            sellerName: 'Apollo Engineering',
-            fulfillmentType: 'FBF',
-            weightGrams: 180,
-            quantity: 2,
-            isB2BPricingApplied: false
-          }
-        ],
+        items: [createMockSprinklerItem(2)],
         milestones: [
           {
             status: 'ORDER_PLACED',
@@ -581,26 +661,7 @@ const DEFAULT_SAMPLE_ORDERS: Order[] = [
           manifestId: 'MNF-PENDING',
           carrier: 'INDIA_POST_SPEED_POST'
         },
-        items: [
-          {
-            sku: 'AE-SPRINKLER-SS304',
-            parentAsin: 'AP-SPRINKLER-01',
-            productTitle: 'SS304 Solar Panel Sprinkler',
-            variantTitle: '180° Uniform Curtain / ½" BSP Male',
-            attributes: { material: 'SS304' },
-            imageUrl: '/solar_sprinkler.webp',
-            unitPrice: 220,
-            mrp: 350,
-            gstRate: 18,
-            hsnCode: '84248990',
-            sellerId: 'apollo_mfg',
-            sellerName: 'Apollo Engineering',
-            fulfillmentType: 'FBF',
-            weightGrams: 180,
-            quantity: 10,
-            isB2BPricingApplied: false
-          }
-        ],
+        items: [createMockSprinklerItem(10)],
         milestones: [
           {
             status: 'PICKUP_SCHEDULED',
@@ -812,26 +873,7 @@ const DEFAULT_SAMPLE_ORDERS: Order[] = [
           manifestId: 'MNF-KATH-20260909-01',
           carrier: 'INDIA_POST_SPEED_POST'
         },
-        items: [
-          {
-            sku: 'AE-SPRINKLER-SS304',
-            parentAsin: 'AP-SPRINKLER-01',
-            productTitle: 'SS304 Solar Panel Sprinkler',
-            variantTitle: '180° Uniform Curtain / ½" BSP Male',
-            attributes: { material: 'SS304' },
-            imageUrl: '/solar_sprinkler.webp',
-            unitPrice: 220,
-            mrp: 350,
-            gstRate: 18,
-            hsnCode: '84248990',
-            sellerId: 'apollo_mfg',
-            sellerName: 'Apollo Engineering',
-            fulfillmentType: 'FBF',
-            weightGrams: 180,
-            quantity: 1,
-            isB2BPricingApplied: false
-          }
-        ],
+        items: [createMockSprinklerItem(1)],
         milestones: [
           {
             status: 'DISPATCHED',
@@ -1204,10 +1246,10 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
       );
 
       // Check if deleted by ID, SKU prefix, or mapped frontend ASIN
-      const isDeleted = !ap || !ap.is_active ||
+      const isDeleted = !ap ||
         deletedProductAsinsSet.has(ap.id) ||
         deletedProductAsinsSet.has(ap.sku_prefix) ||
-        (pMatch && (deletedProductAsinsSet.has(pMatch.asin) || pMatch.isLive === false));
+        (pMatch && deletedProductAsinsSet.has(pMatch.asin));
 
       if (isDeleted) {
         continue;
@@ -1240,17 +1282,24 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
                        (cleanPrefix.includes('KIT') || cleanName.includes('kit')) ? 'COMPLETE KIT' : 'SS304 GRADE';
 
       const syncedVariants = (ap.variants || []).map(av => {
-        const matchingV = pMatch?.variants?.find(v => v.sku === av.sku || (av.frame_thickness_mm && v.attributes?.size && parseFloat(v.attributes.size) === Number(av.frame_thickness_mm)));
+        const matchingV = pMatch?.variants?.find(v =>
+          v.sku === av.sku ||
+          (av.frame_thickness_mm && v.attributes?.size && parseFloat(v.attributes.size) === Number(av.frame_thickness_mm))
+        ) || (pMatch?.variants?.length === 1 ? pMatch.variants[0] : undefined);
         
         // Respect admin-edited price and stock if set locally
         const rawPrice = (matchingV?.b2cPrice !== undefined && matchingV?.b2cPrice !== null)
           ? matchingV.b2cPrice
-          : av.unit_price;
+          : (pMatch?.variants?.[0]?.b2cPrice !== undefined && pMatch?.variants?.[0]?.b2cPrice !== null
+              ? pMatch.variants[0].b2cPrice
+              : av.unit_price);
         const parsedPrice = typeof rawPrice === 'number' ? rawPrice : (parseFloat(String(rawPrice)) || 20);
 
         const stock = (matchingV?.inventory !== undefined && matchingV?.inventory !== null)
           ? matchingV.inventory
-          : (typeof av.available_stock === 'number' ? av.available_stock : 100);
+          : (pMatch?.variants?.[0]?.inventory !== undefined && pMatch?.variants?.[0]?.inventory !== null
+              ? pMatch.variants[0].inventory
+              : (typeof av.available_stock === 'number' ? av.available_stock : 100));
 
         return {
           ...av,
@@ -1259,13 +1308,15 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
           available_stock: stock,
           unit_price: parsedPrice, // Authoritative price
           mrp: matchingV?.mrp || Math.round(parsedPrice * 1.5),
-          b2bTierPricing: matchingV?.b2bTierPricing || [],
+          b2bTierPricing: (matchingV?.b2bTierPricing && matchingV.b2bTierPricing.length > 0)
+            ? matchingV.b2bTierPricing
+            : (pMatch?.variants?.[0]?.b2bTierPricing || []),
           weightGrams: matchingV?.weightGrams,
-          hsnCode: av.hsnCode || ap.hsn_code,
+          hsnCode: matchingV?.hsnCode || av.hsnCode || ap.hsn_code,
           tax_mode: av.tax_mode || 'GST_INCLUSIVE',
           b2bMoq: pMatch?.b2bMoq || matchingV?.b2bMoq || 50,
           b2cPrice: parsedPrice,
-          b2bPrice: matchingV?.b2bTierPricing?.[0]?.pricePerUnit || Math.round(parsedPrice * 0.72),
+          b2bPrice: matchingV?.b2bTierPricing?.[0]?.pricePerUnit || pMatch?.variants?.[0]?.b2bTierPricing?.[0]?.pricePerUnit || Math.round(parsedPrice * 0.72),
         } as any;
       });
 
@@ -1306,12 +1357,12 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
         sku_prefix: ap.sku_prefix,
         name: pMatch?.title || ap.name,
         description: pMatch?.description !== undefined ? pMatch.description : (ap.description || ''),
-        hsn_code: ap.hsn_code || '73269099',
-        is_active: (pMatch ? (pMatch.isLive !== false) : ap.is_active) && ap.is_active,
+        hsn_code: pMatch?.variants?.[0]?.hsnCode || ap.hsn_code || '73269099',
+        is_active: pMatch ? (pMatch.isLive !== false) : (ap.is_active ?? true),
         is_archived: ap.is_archived || false,
         version: ap.version || 1,
         created_at: ap.created_at || new Date().toISOString(),
-        updated_at: ap.updated_at || new Date().toISOString(),
+        updated_at: pMatch?.lastUpdated || ap.updated_at || new Date().toISOString(),
         category: pMatch?.category || category,
         image: primaryImg,
         images: allImgs,
@@ -1350,6 +1401,79 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
   });
 
   return Array.from(apiMap.values());
+}
+
+let catalogBroadcastChannel: BroadcastChannel | null = null;
+if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+  try {
+    catalogBroadcastChannel = new BroadcastChannel('apollo_catalog_live_sync');
+    catalogBroadcastChannel.onmessage = (event) => {
+      if (event.data?.type === 'CATALOG_SYNC' && Array.isArray(event.data?.products)) {
+        const incomingProducts: Product[] = event.data.products;
+        const currentSelected = useStore.getState().selectedProduct;
+        const newSelected = currentSelected
+          ? (incomingProducts.find(p => p.asin === currentSelected.asin) || null)
+          : null;
+        const newApiProds = syncCatalogProducts(incomingProducts, useStore.getState().apiCatalogProducts);
+        useStore.setState({
+          products: incomingProducts,
+          selectedProduct: newSelected,
+          apiCatalogProducts: newApiProds
+        });
+      }
+    };
+  } catch (e) {
+    console.warn('BroadcastChannel initialization skipped', e);
+  }
+}
+
+export function broadcastCatalogUpdate(products: Product[]) {
+  if (catalogBroadcastChannel) {
+    try {
+      catalogBroadcastChannel.postMessage({
+        type: 'CATALOG_SYNC',
+        products,
+        timestamp: Date.now()
+      });
+    } catch {}
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'apollo_products' && event.newValue) {
+      try {
+        const incomingProducts: Product[] = JSON.parse(event.newValue);
+        if (Array.isArray(incomingProducts)) {
+          const currentSelected = useStore.getState().selectedProduct;
+          const newSelected = currentSelected
+            ? (incomingProducts.find(p => p.asin === currentSelected.asin) || null)
+            : null;
+          const newApiProds = syncCatalogProducts(incomingProducts, useStore.getState().apiCatalogProducts);
+          useStore.setState({
+            products: incomingProducts,
+            selectedProduct: newSelected,
+            apiCatalogProducts: newApiProds
+          });
+        }
+      } catch {}
+    }
+  });
+}
+
+export function commitCatalogProductsUpdate(
+  updated: Product[],
+  currentSelected: Product | null,
+  apiProducts: ApiProduct[],
+  targetAsin?: string
+) {
+  saveStored('apollo_products', updated);
+  broadcastCatalogUpdate(updated);
+  const selectedProduct = currentSelected
+    ? (updated.find(p => p.asin === (targetAsin || currentSelected.asin)) || null)
+    : null;
+  const apiCatalogProducts = syncCatalogProducts(updated, apiProducts);
+  return { products: updated, selectedProduct, apiCatalogProducts };
 }
 
 export const DEFAULT_API_CATALOG_PRODUCTS: ApiProduct[] = syncCatalogProducts(initialProducts);
@@ -1465,14 +1589,7 @@ export const useStore = create<AppStore>((set, get) => ({
   currentUser: initialCurrentUser,
   setCurrentUser: (user) => {
     saveStored('apollo_current_user', user);
-    const existingUsers = get().allUsers;
-    const index = existingUsers.findIndex(u => u.id === user.id || (u.phone && user.phone && u.phone.slice(-10) === user.phone.slice(-10)));
-    let updatedUsers: UserProfile[];
-    if (index >= 0) {
-      updatedUsers = existingUsers.map((u, i) => i === index ? user : u);
-    } else {
-      updatedUsers = [user, ...existingUsers];
-    }
+    const updatedUsers = syncUserToList(user, get().allUsers);
     saveStored('apollo_users', updatedUsers);
     const newMode: AppMode = (user.role && user.role.includes('B2B')) ? 'B2B' : user.role === 'SUPER_ADMIN' ? 'ADMIN' : get().appMode;
     if (newMode === 'B2B') {
@@ -1488,14 +1605,7 @@ export const useStore = create<AppStore>((set, get) => ({
   updateUserProfile: (updates) => {
     const user = { ...get().currentUser, ...updates };
     saveStored('apollo_current_user', user);
-    const existingUsers = get().allUsers;
-    const index = existingUsers.findIndex(u => u.id === user.id || (u.phone && user.phone && u.phone.slice(-10) === user.phone.slice(-10)));
-    let updatedUsers: UserProfile[];
-    if (index >= 0) {
-      updatedUsers = existingUsers.map((u, i) => i === index ? user : u);
-    } else {
-      updatedUsers = [user, ...existingUsers];
-    }
+    const updatedUsers = syncUserToList(user, get().allUsers);
     saveStored('apollo_users', updatedUsers);
     set({ currentUser: user, allUsers: updatedUsers });
 
@@ -1528,7 +1638,7 @@ export const useStore = create<AppStore>((set, get) => ({
         role: 'B2B_BUYER'
       };
       saveStored('apollo_current_user', updatedUser);
-      const updatedUsers = state.allUsers.map(u => (u.id === updatedUser.id || (u.phone && updatedUser.phone && u.phone.slice(-10) === updatedUser.phone.slice(-10))) ? updatedUser : u);
+      const updatedUsers = syncUserToList(updatedUser, state.allUsers);
       saveStored('apollo_users', updatedUsers);
       return {
         currentOrg: updatedOrg,
@@ -1544,7 +1654,7 @@ export const useStore = create<AppStore>((set, get) => ({
         role: state.currentUser.role === 'B2B_BUYER' ? 'B2C_CUSTOMER' : state.currentUser.role
       };
       saveStored('apollo_current_user', updatedUser);
-      const updatedUsers = state.allUsers.map(u => (u.id === updatedUser.id || (u.phone && updatedUser.phone && u.phone.slice(-10) === updatedUser.phone.slice(-10))) ? updatedUser : u);
+      const updatedUsers = syncUserToList(updatedUser, state.allUsers);
       saveStored('apollo_users', updatedUsers);
       return {
         currentOrg: updatedOrg,
@@ -1608,13 +1718,12 @@ export const useStore = create<AppStore>((set, get) => ({
     if (same) {
       const billing = get().billingAddress;
       if (billing) {
-        const syncedShipping: DeliveryAddress = {
-          ...billing,
-          id: get().shippingAddress?.id || `addr_shipping_${Date.now()}`,
-          addressType: get().currentUser.role.includes('B2B') ? 'WAREHOUSE' : 'HOME'
-        };
-        saveStored('apollo_shipping_address', syncedShipping);
-        saveStored('apollo_addresses', [syncedShipping, ...get().addresses.filter(a => a.id !== syncedShipping.id)]);
+        const syncedShipping = syncBillingToShipping(
+          billing,
+          get().shippingAddress?.id,
+          get().currentUser.role.includes('B2B')
+        );
+        persistShippingAddress(syncedShipping, get().addresses);
         set({ isShippingSameAsBilling: true, shippingAddress: syncedShipping, activeAddress: syncedShipping });
         get().showToast('Shipping address synced with Billing address', 'success');
         return;
@@ -1625,13 +1734,12 @@ export const useStore = create<AppStore>((set, get) => ({
   setBillingAddress: (addr) => {
     saveStored('apollo_billing_address', addr);
     if (get().isShippingSameAsBilling) {
-      const syncedShipping: DeliveryAddress = {
-        ...addr,
-        id: get().shippingAddress?.id || `addr_shipping_${Date.now()}`,
-        addressType: get().currentUser.role.includes('B2B') ? 'WAREHOUSE' : 'HOME'
-      };
-      saveStored('apollo_shipping_address', syncedShipping);
-      saveStored('apollo_addresses', [syncedShipping, ...get().addresses.filter(a => a.id !== syncedShipping.id)]);
+      const syncedShipping = syncBillingToShipping(
+        addr,
+        get().shippingAddress?.id,
+        get().currentUser.role.includes('B2B')
+      );
+      persistShippingAddress(syncedShipping, get().addresses);
       set({ billingAddress: addr, shippingAddress: syncedShipping, activeAddress: syncedShipping });
     } else {
       set({ billingAddress: addr });
@@ -1639,8 +1747,7 @@ export const useStore = create<AppStore>((set, get) => ({
     get().showToast(`Billing address updated: ${addr.postOffice.name} (${addr.pincode})`, 'success');
   },
   setShippingAddress: (addr) => {
-    saveStored('apollo_shipping_address', addr);
-    saveStored('apollo_addresses', [addr, ...get().addresses.filter(a => a.id !== addr.id)]);
+    persistShippingAddress(addr, get().addresses);
     set({ shippingAddress: addr, activeAddress: addr });
     get().showToast(`Shipping address updated: ${addr.postOffice.name} (${addr.pincode})`, 'success');
   },
@@ -1783,9 +1890,13 @@ selectProductVariant: (asin, sku) => {
       }
       return p;
     });
-    saveStored('apollo_products', updated);
-    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
-    set({ products: updated, apiCatalogProducts: updatedApi });
+    const catalogState = commitCatalogProductsUpdate(
+      updated,
+      get().selectedProduct,
+      get().apiCatalogProducts,
+      asin
+    );
+    set(catalogState);
     get().addAuditLog({
       userEmail: 'admin@apolloengineering.co.in',
       actionType: 'STOCK_UPDATE',
@@ -1795,13 +1906,28 @@ selectProductVariant: (asin, sku) => {
       newValue: `${newInv} pcs`,
       notes: `Fulfillable inventory updated to ${newInv} units`
     });
+
+    // Background sync to backend inventory ledger
+    const delta = newInv - oldInv;
+    if (delta !== 0) {
+      inventoryApi.adjustStock({
+        sku,
+        quantity_delta: delta,
+        reason: 'Admin Stock Adjustment',
+        idempotency_key: `adj-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+      }).catch(() => {});
+    }
   },
   addNewProduct: (newProd) => {
     const existing = get().products.filter(p => p.asin !== newProd.asin);
     const updated = [newProd, ...existing];
-    saveStored('apollo_products', updated);
-    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
-    set({ products: updated, apiCatalogProducts: updatedApi });
+    const catalogState = commitCatalogProductsUpdate(
+      updated,
+      get().selectedProduct,
+      get().apiCatalogProducts,
+      newProd.asin
+    );
+    set(catalogState);
     get().showToast(`Product ASIN ${newProd.asin} published live to Apollo catalog`, 'success');
 
     // Attempt background persistence with FastAPI backend
@@ -1811,7 +1937,7 @@ selectProductVariant: (asin, sku) => {
       name: newProd.title,
       description: newProd.description || '',
       hsn_code: primaryV?.hsnCode || '73269099',
-      is_active: true,
+      is_active: newProd.isLive !== false,
       variants: (newProd.variants || []).map(v => ({
         sku: v.sku,
         fit_mode: (v.attributes?.size && v.attributes.size.includes('mm')) ? 'EXACT' : 'NOT_APPLICABLE',
@@ -1825,13 +1951,13 @@ selectProductVariant: (asin, sku) => {
   },
   updateProduct: (asin, updates) => {
     const updated = get().products.map((p) => p.asin === asin ? { ...p, ...updates } : p);
-    saveStored('apollo_products', updated);
-    const currSelected = get().selectedProduct;
-    const updatedSelected = (currSelected && currSelected.asin === asin)
-      ? updated.find(p => p.asin === asin) || null
-      : currSelected;
-    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
-    set({ products: updated, selectedProduct: updatedSelected, apiCatalogProducts: updatedApi });
+    const catalogState = commitCatalogProductsUpdate(
+      updated,
+      get().selectedProduct,
+      get().apiCatalogProducts,
+      asin
+    );
+    set(catalogState);
     get().showToast(`Product ${asin} updated successfully`, 'success');
 
     // Background sync to backend if backend product exists
@@ -1840,6 +1966,7 @@ selectProductVariant: (asin, sku) => {
       catalogApi.updateProduct(matchingBackend.id, {
         name: updates.title || matchingBackend.name,
         description: updates.description || matchingBackend.description,
+        is_active: updates.isLive !== undefined ? updates.isLive : matchingBackend.is_active,
         version: matchingBackend.version || 1,
       }).catch(() => {});
     }
@@ -1885,6 +2012,7 @@ selectProductVariant: (asin, sku) => {
     // 2. Remove from products
     const updated = get().products.filter((p) => p.asin !== asin);
     saveStored('apollo_products', updated);
+    broadcastCatalogUpdate(updated);
 
     // 3. Clear selected product if it was deleted
     const currSelected = get().selectedProduct;
@@ -1922,13 +2050,13 @@ selectProductVariant: (asin, sku) => {
       }
       return p;
     });
-    saveStored('apollo_products', updated);
-    const currSelected = get().selectedProduct;
-    const updatedSelected = (currSelected && currSelected.asin === asin)
-      ? updated.find(p => p.asin === asin) || null
-      : currSelected;
-    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
-    set({ products: updated, selectedProduct: updatedSelected, apiCatalogProducts: updatedApi });
+    const catalogState = commitCatalogProductsUpdate(
+      updated,
+      get().selectedProduct,
+      get().apiCatalogProducts,
+      asin
+    );
+    set(catalogState);
     get().showToast(`Variant ${sku} updated successfully`, 'success');
   },
   addNewVariantToProduct: (asin, newVariant) => {
@@ -1941,9 +2069,13 @@ selectProductVariant: (asin, sku) => {
       }
       return p;
     });
-    saveStored('apollo_products', updated);
-    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
-    set({ products: updated, apiCatalogProducts: updatedApi });
+    const catalogState = commitCatalogProductsUpdate(
+      updated,
+      get().selectedProduct,
+      get().apiCatalogProducts,
+      asin
+    );
+    set(catalogState);
     get().showToast(`New variant SKU ${newVariant.sku} added to ASIN ${asin}`, 'success');
   },
   deleteVariantFromProduct: (asin, sku) => {
@@ -1961,9 +2093,13 @@ selectProductVariant: (asin, sku) => {
       }
       return p;
     });
-    saveStored('apollo_products', updated);
-    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
-    set({ products: updated, apiCatalogProducts: updatedApi });
+    const catalogState = commitCatalogProductsUpdate(
+      updated,
+      get().selectedProduct,
+      get().apiCatalogProducts,
+      asin
+    );
+    set(catalogState);
     get().showToast(`Variant ${sku} removed from product`, 'info');
   },
   combineProductsIntoParentListing: (asins, parentTitle) => {
@@ -2022,8 +2158,13 @@ selectProductVariant: (asin, sku) => {
     };
 
     const updated = [combinedProduct, ...currentProducts];
-    saveStored('apollo_products', updated);
-    set({ products: updated });
+    const catalogState = commitCatalogProductsUpdate(
+      updated,
+      get().selectedProduct,
+      get().apiCatalogProducts,
+      newAsin
+    );
+    set(catalogState);
     get().showToast(`Combined ${matched.length} items into 1 parent listing (${combinedVariants.length} variations)!`, 'success');
     return combinedProduct;
   },
@@ -2041,9 +2182,13 @@ selectProductVariant: (asin, sku) => {
       lastUpdated: new Date().toISOString()
     };
     const updated = [newProduct, ...get().products];
-    saveStored('apollo_products', updated);
-    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
-    set({ products: updated, apiCatalogProducts: updatedApi });
+    const catalogState = commitCatalogProductsUpdate(
+      updated,
+      get().selectedProduct,
+      get().apiCatalogProducts,
+      asin
+    );
+    set(catalogState);
     get().showToast(`Product published with ASIN ${asin}`, 'success');
     return asin;
   },
@@ -2055,9 +2200,13 @@ selectProductVariant: (asin, sku) => {
       }
       return p;
     });
-    saveStored('apollo_products', updated);
-    const updatedApi = syncCatalogProducts(updated, get().apiCatalogProducts);
-    set({ products: updated, apiCatalogProducts: updatedApi });
+    const catalogState = commitCatalogProductsUpdate(
+      updated,
+      get().selectedProduct,
+      get().apiCatalogProducts,
+      asin
+    );
+    set(catalogState);
     get().showToast(`Product ${asin} updated successfully`, 'success');
   },
   
@@ -2067,23 +2216,27 @@ selectProductVariant: (asin, sku) => {
   
   updateVariantPricing: (asin, sku, price, quantity) => {
     const qty = quantity || 1;
-    set((state) => ({
-      products: state.products.map((p) => {
-        if (p.asin === asin) {
-          return {
-            ...p,
-            variants: p.variants.map((v) =>
-              v.sku === sku
-                ? { ...v, b2cPrice: price, mrp: Math.round(price * 1.5 * 100) / 100 }
-                : v
-            ),
-            lastUpdated: new Date().toISOString()
-          };
-        }
-        return p;
-      }),
-      listingMode: 'B2B'
-    }));
+    const updated = get().products.map((p) => {
+      if (p.asin === asin) {
+        return {
+          ...p,
+          variants: p.variants.map((v) =>
+            v.sku === sku
+              ? { ...v, b2cPrice: price, mrp: Math.round(price * 1.5 * 100) / 100 }
+              : v
+          ),
+          lastUpdated: new Date().toISOString()
+        };
+      }
+      return p;
+    });
+    const catalogState = commitCatalogProductsUpdate(
+      updated,
+      get().selectedProduct,
+      get().apiCatalogProducts,
+      asin
+    );
+    set({ ...catalogState, listingMode: 'B2B' });
     get().showToast(`Variant ${sku} pricing updated to ₹${price} (qty: ${qty})`, 'success');
   },
   
@@ -2217,31 +2370,6 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
 
     const newTotalQty = existingQty + effectiveAddQty;
 
-    const isDrainClipCartItem = (i: { sku?: string; parentAsin?: string; productTitle?: string }) => {
-      const s = (i.sku || '').toUpperCase();
-      const p = (i.parentAsin || '').toUpperCase();
-      const t = (i.productTitle || '').toLowerCase();
-      return s.startsWith('APE-SC') || s.includes('CLIP') || s.includes('DRAIN') || p.includes('CLIP') || p === 'AP-DRAIN-02' || t.includes('drain clip');
-    };
-
-    const recalculateCartVolumeTiers = (cartItems: any[]) => {
-      const totalDrainClipQty = cartItems
-        .filter(isDrainClipCartItem)
-        .reduce((sum, i) => sum + (i.quantity || 0), 0);
-
-      const drainTierPrice = totalDrainClipQty >= 1000 ? 12.75 : 20.00;
-
-      return cartItems.map((item) => {
-        if (isDrainClipCartItem(item)) {
-          return {
-            ...item,
-            unitPrice: drainTierPrice,
-          };
-        }
-        return item;
-      });
-    };
-
     if (existingIndex > -1) {
       updatedCart[existingIndex] = {
         ...updatedCart[existingIndex],
@@ -2294,16 +2422,9 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       get().removeFromCart(sku);
       return;
     }
-    const isDrainClipCartItem = (i: { sku?: string; parentAsin?: string; productTitle?: string }) => {
-      const s = (i.sku || '').toUpperCase();
-      const p = (i.parentAsin || '').toUpperCase();
-      const t = (i.productTitle || '').toLowerCase();
-      return s.startsWith('APE-SC') || s.includes('CLIP') || s.includes('DRAIN') || p.includes('CLIP') || p === 'AP-DRAIN-02' || t.includes('drain clip');
-    };
-    let updatedCart = get().cart.map((item) => item.sku === sku ? { ...item, quantity: qty } : item);
-    const totalDrainClips = updatedCart.filter(isDrainClipCartItem).reduce((sum, i) => sum + (i.quantity || 0), 0);
-    const drainTierPrice = totalDrainClips >= 1000 ? 12.75 : 20.00;
-    updatedCart = updatedCart.map((item) => isDrainClipCartItem(item) ? { ...item, unitPrice: drainTierPrice } : item);
+    const updatedCart = recalculateCartVolumeTiers(
+      get().cart.map((item) => item.sku === sku ? { ...item, quantity: qty } : item)
+    );
 
     saveSessionCart(updatedCart);
     set({
@@ -2315,16 +2436,9 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
     get().fetchAuthoritativeQuote();
   },
   removeFromCart: (sku) => {
-    const isDrainClipCartItem = (i: { sku?: string; parentAsin?: string; productTitle?: string }) => {
-      const s = (i.sku || '').toUpperCase();
-      const p = (i.parentAsin || '').toUpperCase();
-      const t = (i.productTitle || '').toLowerCase();
-      return s.startsWith('APE-SC') || s.includes('CLIP') || s.includes('DRAIN') || p.includes('CLIP') || p === 'AP-DRAIN-02' || t.includes('drain clip');
-    };
-    let remaining = get().cart.filter((item) => item.sku !== sku);
-    const totalDrainClips = remaining.filter(isDrainClipCartItem).reduce((sum, i) => sum + (i.quantity || 0), 0);
-    const drainTierPrice = totalDrainClips >= 1000 ? 12.75 : 20.00;
-    remaining = remaining.map((item) => isDrainClipCartItem(item) ? { ...item, unitPrice: drainTierPrice } : item);
+    const remaining = recalculateCartVolumeTiers(
+      get().cart.filter((item) => item.sku !== sku)
+    );
 
     saveSessionCart(remaining);
     set({
@@ -2758,26 +2872,9 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
   },
 
   schedulePickupForOrder: (orderId, packageId, slot, courier, date) => {
-    const updatedOrders = updateOrderShipmentHelper(get().orders, orderId, packageId, (shp) => ({
-      ...shp,
-      status: 'PROCESSING_PICK_PACK' as OrderStatus,
-      pickupDetail: {
-        slot,
-        date,
-        courier,
-        scheduledAt: new Date().toISOString()
-      },
-      milestones: [
-        ...shp.milestones,
-        {
-          status: 'PICKUP_SCHEDULED',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          location: 'Kathwada GIDC Hub (382430)',
-          description: `Pickup scheduled for ${date} (${slot}) with ${courier}`,
-          isCompleted: true
-        }
-      ]
-    }));
+    const updatedOrders = updateOrderShipmentHelper(get().orders, orderId, packageId, (shp) =>
+      createScheduledPickupShipment(shp, slot, courier, date, false)
+    );
     saveStored('apollo_orders', updatedOrders);
     set({ orders: updatedOrders });
     get().showToast(`Pickup scheduled for ${orderId} on ${date} (${slot}) with ${courier}!`, 'success');
@@ -2838,26 +2935,9 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       if (idSet.has(ord.id) || idSet.has(ord.orderNumber)) {
         return {
           ...ord,
-          shipments: ord.shipments.map((shp) => ({
-            ...shp,
-            status: 'PROCESSING_PICK_PACK' as OrderStatus,
-            pickupDetail: {
-              slot,
-              date,
-              courier,
-              scheduledAt: new Date().toISOString()
-            },
-            milestones: [
-              ...shp.milestones,
-              {
-                status: 'PICKUP_SCHEDULED',
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                location: 'Kathwada GIDC Hub (382430)',
-                description: `Batch pickup scheduled for ${date} (${slot}) with ${courier}`,
-                isCompleted: true
-              }
-            ]
-          }))
+          shipments: ord.shipments.map((shp) =>
+            createScheduledPickupShipment(shp, slot, courier, date, true)
+          )
         };
       }
       return ord;

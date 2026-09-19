@@ -552,6 +552,7 @@ const seenNames = new Set<string>();
                         <input
                           type="number"
                           min={1}
+                          aria-label={`Quantity for ${product.name}`}
                           value={getSelectedQty(product.id)}
                           onChange={(e) => setProductQty(product.id, parseInt(e.target.value, 10) || 1)}
                           className="w-12 text-center text-xs font-mono font-bold text-slate-900 focus:outline-none"
@@ -569,7 +570,7 @@ const seenNames = new Set<string>();
 
                     {/* Quick Preset Buttons (e.g. 20, 50, 100, 500, 1000 pcs) */}
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] text-slate-400 font-mono">Presets:</span>
+                      <span className="text-[10px] text-slate-600 font-mono font-medium">Presets:</span>
                       {(isDrain || isB2B ? [20, 50, 100, 500, 1000] : [1, 5, 10, 20, 50]).map((preset) => (
                         <button
                           key={preset}
@@ -708,6 +709,7 @@ const seenNames = new Set<string>();
                     <input
                       type="number"
                       min={1}
+                      aria-label="Modal quantity"
                       value={modalQuantity}
                       onChange={(e) => setModalQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
                       className="w-14 text-center text-xs font-mono font-bold text-slate-900 focus:outline-none"

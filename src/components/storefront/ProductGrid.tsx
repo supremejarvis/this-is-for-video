@@ -12,6 +12,7 @@ export const ProductGrid: React.FC = () => {
   const [productQuantities, setProductQuantities] = useState<Record<string, number>>({});
 
   const filteredProducts = products.filter((p) => {
+    if (p.isLive === false) return false;
     const matchesCat = selectedCategory === 'ALL' || p.category === selectedCategory;
     const matchesSearch = 
       p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

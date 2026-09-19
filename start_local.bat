@@ -1,5 +1,5 @@
 @echo off
-title Apollo Engineering Local Dev Server (PostgreSQL + FastAPI + Vite)
+title Apollo Engineering Local Dev Server (PostgreSQL + FastAPI + Next.js)
 echo ===================================================================
 echo   Starting Apollo Engineering Local Servers with PostgreSQL
 echo ===================================================================
@@ -14,13 +14,13 @@ if %errorlevel% neq 0 (
 echo [2/3] Launching FastAPI Backend on http://127.0.0.1:8000 ...
 start "Apollo FastAPI Backend (PostgreSQL)" cmd /k "cd /d %~dp0backend && .venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
 
-echo [3/3] Launching Frontend (Vite) on http://localhost:3000 ...
-start "Apollo Frontend (Vite)" cmd /k "cd /d %~dp0 && npm run dev"
+echo [3/3] Launching Frontend (Next.js) on http://localhost:3000 ...
+start "Apollo Frontend (Next.js)" cmd /k "cd /d %~dp0 && npm run dev"
 
 echo.
 echo ===================================================================
 echo   Local Servers Active:
-echo   - Frontend Portal:  http://localhost:3000
+echo   - Frontend Portal:  http://localhost:3000 (Next.js App Router)
 echo   - FastAPI Backend:  http://127.0.0.1:8000
 echo   - API Documentation: http://127.0.0.1:8000/docs
 echo   - Database: PostgreSQL 5432 (Database: apollo_ecommerce)

@@ -1,5 +1,6 @@
 """Product and Dynamic Variant Catalog API Endpoints."""
 import uuid
+from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
@@ -8,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import require_roles
 from app.core.database import get_db
 from app.models.auth import User, UserRole
-from app.models.product import Product
+from app.models.product import Product, ProductVariant
 from app.schemas.product import (
     ProductCreate,
     ProductResponse,
@@ -26,6 +27,47 @@ from app.services.catalog_service import (
 )
 
 router = APIRouter(prefix="/products", tags=["products"])
+
+
+def _extract_expected_version(if_match: str | None, body_version: int | None) -> int:
+    if if_match is not None:
+        try:
+            return int(if_match.strip().strip('"'))
+        except ValueError:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid If-Match header value.") from None
+    if body_version is not None:
+        return body_version
+    raise HTTPException(
+        status_code=status.HTTP_428_PRECONDITION_REQUIRED,
+        detail="Update requires expected version in body or If-Match header.",
+    )
+
+
+def _to_variant_response(
+    variant: ProductVariant,
+    available_stock: int = 0,
+    unit_price: Decimal | None = None,
+    tax_mode: str | None = None,
+) -> ProductVariantResponse:
+    return ProductVariantResponse(
+        id=variant.id,
+        product_id=variant.product_id,
+        sku=variant.sku,
+        fit_mode=variant.fit_mode,
+        frame_thickness_mm=variant.frame_thickness_mm,
+        min_thickness_mm=variant.min_thickness_mm,
+        max_thickness_mm=variant.max_thickness_mm,
+        display_label=variant.display_label,
+        frame_thickness=variant.frame_thickness,
+        pack_size=variant.pack_size,
+        is_active=variant.is_active,
+        is_archived=variant.is_archived,
+        version=variant.version,
+        available_stock=available_stock,
+        unit_price=unit_price,
+        tax_mode=tax_mode,
+        created_at=variant.created_at,
+    )
 
 
 def _map_product_response(product: Product) -> ProductResponse:
@@ -50,24 +92,11 @@ def _map_product_response(product: Product) -> ProductResponse:
                 tax_mode_val = current_pv.tax_mode.value if hasattr(current_pv.tax_mode, "value") else str(current_pv.tax_mode)
 
         variants.append(
-            ProductVariantResponse(
-                id=v.id,
-                product_id=v.product_id,
-                sku=v.sku,
-                fit_mode=v.fit_mode,
-                frame_thickness_mm=v.frame_thickness_mm,
-                min_thickness_mm=v.min_thickness_mm,
-                max_thickness_mm=v.max_thickness_mm,
-                display_label=v.display_label,
-                frame_thickness=v.frame_thickness,
-                pack_size=v.pack_size,
-                is_active=v.is_active,
-                is_archived=v.is_archived,
-                version=v.version,
+            _to_variant_response(
+                v,
                 available_stock=avail,
                 unit_price=price_val,
                 tax_mode=tax_mode_val,
-                created_at=v.created_at,
             )
         )
     return ProductResponse(
@@ -143,19 +172,7 @@ async def update_product(
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ) -> ProductResponse:
     """Update product metadata with optimistic concurrency control."""
-    expected_version: int | None = None
-    if if_match is not None:
-        try:
-            expected_version = int(if_match.strip().strip('"'))
-        except ValueError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid If-Match header value.") from None
-    elif data.version is not None:
-        expected_version = data.version
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_428_PRECONDITION_REQUIRED,
-            detail="Update requires expected version in body or If-Match header.",
-        )
+    expected_version = _extract_expected_version(if_match, data.version)
 
     try:
         product = await CatalogService.update_product(
@@ -202,23 +219,7 @@ async def create_variant(
         variant = await CatalogService.create_variant(
             db, product_id, data, creator_user_id=current_user.id
         )
-        return ProductVariantResponse(
-            id=variant.id,
-            product_id=variant.product_id,
-            sku=variant.sku,
-            fit_mode=variant.fit_mode,
-            frame_thickness_mm=variant.frame_thickness_mm,
-            min_thickness_mm=variant.min_thickness_mm,
-            max_thickness_mm=variant.max_thickness_mm,
-            display_label=variant.display_label,
-            frame_thickness=variant.frame_thickness,
-            pack_size=variant.pack_size,
-            is_active=variant.is_active,
-            is_archived=variant.is_archived,
-            version=variant.version,
-            available_stock=data.initial_stock,
-            created_at=variant.created_at,
-        )
+        return _to_variant_response(variant, available_stock=data.initial_stock)
     except ProductNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from None
     except DuplicateSkuException as e:
@@ -239,41 +240,13 @@ async def update_variant(
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ) -> ProductVariantResponse:
     """Update variant status or pack size with optimistic concurrency control."""
-    expected_version: int | None = None
-    if if_match is not None:
-        try:
-            expected_version = int(if_match.strip().strip('"'))
-        except ValueError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid If-Match header value.") from None
-    elif data.version is not None:
-        expected_version = data.version
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_428_PRECONDITION_REQUIRED,
-            detail="Update requires expected version in body or If-Match header.",
-        )
+    expected_version = _extract_expected_version(if_match, data.version)
 
     try:
         variant = await CatalogService.update_variant(
             db, variant_id, data, expected_version=expected_version
         )
-        return ProductVariantResponse(
-            id=variant.id,
-            product_id=variant.product_id,
-            sku=variant.sku,
-            fit_mode=variant.fit_mode,
-            frame_thickness_mm=variant.frame_thickness_mm,
-            min_thickness_mm=variant.min_thickness_mm,
-            max_thickness_mm=variant.max_thickness_mm,
-            display_label=variant.display_label,
-            frame_thickness=variant.frame_thickness,
-            pack_size=variant.pack_size,
-            is_active=variant.is_active,
-            is_archived=variant.is_archived,
-            version=variant.version,
-            available_stock=0,
-            created_at=variant.created_at,
-        )
+        return _to_variant_response(variant, available_stock=0)
     except OptimisticLockException as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from None
     except VariantNotFoundException as e:
@@ -294,22 +267,7 @@ async def archive_variant(
     """Soft-archive a dynamic variant."""
     try:
         variant = await CatalogService.archive_variant(db, variant_id)
-        return ProductVariantResponse(
-            id=variant.id,
-            product_id=variant.product_id,
-            sku=variant.sku,
-            fit_mode=variant.fit_mode,
-            frame_thickness_mm=variant.frame_thickness_mm,
-            min_thickness_mm=variant.min_thickness_mm,
-            max_thickness_mm=variant.max_thickness_mm,
-            display_label=variant.display_label,
-            frame_thickness=variant.frame_thickness,
-            pack_size=variant.pack_size,
-            is_active=variant.is_active,
-            is_archived=variant.is_archived,
-            available_stock=0,
-            created_at=variant.created_at,
-        )
+        return _to_variant_response(variant, available_stock=0)
     except VariantNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from None
 

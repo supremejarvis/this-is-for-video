@@ -6,6 +6,8 @@ node_modules/
 # Production Builds & Output
 dist/
 build/
+.next/
+*.tsbuildinfo
 coverage/
 .vercel
 

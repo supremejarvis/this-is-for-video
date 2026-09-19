@@ -1,7 +1,6 @@
 const CACHE_NAME = 'apollo-engineering-v1';
 const STATIC_ASSETS = [
   '/',
-  '/index.html',
   '/logo.webp',
   '/manifest.json',
 ];
@@ -56,9 +55,9 @@ self.addEventListener('fetch', (event) => {
         // Fallback to cache
         return caches.match(event.request).then((cachedResponse) => {
           if (cachedResponse) return cachedResponse;
-          // For navigation requests, return cached index.html
+          // For navigation requests, return cached root
           if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
+            return caches.match('/');
           }
           return new Response('Offline', { status: 503 });
         });

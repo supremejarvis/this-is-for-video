@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState, useId } from 'react';
 import { 
   X, Trash2, Plus, Minus, ShoppingCart, 
@@ -680,7 +682,7 @@ export const CartDrawer: React.FC = () => {
                 </button>
               );
             })()}
-            <div className="text-center text-[10px] text-slate-400 font-mono">
+            <div className="text-center text-[10px] text-slate-500 font-mono font-medium">
               <span>Direct Factory Dispatch from Kathwada GIDC, Ahmedabad (382430)</span>
             </div>
           </div>

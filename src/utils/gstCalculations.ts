@@ -43,6 +43,33 @@ export function splitGstComponents(totalGst: number, isIntraState: boolean): {
   return { cgst, sgst, igst: 0 };
 }
 
+function assembleGstBreakdown(
+  taxableAmount: number,
+  totalGst: number,
+  totalWithTax: number,
+  isIntraState: boolean,
+  itcSavings: number
+): GstBreakdown {
+  const { cgst, sgst, igst } = splitGstComponents(totalGst, isIntraState);
+  return {
+    taxableAmount,
+    netTaxableAmount: taxableAmount,
+    totalGst,
+    totalTax: totalGst,
+    cgst,
+    cgstAmount: cgst,
+    sgst,
+    sgstAmount: sgst,
+    igst,
+    igstAmount: igst,
+    isInterState: !isIntraState,
+    totalWithTax,
+    grossAmount: totalWithTax,
+    inputTaxCreditSavings: itcSavings,
+    itcEligibleAmount: itcSavings
+  };
+}
+
 /**
  * Calculate pure 18% GST breakdown from an inclusive MRP/Selling price
  */
@@ -78,26 +105,7 @@ export function calculateInclusiveGst(
   const taxableAmount = safeGross > 0 ? Math.round((safeGross / (1 + rate / 100)) * 100) / 100 : 0;
   const totalGst = Math.round((safeGross - taxableAmount) * 100) / 100;
 
-  const { cgst, sgst, igst } = splitGstComponents(totalGst, isIntraState);
-  const itcSavings = totalGst;
-
-  return {
-    taxableAmount,
-    netTaxableAmount: taxableAmount,
-    totalGst,
-    totalTax: totalGst,
-    cgst,
-    cgstAmount: cgst,
-    sgst,
-    sgstAmount: sgst,
-    igst,
-    igstAmount: igst,
-    isInterState: !isIntraState,
-    totalWithTax: safeGross,
-    grossAmount: safeGross,
-    inputTaxCreditSavings: itcSavings,
-    itcEligibleAmount: itcSavings
-  };
+  return assembleGstBreakdown(taxableAmount, totalGst, safeGross, isIntraState, totalGst);
 }
 
 /**
@@ -124,25 +132,7 @@ export function calculateExclusiveGst(
   const totalGst = Math.round((safeTaxable * (rate / 100)) * 100) / 100;
   const totalWithTax = Math.round((safeTaxable + totalGst) * 100) / 100;
 
-  const { cgst, sgst, igst } = splitGstComponents(totalGst, isIntraState);
-
-  return {
-    taxableAmount: safeTaxable,
-    netTaxableAmount: safeTaxable,
-    totalGst,
-    totalTax: totalGst,
-    cgst,
-    cgstAmount: cgst,
-    sgst,
-    sgstAmount: sgst,
-    igst,
-    igstAmount: igst,
-    isInterState: !isIntraState,
-    totalWithTax,
-    grossAmount: totalWithTax,
-    inputTaxCreditSavings: totalGst,
-    itcEligibleAmount: totalGst
-  };
+  return assembleGstBreakdown(safeTaxable, totalGst, totalWithTax, isIntraState, totalGst);
 }
 
 /**

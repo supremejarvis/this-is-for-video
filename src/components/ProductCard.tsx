@@ -464,8 +464,10 @@ export function ProductCard({
             <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-3">
               {/* Qty Input */}
               <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-xl border border-slate-300 shadow-sm">
-                <label className="text-xs font-bold text-slate-700">{appMode === 'B2B' ? 'Bulk Qty:' : 'Qty:'}</label>
+                <label htmlFor={`card-qty-${matchedProduct?.asin || cardId}`} className="text-xs font-bold text-slate-700">{appMode === 'B2B' ? 'Bulk Qty:' : 'Qty:'}</label>
                 <input
+                  id={`card-qty-${matchedProduct?.asin || cardId}`}
+                  aria-label={`Order quantity for ${displayTitle}`}
                   type="number"
                   min={appMode === 'B2B' ? minB2BQty : 1}
                   step={appMode === 'B2B' ? 10 : 1}

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import require_roles
 from app.core.database import get_db
 from app.models.auth import User, UserRole
+from app.models.inventory import InventoryMovement
 from app.schemas.inventory import (
     InventoryAdjustmentRequest,
     InventoryItemResponse,
@@ -17,6 +18,31 @@ from app.schemas.inventory import (
 from app.services.inventory import DuplicateIdempotencyKeyError, InventoryService
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
+
+
+def _to_movement_response(movement: InventoryMovement, sku: str = "") -> InventoryMovementResponse:
+    return InventoryMovementResponse(
+        id=movement.id,
+        inventory_item_id=movement.inventory_item_id,
+        variant_id=movement.variant_id,
+        sku=sku,
+        movement_type=movement.movement_type,
+        idempotency_key=movement.idempotency_key,
+        quantity_delta_on_hand=movement.quantity_delta_on_hand,
+        quantity_delta_reserved=movement.quantity_delta_reserved,
+        resulting_quantity_on_hand=movement.resulting_quantity_on_hand,
+        resulting_quantity_reserved=movement.resulting_quantity_reserved,
+        source_reference_type=movement.source_reference_type,
+        source_reference_id=movement.source_reference_id,
+        quantity_delta=movement.quantity_delta,
+        quantity_on_hand_after=movement.quantity_on_hand_after,
+        quantity_reserved_after=movement.quantity_reserved_after,
+        reference_id=movement.reference_id,
+        reason=movement.reason,
+        actor_id=movement.actor_id,
+        created_by_user_id=movement.created_by_user_id,
+        created_at=movement.created_at,
+    )
 
 
 @router.get("/items", response_model=list[InventoryItemResponse])
@@ -67,28 +93,7 @@ async def receive_stock(
             user_id=current_user.id,
         )
         await db.commit()
-        return InventoryMovementResponse(
-            id=movement.id,
-            inventory_item_id=movement.inventory_item_id,
-            variant_id=movement.variant_id,
-            sku=data.sku,
-            movement_type=movement.movement_type,
-            idempotency_key=movement.idempotency_key,
-            quantity_delta_on_hand=movement.quantity_delta_on_hand,
-            quantity_delta_reserved=movement.quantity_delta_reserved,
-            resulting_quantity_on_hand=movement.resulting_quantity_on_hand,
-            resulting_quantity_reserved=movement.resulting_quantity_reserved,
-            source_reference_type=movement.source_reference_type,
-            source_reference_id=movement.source_reference_id,
-            quantity_delta=movement.quantity_delta,
-            quantity_on_hand_after=movement.quantity_on_hand_after,
-            quantity_reserved_after=movement.quantity_reserved_after,
-            reference_id=movement.reference_id,
-            reason=movement.reason,
-            actor_id=movement.actor_id,
-            created_by_user_id=movement.created_by_user_id,
-            created_at=movement.created_at,
-        )
+        return _to_movement_response(movement, sku=data.sku)
     except DuplicateIdempotencyKeyError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from None
     except ValueError as e:
@@ -117,28 +122,7 @@ async def adjust_stock(
             user_id=current_user.id,
         )
         await db.commit()
-        return InventoryMovementResponse(
-            id=movement.id,
-            inventory_item_id=movement.inventory_item_id,
-            variant_id=movement.variant_id,
-            sku=data.sku,
-            movement_type=movement.movement_type,
-            idempotency_key=movement.idempotency_key,
-            quantity_delta_on_hand=movement.quantity_delta_on_hand,
-            quantity_delta_reserved=movement.quantity_delta_reserved,
-            resulting_quantity_on_hand=movement.resulting_quantity_on_hand,
-            resulting_quantity_reserved=movement.resulting_quantity_reserved,
-            source_reference_type=movement.source_reference_type,
-            source_reference_id=movement.source_reference_id,
-            quantity_delta=movement.quantity_delta,
-            quantity_on_hand_after=movement.quantity_on_hand_after,
-            quantity_reserved_after=movement.quantity_reserved_after,
-            reference_id=movement.reference_id,
-            reason=movement.reason,
-            actor_id=movement.actor_id,
-            created_by_user_id=movement.created_by_user_id,
-            created_at=movement.created_at,
-        )
+        return _to_movement_response(movement, sku=data.sku)
     except DuplicateIdempotencyKeyError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from None
     except ValueError as e:
@@ -160,28 +144,5 @@ async def list_movements(
     movements = await InventoryService.list_movements(
         session=db, variant_id=variant_id, limit=limit, offset=offset
     )
-    return [
-        InventoryMovementResponse(
-            id=m.id,
-            inventory_item_id=m.inventory_item_id,
-            variant_id=m.variant_id,
-            sku="",
-            movement_type=m.movement_type,
-            idempotency_key=m.idempotency_key,
-            quantity_delta_on_hand=m.quantity_delta_on_hand,
-            quantity_delta_reserved=m.quantity_delta_reserved,
-            resulting_quantity_on_hand=m.resulting_quantity_on_hand,
-            resulting_quantity_reserved=m.resulting_quantity_reserved,
-            source_reference_type=m.source_reference_type,
-            source_reference_id=m.source_reference_id,
-            quantity_delta=m.quantity_delta,
-            quantity_on_hand_after=m.quantity_on_hand_after,
-            quantity_reserved_after=m.quantity_reserved_after,
-            reference_id=m.reference_id,
-            reason=m.reason,
-            actor_id=m.actor_id,
-            created_by_user_id=m.created_by_user_id,
-            created_at=m.created_at,
-        )
-        for m in movements
-    ]
+    return [_to_movement_response(m) for m in movements]
+

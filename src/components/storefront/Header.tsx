@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from '../../lib/navigation';
 import { 
   Search, ShoppingCart, MapPin, ChevronDown, ShieldCheck, 
   Building2, User, LayoutDashboard, Truck, Bell, Flame, CheckCircle2, Phone, Mail, Sparkles, Wrench, Info, Heart 
@@ -16,11 +18,19 @@ export const Header: React.FC = () => {
     selectedCategory, setSelectedCategory, setSelectedProduct, wishlist
   } = useStore();
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const navigate = useNavigate();
   const isB2B = Boolean(appMode === 'B2B' || (currentUser?.role && currentUser.role.includes('B2B')));
 
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const isGuest = !mounted || currentUser.id === 'usr_guest';
+  const displayCartCount = mounted ? totalCartCount : 0;
+  const displayWishlistCount = mounted ? wishlist.length : 0;
 
   const categories = [
     'ALL',
@@ -132,7 +142,7 @@ export const Header: React.FC = () => {
         {/* Right Action Icons */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
           {/* User Account / KYC Profile & Dual Addresses (Full Screen) */}
-          {currentUser.id === 'usr_guest' ? (
+          {isGuest ? (
             <button
               onClick={() => setIsAuthModalOpen(true)}
               aria-label="Sign In or Register for Apollo Engineering Account"
@@ -170,18 +180,18 @@ export const Header: React.FC = () => {
           {/* Wishlist Button */}
           <button
             onClick={() => navigateTo('wishlist', '/wishlist')}
-            aria-label={`View wishlist with ${wishlist.length} items`}
+            aria-label={`View wishlist with ${displayWishlistCount} items`}
             className={`h-10 relative flex items-center gap-1.5 px-3 sm:px-3.5 rounded-xl font-bold text-xs transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 shrink-0 ${
               activeTab === 'wishlist'
                 ? 'bg-rose-50 text-rose-600 border-rose-200 shadow-sm'
                 : 'bg-white hover:bg-rose-50 border-slate-200 hover:border-rose-200 text-slate-700 shadow-sm'
             }`}
           >
-            <Heart className={`w-4 h-4 shrink-0 ${wishlist.length > 0 ? 'fill-rose-500 text-rose-500' : ''}`} />
+            <Heart className={`w-4 h-4 shrink-0 ${displayWishlistCount > 0 ? 'fill-rose-500 text-rose-500' : ''}`} />
             <span className="hidden md:inline">Wishlist</span>
-            {wishlist.length > 0 && (
+            {displayWishlistCount > 0 && (
               <span className="absolute -top-1.5 -right-1 bg-rose-500 text-white text-xs font-black w-4 h-4 rounded-full flex items-center justify-center border border-white shadow">
-                {wishlist.length}
+                {displayWishlistCount}
               </span>
             )}
           </button>
@@ -189,14 +199,14 @@ export const Header: React.FC = () => {
           {/* Cart Button with Counter */}
           <button
             onClick={() => setIsCartDrawerOpen(true)}
-            aria-label={`Cart (${totalCartCount} items)`}
+            aria-label={`Cart (${displayCartCount} items)`}
             className="h-10 relative flex items-center gap-1.5 px-3 sm:px-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs shadow-sm hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 shrink-0"
           >
             <div className="relative shrink-0">
               <ShoppingCart className="w-4 h-4 text-slate-950" />
-              {totalCartCount > 0 && (
+              {displayCartCount > 0 && (
                 <span className="absolute -top-2.5 -right-2.5 bg-slate-950 text-white text-[11px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                  {totalCartCount}
+                  {displayCartCount}
                 </span>
               )}
             </div>

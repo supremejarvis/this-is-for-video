@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { 
   Star, Truck, Building2, Check, 
@@ -883,6 +885,7 @@ export const ProductDetail: React.FC = () => {
               <div className="flex items-center gap-2">
                 <input
                   type="number"
+                  aria-label="Order quantity in units"
                   min={1}
                   max={Math.max(50000, currentVariant.inventory || 50000)}
                   value={selectedQty}
@@ -896,7 +899,7 @@ export const ProductDetail: React.FC = () => {
               {/* Quick Lots Selector for Drain Clips */}
               {isDrainClip && (
                 <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                  <span className="text-[10px] text-slate-400 font-mono">Quick Lots:</span>
+                  <span className="text-[10px] text-slate-600 font-mono font-medium">Quick Lots:</span>
                   {[50, 100, 250, 500, 1000, 2000].map((preset) => (
                     <button
                       key={preset}

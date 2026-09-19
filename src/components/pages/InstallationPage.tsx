@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { InstallationGuide } from '../InstallationGuide';
 import { ComparisonTable } from '../ComparisonTable';

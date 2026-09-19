@@ -1,0 +1,291 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Enterprise Cloud Architecture - Apollo Engineering",
+    "output": "enterprise-target-architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "ingress-flow",
+        "label": "Ingress & Core Application Flow",
+        "focus": ["frontend", "cdn", "gateway", "fastapi", "aurora", "redis"],
+        "note": "Authoritative transactional flow from client browser through CDN, Kong Gateway to FastAPI and Aurora PostgreSQL."
+      },
+      {
+        "id": "async-event-flow",
+        "label": "Async Workers & Event Bus",
+        "focus": ["fastapi", "eventbus", "workers", "storage", "opensearch"],
+        "note": "Decoupled background workflows for invoice generation, event streaming, and OpenSearch catalog indexing."
+      },
+      {
+        "id": "gitops-observability",
+        "label": "GitOps & Observability",
+        "focus": ["fastapi", "workers", "observability", "gitops"],
+        "note": "Continuous delivery with Terraform, GitHub Actions, and Argo CD alongside OpenTelemetry, Prometheus, and Sentry."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "Next.js App",
+      "sublabel": "TS + TanStack Query",
+      "brand": "next-js",
+      "pos": [40, 180],
+      "size": [130, 56]
+    },
+    {
+      "id": "cdn",
+      "type": "cloud",
+      "label": "CloudFront / CDN",
+      "sublabel": "WAF & Edge Cache",
+      "brand": "cloudflare",
+      "pos": [230, 180],
+      "size": [130, 56]
+    },
+    {
+      "id": "gateway",
+      "type": "security",
+      "label": "Kong / API Gateway",
+      "sublabel": "ALB Ingress :443",
+      "tag": "Rate Limiter",
+      "pos": [420, 180],
+      "size": [135, 56]
+    },
+    {
+      "id": "gitops",
+      "type": "cloud",
+      "label": "CI/CD & GitOps",
+      "sublabel": "Actions + Argo CD",
+      "brand": "kubernetes",
+      "tag": "Terraform / GitOps",
+      "pos": [420, 310],
+      "size": [135, 56]
+    },
+    {
+      "id": "redis",
+      "type": "database",
+      "label": "Redis Cluster",
+      "sublabel": "Multi-AZ Cache",
+      "brand": "redis",
+      "tag": "In-Memory",
+      "pos": [630, 60],
+      "size": [135, 56]
+    },
+    {
+      "id": "fastapi",
+      "type": "backend",
+      "label": "FastAPI Pods",
+      "sublabel": "EKS Microservices",
+      "brand": "fastapi",
+      "tag": "Decimal Engine",
+      "pos": [630, 180],
+      "size": [135, 56]
+    },
+    {
+      "id": "eventbus",
+      "type": "messagebus",
+      "label": "SQS / SNS / Kafka",
+      "sublabel": "Event Streaming",
+      "tag": "Event Bus",
+      "pos": [630, 310],
+      "size": [135, 56]
+    },
+    {
+      "id": "observability",
+      "type": "external",
+      "label": "Observability",
+      "sublabel": "OTel + Grafana + Sentry",
+      "brand": "grafana",
+      "tag": "Telemetry",
+      "pos": [630, 440],
+      "size": [135, 56]
+    },
+    {
+      "id": "opensearch",
+      "type": "database",
+      "label": "OpenSearch",
+      "sublabel": "Catalog & Search",
+      "brand": "opensearch",
+      "tag": "Search Engine",
+      "pos": [840, 60],
+      "size": [135, 56]
+    },
+    {
+      "id": "aurora",
+      "type": "database",
+      "label": "Aurora PostgreSQL",
+      "sublabel": "PgBouncer + Replicas",
+      "brand": "postgresql",
+      "tag": "Single Source",
+      "pos": [840, 180],
+      "size": [135, 56]
+    },
+    {
+      "id": "workers",
+      "type": "backend",
+      "label": "Async Workers",
+      "sublabel": "Outbox & Invoices",
+      "brand": "docker",
+      "tag": "Background",
+      "pos": [840, 310],
+      "size": [135, 56]
+    },
+    {
+      "id": "storage",
+      "type": "cloud",
+      "label": "Amazon S3",
+      "sublabel": "Invoices & Media",
+      "tag": "Object Storage",
+      "pos": [840, 440],
+      "size": [135, 56]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Edge & Ingress Tier",
+      "wraps": ["frontend", "cdn", "gateway"],
+      "pad": 16
+    },
+    {
+      "kind": "security-group",
+      "label": "EKS Private Application VPC",
+      "wraps": ["redis", "fastapi", "eventbus", "observability", "opensearch", "aurora", "workers", "storage"],
+      "pad": 16
+    }
+  ],
+  "connections": [
+    {
+      "id": "fe-to-cdn",
+      "from": "frontend",
+      "to": "cdn",
+      "label": "HTTPS",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "cdn-to-gw",
+      "from": "cdn",
+      "to": "gateway",
+      "label": "TLS",
+      "variant": "security",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "gw-to-api",
+      "from": "gateway",
+      "to": "fastapi",
+      "label": "HTTP Proxy",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "api-to-redis",
+      "from": "fastapi",
+      "to": "redis",
+      "label": "Cache",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "api-to-aurora",
+      "from": "fastapi",
+      "to": "aurora",
+      "label": "SQL",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "aurora-to-search",
+      "from": "aurora",
+      "to": "opensearch",
+      "label": "CDC Sync",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "api-to-bus",
+      "from": "fastapi",
+      "to": "eventbus",
+      "label": "Outbox",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [698, 273]
+    },
+    {
+      "id": "gitops-to-bus",
+      "from": "gitops",
+      "to": "eventbus",
+      "label": "GitOps",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "bus-to-workers",
+      "from": "eventbus",
+      "to": "workers",
+      "label": "Events",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "workers-to-s3",
+      "from": "workers",
+      "to": "storage",
+      "label": "Invoices",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [908, 403]
+    },
+    {
+      "id": "bus-to-obs",
+      "from": "eventbus",
+      "to": "observability",
+      "label": "OTel",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [698, 403]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Edge, CDN & Gateway",
+      "items": [
+        "CloudFront/Cloudflare Edge provides global CDN caching, DDoS shielding, and SSL termination.",
+        "Kong Gateway / AWS API Gateway with ALB handles rate limiting, authentication headers, and routing."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Core Compute & Data Persistence",
+      "items": [
+        "Python FastAPI microservices run containerized on AWS EKS with horizontal pod autoscaling.",
+        "Aurora PostgreSQL Multi-AZ with PgBouncer connection pooling serves authoritative Decimal state.",
+        "Redis Cluster provides sub-millisecond caching for user sessions, catalog, and rate-limit windows."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Async Workers, Events & Observability",
+      "items": [
+        "SQS/SNS or Kafka delivers transactional outbox events to asynchronous worker pods.",
+        "Amazon S3 securely archives generated statutory PDF invoices and return evidence media.",
+        "OpenTelemetry exporter feeds metrics, logs, and distributed traces to Prometheus, Grafana, and Sentry."
+      ]
+    }
+  ]
+}

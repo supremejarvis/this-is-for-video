@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { 
   X, Check, ShieldCheck, Truck, Building2, CreditCard, 

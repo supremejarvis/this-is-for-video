@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useMemo } from 'react';
 import { ProductCard } from '../ProductCard';
 import { PdfCatalog } from '../PdfCatalog';

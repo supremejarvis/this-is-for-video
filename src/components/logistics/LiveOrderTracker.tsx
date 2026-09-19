@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Truck, CheckCircle2, Clock, Printer, FileText, 

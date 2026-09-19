@@ -28,10 +28,12 @@ export interface InventoryReceiptPayload {
 }
 
 export interface InventoryAdjustmentPayload {
-  variant_id: string;
+  variant_id?: string;
+  sku?: string;
   quantity_delta: number;
   reason: string;
   reference_number?: string;
+  idempotency_key?: string;
 }
 
 export class InventoryApi {

@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Heart, ShoppingCart, Trash2, Package, ArrowRight, Sparkles } from 'lucide-react';
 import { useStore } from '../../store/useStore';

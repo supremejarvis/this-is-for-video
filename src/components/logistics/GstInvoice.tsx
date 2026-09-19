@@ -11,6 +11,20 @@ interface GstInvoiceProps {
   onClose: () => void;
 }
 
+const InvoiceAddressLines: React.FC<{ address?: Order['deliveryAddress'] }> = ({ address }) => {
+  if (!address) return null;
+  return (
+    <>
+      <div className="text-slate-700 leading-snug">
+        {address.flatBuilding}, {address.streetArea}
+      </div>
+      <div className="text-slate-700 font-semibold">
+        {address.city}, {address.state} - {address.pincode}
+      </div>
+    </>
+  );
+};
+
 export const GstInvoice: React.FC<GstInvoiceProps> = ({ order, onClose }) => {
   const stateCode = order.deliveryAddress?.stateCode || '24';
   const isIntrastate = stateCode === '24' || (order.deliveryAddress?.state || '').toLowerCase().includes('gujarat');
@@ -126,12 +140,7 @@ export const GstInvoice: React.FC<GstInvoiceProps> = ({ order, onClose }) => {
                 <div className="font-black text-sm text-slate-900">
                   {order.deliveryAddress?.fullName || order.customerName || 'Valued Customer'}
                 </div>
-                <div className="text-slate-700 leading-snug">
-                  {order.deliveryAddress?.flatBuilding}, {order.deliveryAddress?.streetArea}
-                </div>
-                <div className="text-slate-700 font-semibold">
-                  {order.deliveryAddress?.city}, {order.deliveryAddress?.state} - {order.deliveryAddress?.pincode}
-                </div>
+                <InvoiceAddressLines address={order.deliveryAddress} />
                 <div className="text-slate-600 font-mono text-[11px]">
                   Phone: {order.deliveryAddress?.phone || order.customerPhone || 'Verified Contact'}
                 </div>
@@ -154,12 +163,7 @@ export const GstInvoice: React.FC<GstInvoiceProps> = ({ order, onClose }) => {
                 <div className="text-[#0054A6] font-bold text-[11px]">
                   Delivery Hub: {order.deliveryAddress?.postOffice?.name || 'Local Sub Post Office'}
                 </div>
-                <div className="text-slate-700 leading-snug">
-                  {order.deliveryAddress?.flatBuilding}, {order.deliveryAddress?.streetArea}
-                </div>
-                <div className="text-slate-700 font-semibold">
-                  {order.deliveryAddress?.city}, {order.deliveryAddress?.state} - {order.deliveryAddress?.pincode}
-                </div>
+                <InvoiceAddressLines address={order.deliveryAddress} />
                 <div className="text-slate-500 font-mono text-[10px]">
                   Facility ID: {order.deliveryAddress?.postOffice?.facilityId || `PO${order.deliveryAddress?.pincode}`}
                 </div>

@@ -1,0 +1,1059 @@
+{
+  "duplicates": [
+    {
+      "firstFile": {
+        "end": 236,
+        "endLoc": {
+          "column": 50,
+          "line": 236,
+          "position": 8206
+        },
+        "name": "api\\v1\\endpoints\\auth.py",
+        "start": 223,
+        "startLoc": {
+          "column": 4,
+          "line": 223,
+          "position": 7724
+        }
+      },
+      "format": "python",
+      "fragment": "    user.failed_login_attempts = 0\n    user.locked_until = None\n\n    now = utcnow()\n    raw_session_token = generate_secure_token(32)\n    raw_csrf_token = generate_secure_token(32)\n\n    session = UserSession(\n        user_id=user.id,\n        session_token_hash=hash_token(raw_session_token),\n        csrf_token_hash=hash_token(raw_csrf_token),\n        ip_address=ip_address,\n        user_agent=user_agent[:500] if user_agent else None,\n        absolute_expires_at=now + timedelta(hours=AuthService.ABSOLUTE_SESSION_HOURS),",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 14,
+      "secondFile": {
+        "end": 200,
+        "endLoc": {
+          "column": 54,
+          "line": 200,
+          "position": 7538
+        },
+        "name": "services\\auth_service.py",
+        "start": 187,
+        "startLoc": {
+          "column": 8,
+          "line": 187,
+          "position": 7012
+        }
+      },
+      "tokens": 75
+    },
+    {
+      "firstFile": {
+        "end": 11,
+        "endLoc": {
+          "column": 9,
+          "line": 11,
+          "position": 332
+        },
+        "name": "api\\v1\\endpoints\\inventory.py",
+        "start": 1,
+        "startLoc": {
+          "column": 41,
+          "line": 1,
+          "position": 41
+        }
+      },
+      "format": "python",
+      "fragment": "\"\"\"Inventory and Stock Ledger Endpoints.\"\"\"\nimport uuid\nfrom typing import Annotated\n\nfrom fastapi import APIRouter, Depends, HTTPException, Query, status\nfrom sqlalchemy.ext.asyncio import AsyncSession\n\nfrom app.api.deps import require_roles\nfrom app.core.database import get_db\nfrom app.models.auth import User, UserRole\nfrom app.schemas.inventory import (",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 11,
+      "secondFile": {
+        "end": 11,
+        "endLoc": {
+          "column": 9,
+          "line": 11,
+          "position": 340
+        },
+        "name": "api\\v1\\endpoints\\pricing.py",
+        "start": 1,
+        "startLoc": {
+          "column": 49,
+          "line": 1,
+          "position": 49
+        }
+      },
+      "tokens": 56
+    },
+    {
+      "firstFile": {
+        "end": 98,
+        "endLoc": {
+          "column": 8,
+          "line": 98,
+          "position": 3904
+        },
+        "name": "api\\v1\\endpoints\\inventory.py",
+        "start": 66,
+        "startLoc": {
+          "column": 30,
+          "line": 66,
+          "position": 2410
+        }
+      },
+      "format": "python",
+      "fragment": "            reason=data.reason,\n            user_id=current_user.id,\n        )\n        await db.commit()\n        return InventoryMovementResponse(\n            id=movement.id,\n            inventory_item_id=movement.inventory_item_id,\n            variant_id=movement.variant_id,\n            sku=data.sku,\n            movement_type=movement.movement_type,\n            idempotency_key=movement.idempotency_key,\n            quantity_delta_on_hand=movement.quantity_delta_on_hand,\n            quantity_delta_reserved=movement.quantity_delta_reserved,\n            resulting_quantity_on_hand=movement.resulting_quantity_on_hand,\n            resulting_quantity_reserved=movement.resulting_quantity_reserved,\n            source_reference_type=movement.source_reference_type,\n            source_reference_id=movement.source_reference_id,\n            quantity_delta=movement.quantity_delta,\n            quantity_on_hand_after=movement.quantity_on_hand_after,\n            quantity_reserved_after=movement.quantity_reserved_after,\n            reference_id=movement.reference_id,\n            reason=movement.reason,\n            actor_id=movement.actor_id,\n            created_by_user_id=movement.created_by_user_id,\n            created_at=movement.created_at,\n        )\n    except DuplicateIdempotencyKeyError as e:\n        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from None\n    except ValueError as e:\n        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from None\n\n\n@router.post(\"/adjustment\", response_model=InventoryMovementResponse, status_code=status.HTTP_201_CREATED)",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 33,
+      "secondFile": {
+        "end": 148,
+        "endLoc": {
+          "column": 8,
+          "line": 148,
+          "position": 6204
+        },
+        "name": "api\\v1\\endpoints\\inventory.py",
+        "start": 116,
+        "startLoc": {
+          "column": 60,
+          "line": 116,
+          "position": 4710
+        }
+      },
+      "tokens": 187
+    },
+    {
+      "firstFile": {
+        "end": 45,
+        "endLoc": {
+          "column": 9,
+          "line": 45,
+          "position": 1585
+        },
+        "name": "api\\v1\\endpoints\\payments.py",
+        "start": 38,
+        "startLoc": {
+          "column": 82,
+          "line": 38,
+          "position": 1314
+        }
+      },
+      "format": "python",
+      "fragment": "    \"\"\"Create an authoritative Razorpay payment order tied to a PostgreSQL order.\"\"\"\n    stmt = select(Order).where(Order.id == payload.order_id)\n    order = (await db.execute(stmt)).scalar_one_or_none()\n    if order is None:\n        raise HTTPException(\n            status_code=status.HTTP_404_NOT_FOUND,\n            detail=\"Order not found\",\n        )",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 8,
+      "secondFile": {
+        "end": 144,
+        "endLoc": {
+          "column": 9,
+          "line": 144,
+          "position": 5658
+        },
+        "name": "api\\v1\\endpoints\\payments.py",
+        "start": 137,
+        "startLoc": {
+          "column": 72,
+          "line": 137,
+          "position": 5387
+        }
+      },
+      "tokens": 53
+    },
+    {
+      "firstFile": {
+        "end": 115,
+        "endLoc": {
+          "column": 32,
+          "line": 115,
+          "position": 4654
+        },
+        "name": "api\\v1\\endpoints\\payments.py",
+        "start": 109,
+        "startLoc": {
+          "column": 4,
+          "line": 109,
+          "position": 4348
+        }
+      },
+      "format": "python",
+      "fragment": "    stmt_pmt = select(Payment).where(Payment.order_id == order.id, Payment.provider == \"razorpay\")\n    payment = (await db.execute(stmt_pmt)).scalar_one_or_none()\n    if payment is None:\n        payment = Payment(\n            order_id=order.id,\n            provider=\"razorpay\",\n            provider_payment_id=None,",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 7,
+      "secondFile": {
+        "end": 175,
+        "endLoc": {
+          "column": 32,
+          "line": 175,
+          "position": 6873
+        },
+        "name": "api\\v1\\endpoints\\payments.py",
+        "start": 169,
+        "startLoc": {
+          "column": 4,
+          "line": 169,
+          "position": 6567
+        }
+      },
+      "tokens": 61
+    },
+    {
+      "firstFile": {
+        "end": 196,
+        "endLoc": {
+          "column": 109,
+          "line": 196,
+          "position": 7781
+        },
+        "name": "api\\v1\\endpoints\\payments.py",
+        "start": 185,
+        "startLoc": {
+          "column": 8,
+          "line": 185,
+          "position": 7207
+        }
+      },
+      "format": "python",
+      "fragment": "        stmt_items = select(OrderItem).where(OrderItem.order_id == order.id)\n        order_items = (await db.execute(stmt_items)).scalars().all()\n        for item in order_items:\n            try:\n                await InventoryService.confirm_payment_and_commit_stock(\n                    session=db,\n                    order_id=order.id,\n                    sku=item.sku,\n                    quantity=item.quantity,\n                )\n            except Exception as exc:\n                logger.warning(\"Inventory commit notice for SKU %s on order %s: %s\", item.sku, order.id, exc)",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 12,
+      "secondFile": {
+        "end": 332,
+        "endLoc": {
+          "column": 121,
+          "line": 332,
+          "position": 13280
+        },
+        "name": "api\\v1\\endpoints\\payments.py",
+        "start": 321,
+        "startLoc": {
+          "column": 20,
+          "line": 321,
+          "position": 12574
+        }
+      },
+      "tokens": 93
+    },
+    {
+      "firstFile": {
+        "end": 55,
+        "endLoc": {
+          "column": 26,
+          "line": 55,
+          "position": 1929
+        },
+        "name": "api\\v1\\endpoints\\pricing.py",
+        "start": 40,
+        "startLoc": {
+          "column": 88,
+          "line": 40,
+          "position": 1416
+        }
+      },
+      "format": "python",
+      "fragment": "        is_active = (pv.valid_from <= now) and (pv.valid_to is None or pv.valid_to > now)\n        return PriceVersionResponse(\n            id=pv.id,\n            variant_id=pv.variant_id,\n            product_id=pv.product_id,\n            currency=pv.currency,\n            channel=pv.channel,\n            min_quantity=pv.min_quantity,\n            unit_price=pv.unit_price,\n            gst_rate=pv.gst_rate,\n            hsn_code=pv.hsn_code,\n            tax_mode=pv.tax_mode,\n            valid_from=pv.valid_from,\n            valid_to=pv.valid_to,\n            reason=pv.reason,\n            is_active_now=is_active,",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 16,
+      "secondFile": {
+        "end": 135,
+        "endLoc": {
+          "column": 22,
+          "line": 135,
+          "position": 5056
+        },
+        "name": "api\\v1\\endpoints\\pricing.py",
+        "start": 120,
+        "startLoc": {
+          "column": 8,
+          "line": 120,
+          "position": 4603
+        }
+      },
+      "tokens": 84
+    },
+    {
+      "firstFile": {
+        "end": 56,
+        "endLoc": {
+          "column": 9,
+          "line": 56,
+          "position": 1949
+        },
+        "name": "api\\v1\\endpoints\\pricing.py",
+        "start": 41,
+        "startLoc": {
+          "column": 15,
+          "line": 41,
+          "position": 1433
+        }
+      },
+      "format": "python",
+      "fragment": "        return PriceVersionResponse(\n            id=pv.id,\n            variant_id=pv.variant_id,\n            product_id=pv.product_id,\n            currency=pv.currency,\n            channel=pv.channel,\n            min_quantity=pv.min_quantity,\n            unit_price=pv.unit_price,\n            gst_rate=pv.gst_rate,\n            hsn_code=pv.hsn_code,\n            tax_mode=pv.tax_mode,\n            valid_from=pv.valid_from,\n            valid_to=pv.valid_to,\n            reason=pv.reason,\n            is_active_now=is_active,\n        )",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 16,
+      "secondFile": {
+        "end": 99,
+        "endLoc": {
+          "column": 13,
+          "line": 99,
+          "position": 3750
+        },
+        "name": "api\\v1\\endpoints\\pricing.py",
+        "start": 84,
+        "startLoc": {
+          "column": 12,
+          "line": 84,
+          "position": 3174
+        }
+      },
+      "tokens": 85
+    },
+    {
+      "firstFile": {
+        "end": 144,
+        "endLoc": {
+          "column": 4,
+          "line": 144,
+          "position": 5442
+        },
+        "name": "api\\v1\\endpoints\\products.py",
+        "start": 137,
+        "startLoc": {
+          "column": 23,
+          "line": 137,
+          "position": 5189
+        }
+      },
+      "format": "python",
+      "fragment": "    data: ProductUpdate,\n    _current_user: Annotated[\n        User,\n        Depends(require_roles([UserRole.OWNER, UserRole.CATALOG_MANAGER])),\n    ],\n    db: Annotated[AsyncSession, Depends(get_db)],\n    if_match: Annotated[str | None, Header(alias=\"If-Match\")] = None,\n) -> ProductResponse:",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 8,
+      "secondFile": {
+        "end": 240,
+        "endLoc": {
+          "column": 4,
+          "line": 240,
+          "position": 9480
+        },
+        "name": "api\\v1\\endpoints\\products.py",
+        "start": 233,
+        "startLoc": {
+          "column": 30,
+          "line": 233,
+          "position": 9227
+        }
+      },
+      "tokens": 58
+    },
+    {
+      "firstFile": {
+        "end": 160,
+        "endLoc": {
+          "column": 8,
+          "line": 160,
+          "position": 6107
+        },
+        "name": "api\\v1\\endpoints\\products.py",
+        "start": 145,
+        "startLoc": {
+          "column": 68,
+          "line": 145,
+          "position": 5528
+        }
+      },
+      "format": "python",
+      "fragment": "    \"\"\"Update product metadata with optimistic concurrency control.\"\"\"\n    expected_version: int | None = None\n    if if_match is not None:\n        try:\n            expected_version = int(if_match.strip().strip('\"'))\n        except ValueError:\n            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=\"Invalid If-Match header value.\") from None\n    elif data.version is not None:\n        expected_version = data.version\n    else:\n        raise HTTPException(\n            status_code=status.HTTP_428_PRECONDITION_REQUIRED,\n            detail=\"Update requires expected version in body or If-Match header.\",\n        )\n\n    try:",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 16,
+      "secondFile": {
+        "end": 256,
+        "endLoc": {
+          "column": 8,
+          "line": 256,
+          "position": 10163
+        },
+        "name": "api\\v1\\endpoints\\products.py",
+        "start": 241,
+        "startLoc": {
+          "column": 79,
+          "line": 241,
+          "position": 9584
+        }
+      },
+      "tokens": 80
+    },
+    {
+      "firstFile": {
+        "end": 219,
+        "endLoc": {
+          "column": 28,
+          "line": 219,
+          "position": 8604
+        },
+        "name": "api\\v1\\endpoints\\products.py",
+        "start": 204,
+        "startLoc": {
+          "column": 8,
+          "line": 204,
+          "position": 7962
+        }
+      },
+      "format": "python",
+      "fragment": "        )\n        return ProductVariantResponse(\n            id=variant.id,\n            product_id=variant.product_id,\n            sku=variant.sku,\n            fit_mode=variant.fit_mode,\n            frame_thickness_mm=variant.frame_thickness_mm,\n            min_thickness_mm=variant.min_thickness_mm,\n            max_thickness_mm=variant.max_thickness_mm,\n            display_label=variant.display_label,\n            frame_thickness=variant.frame_thickness,\n            pack_size=variant.pack_size,\n            is_active=variant.is_active,\n            is_archived=variant.is_archived,\n            version=variant.version,\n            available_stock=data.initial_stock,",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 16,
+      "secondFile": {
+        "end": 274,
+        "endLoc": {
+          "column": 28,
+          "line": 274,
+          "position": 10937
+        },
+        "name": "api\\v1\\endpoints\\products.py",
+        "start": 259,
+        "startLoc": {
+          "column": 8,
+          "line": 259,
+          "position": 10295
+        }
+      },
+      "tokens": 84
+    },
+    {
+      "firstFile": {
+        "end": 217,
+        "endLoc": {
+          "column": 44,
+          "line": 217,
+          "position": 8538
+        },
+        "name": "api\\v1\\endpoints\\products.py",
+        "start": 204,
+        "startLoc": {
+          "column": 8,
+          "line": 204,
+          "position": 7962
+        }
+      },
+      "format": "python",
+      "fragment": "        )\n        return ProductVariantResponse(\n            id=variant.id,\n            product_id=variant.product_id,\n            sku=variant.sku,\n            fit_mode=variant.fit_mode,\n            frame_thickness_mm=variant.frame_thickness_mm,\n            min_thickness_mm=variant.min_thickness_mm,\n            max_thickness_mm=variant.max_thickness_mm,\n            display_label=variant.display_label,\n            frame_thickness=variant.frame_thickness,\n            pack_size=variant.pack_size,\n            is_active=variant.is_active,\n            is_archived=variant.is_archived,",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 14,
+      "secondFile": {
+        "end": 309,
+        "endLoc": {
+          "column": 44,
+          "line": 309,
+          "position": 12419
+        },
+        "name": "api\\v1\\endpoints\\products.py",
+        "start": 296,
+        "startLoc": {
+          "column": 69,
+          "line": 296,
+          "position": 11843
+        }
+      },
+      "tokens": 76
+    },
+    {
+      "firstFile": {
+        "end": 25,
+        "endLoc": {
+          "column": 6,
+          "line": 25,
+          "position": 881
+        },
+        "name": "api\\v1\\endpoints\\users.py",
+        "start": 20,
+        "startLoc": {
+          "column": 30,
+          "line": 20,
+          "position": 681
+        }
+      },
+      "format": "python",
+      "fragment": "    payload: UserCreateRequest,\n    _: Annotated[None, Depends(verify_csrf)],\n    current_user: Annotated[User, Depends(require_roles([UserRole.OWNER]))],\n    db: Annotated[AsyncSession, Depends(get_db)],\n) -> UserResponse:\n    \"\"\"Create a new staff user with granular RBAC role (Owner only).\"\"\"",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 6,
+      "secondFile": {
+        "end": 52,
+        "endLoc": {
+          "column": 6,
+          "line": 52,
+          "position": 1823
+        },
+        "name": "api\\v1\\endpoints\\users.py",
+        "start": 47,
+        "startLoc": {
+          "column": 30,
+          "line": 47,
+          "position": 1623
+        }
+      },
+      "tokens": 50
+    },
+    {
+      "firstFile": {
+        "end": 126,
+        "endLoc": {
+          "column": 24,
+          "line": 126,
+          "position": 5365
+        },
+        "name": "cli\\seed_catalog.py",
+        "start": 115,
+        "startLoc": {
+          "column": 30,
+          "line": 115,
+          "position": 4893
+        }
+      },
+      "format": "python",
+      "fragment": "            sprinkler_variant = ProductVariant(\n                id=uuid.uuid4(),\n                product_id=sprinkler_prod.id,\n                sku=\"AE-SPRINKLER-SS304\",\n                fit_mode=FitMode.NOT_APPLICABLE,\n                frame_thickness=\"not_applicable\",\n                display_label='SS304 Solar Panel Sprinkler (180° Uniform Curtain / ½\" BSP Male)',\n                pack_size=1,\n                is_active=True,\n                is_archived=False,\n            )\n            session.add(sprinkler_variant)",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 12,
+      "secondFile": {
+        "end": 206,
+        "endLoc": {
+          "column": 28,
+          "line": 206,
+          "position": 8647
+        },
+        "name": "cli\\seed_catalog.py",
+        "start": 195,
+        "startLoc": {
+          "column": 22,
+          "line": 195,
+          "position": 8131
+        }
+      },
+      "tokens": 52
+    },
+    {
+      "firstFile": {
+        "end": 171,
+        "endLoc": {
+          "column": 31,
+          "line": 171,
+          "position": 7156
+        },
+        "name": "cli\\seed_catalog.py",
+        "start": 160,
+        "startLoc": {
+          "column": 44,
+          "line": 160,
+          "position": 6728
+        }
+      },
+      "format": "python",
+      "fragment": "                variant_id=sprinkler_variant.id,\n                product_id=sprinkler_prod.id,\n                currency=\"INR\",\n                channel=\"B2C\",\n                min_quantity=1,\n                unit_price=Decimal(\"220.00\"),\n                gst_rate=DEFAULT_GST_RATE,\n                hsn_code=\"84248990\",\n                tax_mode=TaxMode.GST_INCLUSIVE,\n                reason=\"Initial Flagship Sprinkler B2C Price\",\n            )\n            session.add(pv_b2c)",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 12,
+      "secondFile": {
+        "end": 232,
+        "endLoc": {
+          "column": 35,
+          "line": 232,
+          "position": 9647
+        },
+        "name": "cli\\seed_catalog.py",
+        "start": 221,
+        "startLoc": {
+          "column": 36,
+          "line": 221,
+          "position": 9175
+        }
+      },
+      "tokens": 53
+    },
+    {
+      "firstFile": {
+        "end": 188,
+        "endLoc": {
+          "column": 34,
+          "line": 188,
+          "position": 7775
+        },
+        "name": "cli\\seed_catalog.py",
+        "start": 176,
+        "startLoc": {
+          "column": 44,
+          "line": 176,
+          "position": 7301
+        }
+      },
+      "format": "python",
+      "fragment": "                variant_id=sprinkler_variant.id,\n                product_id=sprinkler_prod.id,\n                currency=\"INR\",\n                channel=\"B2B\",\n                min_quantity=50,\n                unit_price=Decimal(\"185.00\"),\n                gst_rate=DEFAULT_GST_RATE,\n                hsn_code=\"84248990\",\n                tax_mode=TaxMode.GST_EXCLUSIVE,\n                reason=\"Initial Flagship Sprinkler B2B Wholesale Price\",\n            )\n            session.add(pv_b2b)\n            await session.commit()",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 13,
+      "secondFile": {
+        "end": 248,
+        "endLoc": {
+          "column": 38,
+          "line": 248,
+          "position": 10283
+        },
+        "name": "cli\\seed_catalog.py",
+        "start": 236,
+        "startLoc": {
+          "column": 36,
+          "line": 236,
+          "position": 9761
+        }
+      },
+      "tokens": 59
+    },
+    {
+      "firstFile": {
+        "end": 79,
+        "endLoc": {
+          "column": 67,
+          "line": 79,
+          "position": 3105
+        },
+        "name": "core\\worker.py",
+        "start": 72,
+        "startLoc": {
+          "column": 58,
+          "line": 72,
+          "position": 2864
+        }
+      },
+      "format": "python",
+      "fragment": "                await asyncio.sleep(self.poll_interval_sec)\n            except asyncio.CancelledError:\n                break\n        self.running = False\n\n    def start(self) -> None:\n        if not self._task or self._task.done():\n            self._task = asyncio.create_task(self.run_loop(), name=\"outbox_worker_task\")",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 8,
+      "secondFile": {
+        "end": 137,
+        "endLoc": {
+          "column": 67,
+          "line": 137,
+          "position": 5302
+        },
+        "name": "core\\worker.py",
+        "start": 130,
+        "startLoc": {
+          "column": 53,
+          "line": 130,
+          "position": 5061
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 87,
+        "endLoc": {
+          "column": 20,
+          "line": 87,
+          "position": 3387
+        },
+        "name": "core\\worker.py",
+        "start": 79,
+        "startLoc": {
+          "column": 87,
+          "line": 79,
+          "position": 3125
+        }
+      },
+      "format": "python",
+      "fragment": "            self._task = asyncio.create_task(self.run_loop(), name=\"outbox_worker_task\")\n\n    async def stop(self) -> None:\n        self.running = False\n        if self._task and not self._task.done():\n            self._task.cancel()\n            with contextlib.suppress(asyncio.CancelledError):\n                await self._task\n        logger.info(\"[OutboxWorker] Stopped.\")",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 9,
+      "secondFile": {
+        "end": 145,
+        "endLoc": {
+          "column": 20,
+          "line": 145,
+          "position": 5584
+        },
+        "name": "core\\worker.py",
+        "start": 137,
+        "startLoc": {
+          "column": 87,
+          "line": 137,
+          "position": 5322
+        }
+      },
+      "tokens": 55
+    },
+    {
+      "firstFile": {
+        "end": 86,
+        "endLoc": {
+          "column": 32,
+          "line": 86,
+          "position": 3366
+        },
+        "name": "core\\worker.py",
+        "start": 79,
+        "startLoc": {
+          "column": 87,
+          "line": 79,
+          "position": 3125
+        }
+      },
+      "format": "python",
+      "fragment": "            self._task = asyncio.create_task(self.run_loop(), name=\"outbox_worker_task\")\n\n    async def stop(self) -> None:\n        self.running = False\n        if self._task and not self._task.done():\n            self._task.cancel()\n            with contextlib.suppress(asyncio.CancelledError):\n                await self._task",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 8,
+      "secondFile": {
+        "end": 78,
+        "endLoc": {
+          "column": 32,
+          "line": 78,
+          "position": 2978
+        },
+        "name": "workers\\invoice_worker.py",
+        "start": 71,
+        "startLoc": {
+          "column": 60,
+          "line": 71,
+          "position": 2737
+        }
+      },
+      "tokens": 51
+    },
+    {
+      "firstFile": {
+        "end": 53,
+        "endLoc": {
+          "column": 5,
+          "line": 53,
+          "position": 2056
+        },
+        "name": "models\\auth.py",
+        "start": 47,
+        "startLoc": {
+          "column": 80,
+          "line": 47,
+          "position": 1782
+        }
+      },
+      "format": "python",
+      "fragment": "    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)\n    created_at: Mapped[datetime] = mapped_column(\n        DateTime(timezone=True), default=utcnow, nullable=False\n    )\n    updated_at: Mapped[datetime] = mapped_column(\n        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False\n    )",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 7,
+      "secondFile": {
+        "end": 101,
+        "endLoc": {
+          "column": 122,
+          "line": 101,
+          "position": 4090
+        },
+        "name": "models\\order.py",
+        "start": 98,
+        "startLoc": {
+          "column": 55,
+          "line": 98,
+          "position": 3843
+        }
+      },
+      "tokens": 58
+    },
+    {
+      "firstFile": {
+        "end": 53,
+        "endLoc": {
+          "column": 5,
+          "line": 53,
+          "position": 2056
+        },
+        "name": "models\\auth.py",
+        "start": 47,
+        "startLoc": {
+          "column": 96,
+          "line": 47,
+          "position": 1798
+        }
+      },
+      "format": "python",
+      "fragment": "    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)\n    created_at: Mapped[datetime] = mapped_column(\n        DateTime(timezone=True), default=utcnow, nullable=False\n    )\n    updated_at: Mapped[datetime] = mapped_column(\n        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False\n    )",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 7,
+      "secondFile": {
+        "end": 44,
+        "endLoc": {
+          "column": 122,
+          "line": 44,
+          "position": 1676
+        },
+        "name": "models\\product.py",
+        "start": 42,
+        "startLoc": {
+          "column": 75,
+          "line": 42,
+          "position": 1446
+        }
+      },
+      "tokens": 53
+    },
+    {
+      "firstFile": {
+        "end": 73,
+        "endLoc": {
+          "column": 18,
+          "line": 73,
+          "position": 3229
+        },
+        "name": "models\\inventory.py",
+        "start": 68,
+        "startLoc": {
+          "column": 100,
+          "line": 68,
+          "position": 2979
+        }
+      },
+      "format": "python",
+      "fragment": "        SQLEnum(ReservationStatus, name=\"reservation_status_enum\"), default=ReservationStatus.ACTIVE, nullable=False\n    )\n    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)\n    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)\n\n    inventory_item: Mapped[\"InventoryItem\"] = relationship(\"InventoryItem\", back_populates=\"reservations\")",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 6,
+      "secondFile": {
+        "end": 42,
+        "endLoc": {
+          "column": 9,
+          "line": 42,
+          "position": 2222
+        },
+        "name": "models\\quote.py",
+        "start": 38,
+        "startLoc": {
+          "column": 69,
+          "line": 38,
+          "position": 1986
+        }
+      },
+      "tokens": 53
+    },
+    {
+      "firstFile": {
+        "end": 101,
+        "endLoc": {
+          "column": 14,
+          "line": 101,
+          "position": 3982
+        },
+        "name": "models\\order.py",
+        "start": 96,
+        "startLoc": {
+          "column": 81,
+          "line": 96,
+          "position": 3705
+        }
+      },
+      "format": "python",
+      "fragment": "    customer_email: Mapped[str | None] = mapped_column(String(100), nullable=True)\n    company_name: Mapped[str | None] = mapped_column(String(150), nullable=True)\n    gstin: Mapped[str | None] = mapped_column(String(20), nullable=True)\n\n    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)\n    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 6,
+      "secondFile": {
+        "end": 137,
+        "endLoc": {
+          "column": 9,
+          "line": 137,
+          "position": 6221
+        },
+        "name": "models\\order.py",
+        "start": 132,
+        "startLoc": {
+          "column": 84,
+          "line": 132,
+          "position": 5949
+        }
+      },
+      "tokens": 65
+    },
+    {
+      "firstFile": {
+        "end": 155,
+        "endLoc": {
+          "column": 76,
+          "line": 155,
+          "position": 7149
+        },
+        "name": "models\\order.py",
+        "start": 147,
+        "startLoc": {
+          "column": 50,
+          "line": 147,
+          "position": 6562
+        }
+      },
+      "format": "python",
+      "fragment": "        UUID(as_uuid=True), ForeignKey(\"orders.id\", ondelete=\"CASCADE\"), nullable=False, index=True\n    )\n    sku: Mapped[str] = mapped_column(String(50), nullable=False)\n    quantity: Mapped[int] = mapped_column(Integer, nullable=False)\n    unit_price: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)\n    line_gross: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)\n    taxable_base: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)\n    product_gst: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)\n    gst_rate: Mapped[Decimal] = mapped_column(Numeric(6, 4), nullable=False)",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 9,
+      "secondFile": {
+        "end": 60,
+        "endLoc": {
+          "column": 76,
+          "line": 60,
+          "position": 3192
+        },
+        "name": "models\\quote.py",
+        "start": 52,
+        "startLoc": {
+          "column": 50,
+          "line": 52,
+          "position": 2605
+        }
+      },
+      "tokens": 147
+    },
+    {
+      "firstFile": {
+        "end": 168,
+        "endLoc": {
+          "column": 5,
+          "line": 168,
+          "position": 7550
+        },
+        "name": "models\\order.py",
+        "start": 163,
+        "startLoc": {
+          "column": 14,
+          "line": 163,
+          "position": 7295
+        }
+      },
+      "format": "python",
+      "fragment": "    id: Mapped[uuid.UUID] = mapped_column(\n        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4\n    )\n    order_id: Mapped[uuid.UUID] = mapped_column(\n        UUID(as_uuid=True), ForeignKey(\"orders.id\", ondelete=\"RESTRICT\"), nullable=False, index=True\n    )",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 6,
+      "secondFile": {
+        "end": 188,
+        "endLoc": {
+          "column": 5,
+          "line": 188,
+          "position": 8501
+        },
+        "name": "models\\order.py",
+        "start": 183,
+        "startLoc": {
+          "column": 14,
+          "line": 183,
+          "position": 8246
+        }
+      },
+      "tokens": 60
+    },
+    {
+      "firstFile": {
+        "end": 25,
+        "endLoc": {
+          "column": 20,
+          "line": 25,
+          "position": 894
+        },
+        "name": "schemas\\pricing.py",
+        "start": 19,
+        "startLoc": {
+          "column": 106,
+          "line": 19,
+          "position": 606
+        }
+      },
+      "format": "python",
+      "fragment": "    quantity: int = Field(..., gt=0, le=10000000, description=\"Ordered quantity, must be positive integer\")\n    unit_price: Decimal = Field(..., ge=Decimal(\"0.00\"), le=Decimal(\"999999999999.99\"), description=\"Configured unit price (NUMERIC 14,2)\")\n    gst_rate: Decimal = Field(\n        default=Decimal(\"0.1800\"),\n        ge=Decimal(\"0.0000\"),\n        le=Decimal(\"0.2800\"),\n        description=\"Statutory GST rate as fraction (e.g. 0.1800 for 18%)\"",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 7,
+      "secondFile": {
+        "end": 113,
+        "endLoc": {
+          "column": 20,
+          "line": 113,
+          "position": 3744
+        },
+        "name": "schemas\\pricing.py",
+        "start": 107,
+        "startLoc": {
+          "column": 107,
+          "line": 107,
+          "position": 3456
+        }
+      },
+      "tokens": 58
+    },
+    {
+      "firstFile": {
+        "end": 78,
+        "endLoc": {
+          "column": 32,
+          "line": 78,
+          "position": 2978
+        },
+        "name": "workers\\invoice_worker.py",
+        "start": 66,
+        "startLoc": {
+          "column": 82,
+          "line": 66,
+          "position": 2548
+        }
+      },
+      "format": "python",
+      "fragment": "                logger.error(\"[InvoiceWorker] Unexpected error processing job: %s\", exc, exc_info=True)\n        self.running = False\n\n    def start(self) -> None:\n        if not self._task or self._task.done():\n            self._task = asyncio.create_task(self.run_loop())\n\n    async def stop(self) -> None:\n        self.running = False\n        if self._task and not self._task.done():\n            self._task.cancel()\n            with contextlib.suppress(asyncio.CancelledError):\n                await self._task",
+      "isNew": false,
+      "kind": "exact",
+      "lines": 13,
+      "secondFile": {
+        "end": 96,
+        "endLoc": {
+          "column": 32,
+          "line": 96,
+          "position": 3542
+        },
+        "name": "workers\\notification_worker.py",
+        "start": 84,
+        "startLoc": {
+          "column": 78,
+          "line": 84,
+          "position": 3112
+        }
+      },
+      "tokens": 99
+    }
+  ],
+  "statistics": {
+    "detectionDate": "2026-09-18T19:11:14.352Z",
+    "formats": {
+      "python": {
+        "clones": 27,
+        "duplicatedLines": 273,
+        "duplicatedTokens": 1956,
+        "lines": 8583,
+        "newClones": 0,
+        "newDuplicatedLines": 0,
+        "percentage": 3.1807060468367703,
+        "percentageTokens": 3.919211348881943,
+        "sources": 53,
+        "tokens": 49908
+      }
+    },
+    "total": {
+      "clones": 27,
+      "duplicatedLines": 273,
+      "duplicatedTokens": 1956,
+      "lines": 8583,
+      "newClones": 0,
+      "newDuplicatedLines": 0,
+      "percentage": 3.1807060468367703,
+      "percentageTokens": 3.919211348881943,
+      "sources": 53,
+      "tokens": 49908
+    }
+  }
+}

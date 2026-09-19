@@ -232,7 +232,7 @@ def test_cod_exact_multiple_no_rounding_increment():
 )
 def test_mandatory_cod_rounding_multiples_of_five(raw_amount: Decimal, expected_cod_total: Decimal):
     """Statutory Invariant: Final COD Total = round upward to the next multiple of ₹5.
-    
+
     Mandatory audit test cases:
     * ₹71.00 -> ₹75.00
     * ₹72.00 -> ₹75.00

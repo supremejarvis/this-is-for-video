@@ -23,15 +23,18 @@ TWO_PLACES = Decimal("0.01")
 
 # Standard item weights in grams
 KNOWN_WEIGHTS = {
-    "AE-SPRINKLER-SS304": 180,
-    "APE-SC-28MM": 25,
-    "APE-SC-30MM": 25,
-    "APE-SC-33MM": 25,
-    "APE-SC-35MM": 25,
-    "APE-SC-40MM": 25,
-    "APE-SC-UNIVERSAL": 30,
+    "AE-SPRINKLER": 180,
+    "APE-SC": 25,
+    "DRAIN": 25,
+    "CLIP": 25,
+    "CLAMP": 45,
+    "FITTING": 35,
+    "TEE": 35,
+    "PUMP": 1200,
+    "TIMER": 350,
+    "KIT": 4500,
 }
-FALLBACK_ITEM_WEIGHT_GRAMS = 180
+FALLBACK_ITEM_WEIGHT_GRAMS = 25
 
 
 class ShippingQuote(NamedTuple):
@@ -53,8 +56,8 @@ class ShippingService:
     @staticmethod
     def resolve_item_weight(sku: str) -> int:
         clean_sku = sku.strip().upper()
-        for known_sku, weight in KNOWN_WEIGHTS.items():
-            if known_sku in clean_sku:
+        for known_prefix, weight in KNOWN_WEIGHTS.items():
+            if known_prefix in clean_sku:
                 return weight
         return FALLBACK_ITEM_WEIGHT_GRAMS
 

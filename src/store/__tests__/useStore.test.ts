@@ -284,5 +284,82 @@ describe('Zustand State Store Actions & Order Workflow', () => {
     useStore.getState().updateUserProfile({ name: 'Rajesh K. Patel' });
     expect(useStore.getState().currentUser.name).toBe('Rajesh K. Patel');
   });
+
+  it('instant live update: updateProductStock reflects immediately across products, apiCatalogProducts, and selectedProduct', () => {
+    const products = useStore.getState().products;
+    const target = products[0];
+    const targetSku = target.variants[0].sku;
+
+    // Set as currently active / viewed product
+    useStore.getState().setSelectedProduct(target);
+    expect(useStore.getState().selectedProduct?.asin).toBe(target.asin);
+
+    // Admin updates stock to 777
+    useStore.getState().updateProductStock(target.asin, targetSku, 777);
+
+    // 1. Verify updated in products
+    const updatedProd = useStore.getState().products.find(p => p.asin === target.asin);
+    expect(updatedProd?.variants.find(v => v.sku === targetSku)?.inventory).toBe(777);
+
+    // 2. Verify updated in apiCatalogProducts (buyer catalog)
+    const updatedApi = useStore.getState().apiCatalogProducts.find(p => p.id === target.asin || p.rawProduct?.asin === target.asin);
+    expect(updatedApi).toBeDefined();
+    const apiVariant = updatedApi?.variants.find(v => v.sku === targetSku || v.display_label?.includes(targetSku));
+    expect(apiVariant?.available_stock).toBe(777);
+
+    // 3. Verify updated in currently open selectedProduct (PDP)
+    const currentSelected = useStore.getState().selectedProduct;
+    expect(currentSelected).toBeDefined();
+    expect(currentSelected?.variants.find(v => v.sku === targetSku)?.inventory).toBe(777);
+  });
+
+  it('instant live update: updateVariantPricing updates price across products, apiCatalogProducts, and selectedProduct', () => {
+    const products = useStore.getState().products;
+    const target = products[0];
+    const targetSku = target.variants[0].sku;
+
+    useStore.getState().setSelectedProduct(target);
+
+    // Admin updates variant price to ₹99
+    useStore.getState().updateVariantPricing(target.asin, targetSku, 99, 1);
+
+    // 1. Verify in products
+    const updatedProd = useStore.getState().products.find(p => p.asin === target.asin);
+    expect(updatedProd?.variants.find(v => v.sku === targetSku)?.b2cPrice).toBe(99);
+
+    // 2. Verify in apiCatalogProducts
+    const updatedApi = useStore.getState().apiCatalogProducts.find(p => p.id === target.asin || p.rawProduct?.asin === target.asin);
+    expect(updatedApi).toBeDefined();
+    const apiVariant = updatedApi?.variants.find(v => v.sku === targetSku || v.display_label?.includes(targetSku));
+    expect(apiVariant?.unit_price).toBe(99);
+
+    // 3. Verify in selectedProduct
+    expect(useStore.getState().selectedProduct?.variants.find(v => v.sku === targetSku)?.b2cPrice).toBe(99);
+  });
+
+  it('instant live update: admin toggle isLive false/true instantly toggles is_active in apiCatalogProducts', () => {
+    const products = useStore.getState().products;
+    const target = products[0];
+
+    // Toggle to Inactive (isLive: false)
+    useStore.getState().updateProduct(target.asin, { isLive: false });
+
+    // In products: isLive is false
+    expect(useStore.getState().products.find(p => p.asin === target.asin)?.isLive).toBe(false);
+
+    // In apiCatalogProducts: is_active is false (hidden from storefront)
+    const apiInactive = useStore.getState().apiCatalogProducts.find(p => p.id === target.asin || p.rawProduct?.asin === target.asin);
+    expect(apiInactive?.is_active).toBe(false);
+
+    // Toggle back to Active (isLive: true)
+    useStore.getState().updateProduct(target.asin, { isLive: true });
+
+    // In products: isLive is true
+    expect(useStore.getState().products.find(p => p.asin === target.asin)?.isLive).toBe(true);
+
+    // In apiCatalogProducts: is_active is true (visible in storefront immediately)
+    const apiActive = useStore.getState().apiCatalogProducts.find(p => p.id === target.asin || p.rawProduct?.asin === target.asin);
+    expect(apiActive?.is_active).toBe(true);
+  });
 });
 

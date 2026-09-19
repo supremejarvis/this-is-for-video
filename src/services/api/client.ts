@@ -48,7 +48,7 @@ function getCsrfToken(): string | null {
 export class ApiClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = '/api/v1') {
+  constructor(baseUrl: string = process.env.NEXT_PUBLIC_API_URL || '/api/v1') {
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
   }
 
@@ -61,7 +61,13 @@ export class ApiClient {
     options: RequestOptions = {}
   ): Promise<T> {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = `${this.baseUrl}${cleanEndpoint}`;
+    let url = `${this.baseUrl}${cleanEndpoint}`;
+
+    // If executing server-side in Next.js and URL is relative, prepend backend origin
+    if (typeof window === 'undefined' && url.startsWith('/')) {
+      const serverOrigin = process.env.FASTAPI_BACKEND_URL || 'http://127.0.0.1:8000';
+      url = `${serverOrigin}${url}`;
+    }
 
     const method = (options.method || 'GET').toUpperCase();
     const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);

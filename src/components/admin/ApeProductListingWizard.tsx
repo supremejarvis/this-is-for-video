@@ -209,7 +209,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
   onClose,
   onSaved
 }) => {
-  const { addNewProduct, updateProduct, showToast, products } = useStore();
+  const { addNewProduct, updateProduct, showToast, products, fetchApiCatalog } = useStore();
 
   const isNewProduct = !initialProduct;
 
@@ -1335,6 +1335,10 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
     } else {
       addNewProduct(completeProduct);
     }
+
+    try {
+      fetchApiCatalog();
+    } catch {}
 
     onSaved(completeProduct);
     onClose();

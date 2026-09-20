@@ -1281,6 +1281,154 @@ function updateOrderShipmentHelper(
   });
 }
 
+export function mapApiProductToProduct(ap: ApiProduct, existingProducts: Product[] = []): Product {
+  const asinToBackendPrefix: Record<string, string> = {
+    'AP-SPRINKLER-01': 'AE-SPRINKLER',
+    'AP-DRAINCLIPS-02': 'APE-SC',
+    'AP-GICLAMP-03': 'AE-CLAMP-GI',
+    'AP-FITTINGTEE-04': 'AE-PIPE-FITTING',
+    'AP-PUMP-06': 'AE-PUMP-DC',
+    'AP-TIMER-07': 'AE-TIMER-AUTO',
+    'AP-FULLKIT-05': 'AE-KIT-FULL',
+  };
+
+  const pMatch = ap.rawProduct || existingProducts.find(p =>
+    p.asin === ap.id ||
+    p.asin === ap.sku_prefix ||
+    (ap.sku_prefix && asinToBackendPrefix[p.asin] === ap.sku_prefix) ||
+    (p.variants && p.variants.some(v => v.sku === ap.sku_prefix || v.sku.startsWith(ap.sku_prefix)))
+  );
+
+  let assignedAsin = pMatch?.asin || ap.id;
+  if (!assignedAsin || assignedAsin.length < 3) {
+    if (ap.sku_prefix === 'APE-SC') assignedAsin = 'AP-DRAINCLIPS-02';
+    else if (ap.sku_prefix === 'AE-SPRINKLER') assignedAsin = 'AP-SPRINKLER-01';
+    else if (ap.sku_prefix === 'AE-CLAMP-GI') assignedAsin = 'AP-GICLAMP-03';
+    else if (ap.sku_prefix === 'AE-PIPE-FITTING') assignedAsin = 'AP-FITTINGTEE-04';
+    else if (ap.sku_prefix === 'AE-PUMP-DC') assignedAsin = 'AP-PUMP-06';
+    else if (ap.sku_prefix === 'AE-TIMER-AUTO') assignedAsin = 'AP-TIMER-07';
+    else if (ap.sku_prefix === 'AE-KIT-FULL') assignedAsin = 'AP-FULLKIT-05';
+    else assignedAsin = ap.sku_prefix || `AP-${Date.now()}`;
+  }
+
+  let defaultImg = '/solar_sprinkler.webp';
+  const cleanPrefix = (ap.sku_prefix || '').toUpperCase();
+  const cleanName = (ap.name || '').toLowerCase();
+  if (cleanPrefix.includes('SC') || cleanName.includes('drain')) defaultImg = '/Drain_clips.webp';
+  else if (cleanPrefix.includes('SPRINKLER') || cleanName.includes('sprinkler')) defaultImg = '/solar_sprinkler.webp';
+  else if (cleanPrefix.includes('CLAMP') || cleanPrefix.includes('GI') || cleanName.includes('gi ')) defaultImg = '/gi_pipe_clamp.webp';
+  else if (cleanPrefix.includes('FITTING') || cleanPrefix.includes('PIPE') || cleanName.includes('fitting') || cleanName.includes('tee')) defaultImg = '/cpvc_upvc.webp';
+  else if (cleanPrefix.includes('PUMP') || cleanName.includes('pump')) defaultImg = '/pump.webp';
+  else if (cleanPrefix.includes('TIMER') || cleanName.includes('timer')) defaultImg = '/auto_timer.webp';
+  else if (cleanPrefix.includes('KIT') || cleanName.includes('kit') || cleanName.includes('full set')) defaultImg = '/solar_cleaning_fullset.webp';
+
+  const primaryImg = pMatch?.variants?.[0]?.images?.[0] || (pMatch as any)?.image || pMatch?.aPlusContent?.[0]?.imageUrl || ap.image || defaultImg;
+  const allImgs = pMatch?.variants?.flatMap((v: any) => v.images || [])?.length ? pMatch.variants.flatMap((v: any) => v.images || []) : (ap.images || [primaryImg]);
+
+  const category = pMatch?.category || (
+    (cleanPrefix.includes('SC') || cleanName.includes('drain') || cleanPrefix.includes('SPRINKLER') || cleanName.includes('sprinkler')) ? 'SS304 GRADE' :
+    (cleanPrefix.includes('CLAMP') || cleanPrefix.includes('GI') || cleanName.includes('gi ')) ? 'GI SERIES' :
+    (cleanPrefix.includes('FITTING') || cleanPrefix.includes('PIPE') || cleanName.includes('fitting')) ? 'FITTING SERIES' :
+    (cleanPrefix.includes('PUMP') || cleanName.includes('pump')) ? 'POWER SERIES' :
+    (cleanPrefix.includes('TIMER') || cleanName.includes('timer')) ? 'CONTROL SERIES' :
+    (cleanPrefix.includes('KIT') || cleanName.includes('kit')) ? 'COMPLETE KIT' : 'SS304 GRADE'
+  );
+
+  const variants: ProductVariant[] = (ap.variants && ap.variants.length > 0)
+    ? ap.variants.map((v) => {
+        const matchingLocalV = pMatch?.variants?.find((lv: any) => lv.sku === v.sku || (v.frame_thickness_mm && lv.attributes?.size && parseFloat(lv.attributes.size) === Number(v.frame_thickness_mm)));
+        const price = (matchingLocalV?.b2cPrice !== undefined && matchingLocalV?.b2cPrice !== null)
+          ? matchingLocalV.b2cPrice
+          : (v.unit_price ?? 20);
+        const inv = (matchingLocalV?.inventory !== undefined && matchingLocalV?.inventory !== null)
+          ? matchingLocalV.inventory
+          : (v.available_stock ?? 100);
+
+        return {
+          sku: v.sku,
+          title: v.display_label || matchingLocalV?.title || `${ap.name} - ${v.sku}`,
+          inventory: inv,
+          b2cPrice: price,
+          mrp: matchingLocalV?.mrp || v.mrp || Math.round(price * 1.5),
+          weightGrams: matchingLocalV?.weightGrams || v.weightGrams || 150,
+          hsnCode: matchingLocalV?.hsnCode || v.hsnCode || ap.hsn_code || '84248990',
+          gstRatePercent: 18,
+          unitOfMeasure: 'PCS',
+          attributes: {
+            size: v.frame_thickness || (v.frame_thickness_mm ? `${v.frame_thickness_mm}mm` : (matchingLocalV?.attributes?.size || 'Standard')),
+            material: category,
+            specs: matchingLocalV?.attributes?.specs || {}
+          },
+          images: matchingLocalV?.images || v.images || allImgs,
+          b2bTierPricing: matchingLocalV?.b2bTierPricing || v.b2bTierPricing || [
+            { minQty: 50, pricePerUnit: Math.round(price * 0.75), discountPercentage: 25 },
+            { minQty: 200, pricePerUnit: Math.round(price * 0.65), discountPercentage: 35 }
+          ]
+        };
+      })
+    : (pMatch?.variants || [
+        {
+          sku: `${assignedAsin}-01`,
+          title: ap.name,
+          inventory: 500,
+          b2cPrice: 20,
+          mrp: 30,
+          weightGrams: 150,
+          hsnCode: ap.hsn_code || '84248990',
+          gstRatePercent: 18,
+          unitOfMeasure: 'PCS',
+          attributes: { size: 'Standard', material: category, specs: {} },
+          images: allImgs,
+          b2bTierPricing: [{ minQty: 50, pricePerUnit: 15, discountPercentage: 25 }]
+        }
+      ]);
+
+  const sellerListings: Record<string, SellerListing[]> = pMatch?.sellerListings || {};
+  variants.forEach((v) => {
+    if (!sellerListings[v.sku]) {
+      sellerListings[v.sku] = [
+        {
+          sellerId: 'seller_apollo_mfg',
+          sellerName: 'Apollo Engineering (Direct Factory Hub 382430)',
+          rating: 4.9,
+          ratingCount: 1850,
+          fulfillmentType: 'FBF',
+          price: v.b2cPrice || 20,
+          shippingFee: 0,
+          deliveryDays: 1,
+          stock: v.inventory || 50000,
+          isWinningBuyBox: true,
+          buyBoxScore: 98.5
+        }
+      ];
+    }
+  });
+
+  return {
+    asin: assignedAsin,
+    title: pMatch?.title || ap.name,
+    brand: pMatch?.brand || ap.brand || 'Apollo Engineering',
+    category,
+    subCategory: pMatch?.subCategory || 'Solar Cleaning Hardware',
+    description: pMatch?.description || ap.description || `${ap.name} manufactured at Kathwada Factory Hub.`,
+    highlights: pMatch?.highlights || ap.highlights || [
+      'Direct Factory Dispatch from Kathwada GIDC (382430)',
+      '100% Guaranteed Industrial Grade Quality',
+      'GST Statutory Invoice Included with 18% ITC Support'
+    ],
+    rating: pMatch?.rating || ap.rating || 4.9,
+    reviewCount: pMatch?.reviewCount || ap.reviewCount || 18,
+    variants,
+    selectedVariantSku: variants[0]?.sku || 'SKU-01',
+    sellerListings,
+    aPlusContent: pMatch?.aPlusContent || [],
+    badges: pMatch?.badges || (ap.badges as any) || ['PRIME', 'BEST_SELLER', 'ENTERPRISE_ASSURED'],
+    isLive: pMatch ? (pMatch.isLive !== false) : (ap.is_active !== false),
+    createdAt: pMatch?.createdAt || ap.created_at || new Date().toISOString(),
+    lastUpdated: new Date().toISOString()
+  };
+}
+
 export function syncCatalogProducts(products: Product[], existingApi: ApiProduct[] = []): ApiProduct[] {
   // When backend products exist, sync them with local products
   if (existingApi && existingApi.length > 0) {
@@ -2010,6 +2158,8 @@ selectProductVariant: (asin, sku) => {
         available_stock: v.inventory ?? 100,
         unit_price: v.b2cPrice ?? 20,
       } as any))
+    }).then(() => {
+      get().fetchApiCatalog();
     }).catch(() => {});
   },
   updateProduct: (asin, updates) => {
@@ -2034,6 +2184,8 @@ selectProductVariant: (asin, sku) => {
         description: updates.description || matchingBackend.description,
         is_active: updates.isLive !== undefined ? updates.isLive : matchingBackend.is_active,
         version: matchingBackend.version || 1,
+      }).then(() => {
+        get().fetchApiCatalog();
       }).catch(() => {});
     }
   },
@@ -2066,7 +2218,9 @@ selectProductVariant: (asin, sku) => {
     matchingBackendProds.forEach(p => {
       deletedProductAsinsSet.add(p.id);
       deletedProductAsinsSet.add(p.sku_prefix);
-      catalogApi.archiveProduct(p.id).catch(() => {});
+      catalogApi.archiveProduct(p.id).then(() => {
+        get().fetchApiCatalog();
+      }).catch(() => {});
     });
 
     const deletedList = loadStored<string[]>('apollo_deleted_products', []);
@@ -2594,7 +2748,15 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       const prods = await catalogApi.getCatalog();
       if (prods && prods.length > 0) {
         const merged = syncCatalogProducts(get().products, prods);
-        set({ apiCatalogProducts: merged, apiCatalogLoading: false, apiCatalogError: null });
+        const frontendProducts = merged.map((ap) => mapApiProductToProduct(ap, get().products));
+        set({
+          apiCatalogProducts: merged,
+          products: frontendProducts,
+          apiCatalogLoading: false,
+          apiCatalogError: null,
+        });
+        saveStored('apollo_products', frontendProducts);
+        broadcastCatalogUpdate(frontendProducts);
       } else {
         // Backend returned empty catalog
         set({ apiCatalogProducts: [], apiCatalogLoading: false, apiCatalogError: null });
@@ -2608,7 +2770,8 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
         const localProducts = get().products;
         if (localProducts.length > 0) {
           const merged = syncCatalogProducts(localProducts, []);
-          set({ apiCatalogProducts: merged });
+          const frontendProducts = merged.map((ap) => mapApiProductToProduct(ap, localProducts));
+          set({ apiCatalogProducts: merged, products: frontendProducts });
         }
       }
     }

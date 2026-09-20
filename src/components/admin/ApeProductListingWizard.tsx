@@ -270,32 +270,32 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
 
   // Industrial Catalog Vital Info Identifiers
   const [productIdType, setProductIdType] = useState<'ASIN' | 'UPC' | 'EAN' | 'GTIN_EXEMPTION'>('ASIN');
-  const [productIdValue, setProductIdValue] = useState(initialProduct?.asin || 'B0H3ZJ1J5L');
+  const [productIdValue, setProductIdValue] = useState(initialProduct?.asin || '');
   const [hasGtinExemption, setHasGtinExemption] = useState(false);
 
   // ─────────────────────────────────────────────────────────────────────────
   // TAB 2: MEDIA UPLOADS & 6-IMAGE GALLERY SPECIFICATION
   // ─────────────────────────────────────────────────────────────────────────
   const [image1, setImage1] = useState<string>(
-    initialProduct?.variants[0]?.images[0] || '/Drain_clips.webp'
+    initialProduct?.variants?.[0]?.images?.[0] || ''
   );
   const [image2, setImage2] = useState<string>(
-    initialProduct?.variants[0]?.images[1] || '/solar_sprinkler.webp'
+    initialProduct?.variants?.[0]?.images?.[1] || ''
   );
   const [image3, setImage3] = useState<string>(
-    initialProduct?.variants[0]?.images[2] || '/gi_pipe_clamp.webp'
+    initialProduct?.variants?.[0]?.images?.[2] || ''
   );
   const [image4, setImage4] = useState<string>(
-    initialProduct?.variants[0]?.images[3] || '/Drain_clips.webp'
+    initialProduct?.variants?.[0]?.images?.[3] || ''
   );
   const [image5, setImage5] = useState<string>(
-    initialProduct?.variants[0]?.images[4] || '/solar_sprinkler.webp'
+    initialProduct?.variants?.[0]?.images?.[4] || ''
   );
   const [image6, setImage6] = useState<string>(
-    initialProduct?.variants[0]?.images[5] || '/gi_pipe_clamp.webp'
+    initialProduct?.variants?.[0]?.images?.[5] || ''
   );
   const [videoUrl, setVideoUrl] = useState<string>(
-    initialProduct?.videoUrl || initialProduct?.variants[0]?.videoUrl || 'https://www.w3schools.com/html/mov_bbb.mp4'
+    initialProduct?.videoUrl || initialProduct?.variants?.[0]?.videoUrl || ''
   );
 
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -1238,13 +1238,17 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
       return;
     }
 
-    const asin = initialProduct?.asin || (hasGtinExemption ? `APE-${Math.random().toString(36).substring(2, 8).toUpperCase()}` : productIdValue || `AP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
+    const generatedAsin = hasGtinExemption
+      ? `APE-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+      : (productIdValue.trim() ? productIdValue.trim() : `AP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`);
+    const asin = initialProduct?.asin || generatedAsin;
     const mediaImages = [image1, image2, image3, image4, image5, image6].filter(img => img && img.trim() !== '');
+    const fallbackImage = mediaImages.length > 0 ? mediaImages : ['/logo.webp'];
 
     const finalizedVariants: ProductVariant[] = variantsList.map(v => ({
       ...v,
       b2bMoq: v.b2bMoq || defaultB2bMinQty || 50,
-      images: v.images && v.images.length > 0 ? v.images : mediaImages,
+      images: v.images && v.images.length > 0 ? v.images : fallbackImage,
       videoUrl: v.videoUrl || videoUrl,
       dimensionsCm: { length: itemLength, width: itemWidth, height: itemHeight },
       packageDimensionsCm: { length: packageLength, width: packageWidth, height: packageHeight },

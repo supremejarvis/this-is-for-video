@@ -22,19 +22,22 @@ export class QuoteApi {
       throw new Error('Valid 6-digit Indian PIN code required.');
     }
 
-    const cleanPayload = {
+    const cleanPayload: Record<string, any> = {
       items: payload.items.map((i) => ({
         ...(i.variant_id ? { variant_id: i.variant_id } : {}),
         ...(i.sku ? { sku: i.sku } : {}),
         quantity: i.quantity,
       })),
       destination_pincode: payload.destination_pincode.trim(),
-      channel: payload.channel || 'B2C',
       payment_method: payload.payment_method || 'PREPAID',
       rounding_multiple: payload.rounding_multiple ?? 5,
       ...(payload.base_shipping ? { base_shipping: payload.base_shipping } : {}),
       ...(payload.idempotency_key ? { idempotency_key: payload.idempotency_key } : {}),
     };
+
+    if (payload.channel && payload.channel !== 'B2C') {
+      cleanPayload.channel = payload.channel;
+    }
 
     return apiClient.post<AuthoritativeQuote>('/quotes', cleanPayload);
   }

@@ -1,0 +1,1547 @@
+[
+  {
+    "file": "backend/.coverage",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/.dockerignore",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/.env",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/.env.example",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/.gitignore",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/.vercel/README.txt",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/.vercel/project.json",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/Dockerfile",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/alembic.ini",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/alembic/README",
+    "role": "Database Migration",
+    "desc": "Alembic DDL migration scripts managing the 21 PostgreSQL tables"
+  },
+  {
+    "file": "backend/alembic/env.py",
+    "role": "Database Migration",
+    "desc": "Alembic DDL migration scripts managing the 21 PostgreSQL tables"
+  },
+  {
+    "file": "backend/alembic/script.py.mako",
+    "role": "Database Migration",
+    "desc": "Alembic DDL migration scripts managing the 21 PostgreSQL tables"
+  },
+  {
+    "file": "backend/alembic/versions/001_initial_schema.py",
+    "role": "Database Migration",
+    "desc": "Alembic DDL migration scripts managing the 21 PostgreSQL tables"
+  },
+  {
+    "file": "backend/alembic/versions/002_quote_versions_and_idempotency.py",
+    "role": "Database Migration",
+    "desc": "Alembic DDL migration scripts managing the 21 PostgreSQL tables"
+  },
+  {
+    "file": "backend/alembic/versions/003_auth_and_rbac.py",
+    "role": "Database Migration",
+    "desc": "Alembic DDL migration scripts managing the 21 PostgreSQL tables"
+  },
+  {
+    "file": "backend/alembic/versions/004_gate_2b_catalog.py",
+    "role": "Database Migration",
+    "desc": "Alembic DDL migration scripts managing the 21 PostgreSQL tables"
+  },
+  {
+    "file": "backend/alembic/versions/005_gate_2b_correction.py",
+    "role": "Database Migration",
+    "desc": "Alembic DDL migration scripts managing the 21 PostgreSQL tables"
+  },
+  {
+    "file": "backend/alembic/versions/006_gate_2b_final_patch.py",
+    "role": "Database Migration",
+    "desc": "Alembic DDL migration scripts managing the 21 PostgreSQL tables"
+  },
+  {
+    "file": "backend/alembic/versions/007_webhook_events.py",
+    "role": "Database Migration",
+    "desc": "Alembic DDL migration scripts managing the 21 PostgreSQL tables"
+  },
+  {
+    "file": "backend/alembic/versions/008_order_address_and_customer_persistence.py",
+    "role": "Database Migration",
+    "desc": "Alembic DDL migration scripts managing the 21 PostgreSQL tables"
+  },
+  {
+    "file": "backend/app/__init__.py",
+    "role": "Backend Application",
+    "desc": "FastAPI application factory, lifespan manager, and middleware pipeline"
+  },
+  {
+    "file": "backend/app/api/deps.py",
+    "role": "FastAPI Routing",
+    "desc": "API v1 aggregator router and dependency injection providers"
+  },
+  {
+    "file": "backend/app/api/v1/api.py",
+    "role": "FastAPI Routing",
+    "desc": "API v1 aggregator router and dependency injection providers"
+  },
+  {
+    "file": "backend/app/api/v1/endpoints/auth.py",
+    "role": "FastAPI Endpoint",
+    "desc": "REST route controller handling HTTP requests and auth dependencies"
+  },
+  {
+    "file": "backend/app/api/v1/endpoints/health.py",
+    "role": "FastAPI Endpoint",
+    "desc": "REST route controller handling HTTP requests and auth dependencies"
+  },
+  {
+    "file": "backend/app/api/v1/endpoints/inventory.py",
+    "role": "FastAPI Endpoint",
+    "desc": "REST route controller handling HTTP requests and auth dependencies"
+  },
+  {
+    "file": "backend/app/api/v1/endpoints/orders.py",
+    "role": "FastAPI Endpoint",
+    "desc": "REST route controller handling HTTP requests and auth dependencies"
+  },
+  {
+    "file": "backend/app/api/v1/endpoints/otp.py",
+    "role": "FastAPI Endpoint",
+    "desc": "REST route controller handling HTTP requests and auth dependencies"
+  },
+  {
+    "file": "backend/app/api/v1/endpoints/payments.py",
+    "role": "FastAPI Endpoint",
+    "desc": "REST route controller handling HTTP requests and auth dependencies"
+  },
+  {
+    "file": "backend/app/api/v1/endpoints/pricing.py",
+    "role": "FastAPI Endpoint",
+    "desc": "REST route controller handling HTTP requests and auth dependencies"
+  },
+  {
+    "file": "backend/app/api/v1/endpoints/products.py",
+    "role": "FastAPI Endpoint",
+    "desc": "REST route controller handling HTTP requests and auth dependencies"
+  },
+  {
+    "file": "backend/app/api/v1/endpoints/quotes.py",
+    "role": "FastAPI Endpoint",
+    "desc": "REST route controller handling HTTP requests and auth dependencies"
+  },
+  {
+    "file": "backend/app/api/v1/endpoints/system.py",
+    "role": "FastAPI Endpoint",
+    "desc": "REST route controller handling HTTP requests and auth dependencies"
+  },
+  {
+    "file": "backend/app/api/v1/endpoints/users.py",
+    "role": "FastAPI Endpoint",
+    "desc": "REST route controller handling HTTP requests and auth dependencies"
+  },
+  {
+    "file": "backend/app/cache/__init__.py",
+    "role": "Backend Application",
+    "desc": "FastAPI application factory, lifespan manager, and middleware pipeline"
+  },
+  {
+    "file": "backend/app/cache/redis.py",
+    "role": "Backend Application",
+    "desc": "FastAPI application factory, lifespan manager, and middleware pipeline"
+  },
+  {
+    "file": "backend/app/cli/__init__.py",
+    "role": "CLI Automation",
+    "desc": "Catalog seeding, super admin creation, and database initialization CLI"
+  },
+  {
+    "file": "backend/app/cli/seed_catalog.py",
+    "role": "CLI Automation",
+    "desc": "Catalog seeding, super admin creation, and database initialization CLI"
+  },
+  {
+    "file": "backend/app/cli/seed_owner.py",
+    "role": "CLI Automation",
+    "desc": "Catalog seeding, super admin creation, and database initialization CLI"
+  },
+  {
+    "file": "backend/app/core/circuit_breaker.py",
+    "role": "Core Engine / Infra",
+    "desc": "Database engine, security tokens, circuit breaker, rate limiting, and config"
+  },
+  {
+    "file": "backend/app/core/config.py",
+    "role": "Core Engine / Infra",
+    "desc": "Database engine, security tokens, circuit breaker, rate limiting, and config"
+  },
+  {
+    "file": "backend/app/core/database.py",
+    "role": "Core Engine / Infra",
+    "desc": "Database engine, security tokens, circuit breaker, rate limiting, and config"
+  },
+  {
+    "file": "backend/app/core/load_optimizer.py",
+    "role": "Core Engine / Infra",
+    "desc": "Database engine, security tokens, circuit breaker, rate limiting, and config"
+  },
+  {
+    "file": "backend/app/core/monitoring.py",
+    "role": "Core Engine / Infra",
+    "desc": "Database engine, security tokens, circuit breaker, rate limiting, and config"
+  },
+  {
+    "file": "backend/app/core/rate_limiter.py",
+    "role": "Core Engine / Infra",
+    "desc": "Database engine, security tokens, circuit breaker, rate limiting, and config"
+  },
+  {
+    "file": "backend/app/core/security.py",
+    "role": "Core Engine / Infra",
+    "desc": "Database engine, security tokens, circuit breaker, rate limiting, and config"
+  },
+  {
+    "file": "backend/app/core/worker.py",
+    "role": "Core Engine / Infra",
+    "desc": "Database engine, security tokens, circuit breaker, rate limiting, and config"
+  },
+  {
+    "file": "backend/app/database/__init__.py",
+    "role": "Backend Application",
+    "desc": "FastAPI application factory, lifespan manager, and middleware pipeline"
+  },
+  {
+    "file": "backend/app/database/session.py",
+    "role": "Backend Application",
+    "desc": "FastAPI application factory, lifespan manager, and middleware pipeline"
+  },
+  {
+    "file": "backend/app/events/__init__.py",
+    "role": "Event Pipeline",
+    "desc": "In-memory / Redis event producers and consumers for transactional outbox"
+  },
+  {
+    "file": "backend/app/events/consumers.py",
+    "role": "Event Pipeline",
+    "desc": "In-memory / Redis event producers and consumers for transactional outbox"
+  },
+  {
+    "file": "backend/app/events/producer.py",
+    "role": "Event Pipeline",
+    "desc": "In-memory / Redis event producers and consumers for transactional outbox"
+  },
+  {
+    "file": "backend/app/main.py",
+    "role": "Backend Application",
+    "desc": "FastAPI application factory, lifespan manager, and middleware pipeline"
+  },
+  {
+    "file": "backend/app/models/__init__.py",
+    "role": "SQLAlchemy Model",
+    "desc": "PostgreSQL database table schema mapping with constraints and relationships"
+  },
+  {
+    "file": "backend/app/models/auth.py",
+    "role": "SQLAlchemy Model",
+    "desc": "PostgreSQL database table schema mapping with constraints and relationships"
+  },
+  {
+    "file": "backend/app/models/inventory.py",
+    "role": "SQLAlchemy Model",
+    "desc": "PostgreSQL database table schema mapping with constraints and relationships"
+  },
+  {
+    "file": "backend/app/models/order.py",
+    "role": "SQLAlchemy Model",
+    "desc": "PostgreSQL database table schema mapping with constraints and relationships"
+  },
+  {
+    "file": "backend/app/models/outbox.py",
+    "role": "SQLAlchemy Model",
+    "desc": "PostgreSQL database table schema mapping with constraints and relationships"
+  },
+  {
+    "file": "backend/app/models/price.py",
+    "role": "SQLAlchemy Model",
+    "desc": "PostgreSQL database table schema mapping with constraints and relationships"
+  },
+  {
+    "file": "backend/app/models/product.py",
+    "role": "SQLAlchemy Model",
+    "desc": "PostgreSQL database table schema mapping with constraints and relationships"
+  },
+  {
+    "file": "backend/app/models/quote.py",
+    "role": "SQLAlchemy Model",
+    "desc": "PostgreSQL database table schema mapping with constraints and relationships"
+  },
+  {
+    "file": "backend/app/schemas/auth.py",
+    "role": "Pydantic Schema",
+    "desc": "Request and response validation models with strict type enforcement"
+  },
+  {
+    "file": "backend/app/schemas/inventory.py",
+    "role": "Pydantic Schema",
+    "desc": "Request and response validation models with strict type enforcement"
+  },
+  {
+    "file": "backend/app/schemas/order.py",
+    "role": "Pydantic Schema",
+    "desc": "Request and response validation models with strict type enforcement"
+  },
+  {
+    "file": "backend/app/schemas/otp.py",
+    "role": "Pydantic Schema",
+    "desc": "Request and response validation models with strict type enforcement"
+  },
+  {
+    "file": "backend/app/schemas/pricing.py",
+    "role": "Pydantic Schema",
+    "desc": "Request and response validation models with strict type enforcement"
+  },
+  {
+    "file": "backend/app/schemas/product.py",
+    "role": "Pydantic Schema",
+    "desc": "Request and response validation models with strict type enforcement"
+  },
+  {
+    "file": "backend/app/schemas/quote.py",
+    "role": "Pydantic Schema",
+    "desc": "Request and response validation models with strict type enforcement"
+  },
+  {
+    "file": "backend/app/services/auth_service.py",
+    "role": "Backend Domain Service",
+    "desc": "Business logic for catalog, inventory ledger, quotes, orders, and OTP"
+  },
+  {
+    "file": "backend/app/services/catalog_service.py",
+    "role": "Backend Domain Service",
+    "desc": "Business logic for catalog, inventory ledger, quotes, orders, and OTP"
+  },
+  {
+    "file": "backend/app/services/inventory.py",
+    "role": "Backend Domain Service",
+    "desc": "Business logic for catalog, inventory ledger, quotes, orders, and OTP"
+  },
+  {
+    "file": "backend/app/services/order_state.py",
+    "role": "Backend Domain Service",
+    "desc": "Business logic for catalog, inventory ledger, quotes, orders, and OTP"
+  },
+  {
+    "file": "backend/app/services/otp_service.py",
+    "role": "Backend Domain Service",
+    "desc": "Business logic for catalog, inventory ledger, quotes, orders, and OTP"
+  },
+  {
+    "file": "backend/app/services/outbox.py",
+    "role": "Backend Domain Service",
+    "desc": "Business logic for catalog, inventory ledger, quotes, orders, and OTP"
+  },
+  {
+    "file": "backend/app/services/pricing.py",
+    "role": "Backend Domain Service",
+    "desc": "Business logic for catalog, inventory ledger, quotes, orders, and OTP"
+  },
+  {
+    "file": "backend/app/services/pricing_service.py",
+    "role": "Backend Domain Service",
+    "desc": "Business logic for catalog, inventory ledger, quotes, orders, and OTP"
+  },
+  {
+    "file": "backend/app/services/quote_service.py",
+    "role": "Backend Domain Service",
+    "desc": "Business logic for catalog, inventory ledger, quotes, orders, and OTP"
+  },
+  {
+    "file": "backend/app/services/shipping_service.py",
+    "role": "Backend Domain Service",
+    "desc": "Business logic for catalog, inventory ledger, quotes, orders, and OTP"
+  },
+  {
+    "file": "backend/app/workers/__init__.py",
+    "role": "Background Worker",
+    "desc": "Asynchronous task workers for inventory replenishment, invoices, and alerts"
+  },
+  {
+    "file": "backend/app/workers/inventory_worker.py",
+    "role": "Background Worker",
+    "desc": "Asynchronous task workers for inventory replenishment, invoices, and alerts"
+  },
+  {
+    "file": "backend/app/workers/invoice_worker.py",
+    "role": "Background Worker",
+    "desc": "Asynchronous task workers for inventory replenishment, invoices, and alerts"
+  },
+  {
+    "file": "backend/app/workers/notification_worker.py",
+    "role": "Background Worker",
+    "desc": "Asynchronous task workers for inventory replenishment, invoices, and alerts"
+  },
+  {
+    "file": "backend/openapi.json",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/pyproject.toml",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/requirements.txt",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/setup_postgres_constraints.sql",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/start_apollo_backend.bat",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/start_apollo_hidden.vbs",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/tests/conftest.py",
+    "role": "Pytest Test Suite",
+    "desc": "Test configuration fixtures and reliability verification suite"
+  },
+  {
+    "file": "backend/tests/contract/test_openapi_contract.py",
+    "role": "Pytest Contract Test",
+    "desc": "OpenAPI schema contract compatibility test"
+  },
+  {
+    "file": "backend/tests/integration/conftest.py",
+    "role": "Pytest Integration Test",
+    "desc": "PostgreSQL transaction, concurrency locking, and webhook tests"
+  },
+  {
+    "file": "backend/tests/integration/test_auth_postgres.py",
+    "role": "Pytest Integration Test",
+    "desc": "PostgreSQL transaction, concurrency locking, and webhook tests"
+  },
+  {
+    "file": "backend/tests/integration/test_b2b_tiered_pooling_quote.py",
+    "role": "Pytest Integration Test",
+    "desc": "PostgreSQL transaction, concurrency locking, and webhook tests"
+  },
+  {
+    "file": "backend/tests/integration/test_db_constraints.py",
+    "role": "Pytest Integration Test",
+    "desc": "PostgreSQL transaction, concurrency locking, and webhook tests"
+  },
+  {
+    "file": "backend/tests/integration/test_gate2b_postgres.py",
+    "role": "Pytest Integration Test",
+    "desc": "PostgreSQL transaction, concurrency locking, and webhook tests"
+  },
+  {
+    "file": "backend/tests/integration/test_inventory_concurrency.py",
+    "role": "Pytest Integration Test",
+    "desc": "PostgreSQL transaction, concurrency locking, and webhook tests"
+  },
+  {
+    "file": "backend/tests/integration/test_outbox_integration.py",
+    "role": "Pytest Integration Test",
+    "desc": "PostgreSQL transaction, concurrency locking, and webhook tests"
+  },
+  {
+    "file": "backend/tests/integration/test_quote_api.py",
+    "role": "Pytest Integration Test",
+    "desc": "PostgreSQL transaction, concurrency locking, and webhook tests"
+  },
+  {
+    "file": "backend/tests/integration/test_razorpay_webhook_idempotency.py",
+    "role": "Pytest Integration Test",
+    "desc": "PostgreSQL transaction, concurrency locking, and webhook tests"
+  },
+  {
+    "file": "backend/tests/test_reliability_suite.py",
+    "role": "Pytest Test Suite",
+    "desc": "Test configuration fixtures and reliability verification suite"
+  },
+  {
+    "file": "backend/tests/unit/test_auth_endpoints.py",
+    "role": "Pytest Unit Test",
+    "desc": "Unit tests for pricing, tax invariants, order state, RBAC, and security"
+  },
+  {
+    "file": "backend/tests/unit/test_auth_security.py",
+    "role": "Pytest Unit Test",
+    "desc": "Unit tests for pricing, tax invariants, order state, RBAC, and security"
+  },
+  {
+    "file": "backend/tests/unit/test_catalog_pricing_inventory.py",
+    "role": "Pytest Unit Test",
+    "desc": "Unit tests for pricing, tax invariants, order state, RBAC, and security"
+  },
+  {
+    "file": "backend/tests/unit/test_order_address_persistence.py",
+    "role": "Pytest Unit Test",
+    "desc": "Unit tests for pricing, tax invariants, order state, RBAC, and security"
+  },
+  {
+    "file": "backend/tests/unit/test_order_state.py",
+    "role": "Pytest Unit Test",
+    "desc": "Unit tests for pricing, tax invariants, order state, RBAC, and security"
+  },
+  {
+    "file": "backend/tests/unit/test_orders_and_payments.py",
+    "role": "Pytest Unit Test",
+    "desc": "Unit tests for pricing, tax invariants, order state, RBAC, and security"
+  },
+  {
+    "file": "backend/tests/unit/test_otp.py",
+    "role": "Pytest Unit Test",
+    "desc": "Unit tests for pricing, tax invariants, order state, RBAC, and security"
+  },
+  {
+    "file": "backend/tests/unit/test_pricing.py",
+    "role": "Pytest Unit Test",
+    "desc": "Unit tests for pricing, tax invariants, order state, RBAC, and security"
+  },
+  {
+    "file": "backend/tests/unit/test_pricing_hypothesis.py",
+    "role": "Pytest Unit Test",
+    "desc": "Unit tests for pricing, tax invariants, order state, RBAC, and security"
+  },
+  {
+    "file": "backend/tests/unit/test_pricing_mutations.py",
+    "role": "Pytest Unit Test",
+    "desc": "Unit tests for pricing, tax invariants, order state, RBAC, and security"
+  },
+  {
+    "file": "backend/tests/unit/test_rbac.py",
+    "role": "Pytest Unit Test",
+    "desc": "Unit tests for pricing, tax invariants, order state, RBAC, and security"
+  },
+  {
+    "file": "backend/tests/unit/test_security_audit.py",
+    "role": "Pytest Unit Test",
+    "desc": "Unit tests for pricing, tax invariants, order state, RBAC, and security"
+  },
+  {
+    "file": "backend/tools.yaml",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/uv.lock",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "backend/vercel.json",
+    "role": "Backend Configuration",
+    "desc": "Docker, Alembic INI, pyproject.toml, requirements, and deployment configs"
+  },
+  {
+    "file": "docs/accuracy-invariants.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/agent-execution-runbook.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/architecture/enterprise-target-architecture.architecture.json",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/architecture/enterprise-target-architecture.html",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/architecture/high-availability-infrastructure.architecture.json",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/architecture/high-availability-infrastructure.html",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/architecture/high-availability-infrastructure.visual-check.1440x900.dark.png",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/architecture/high-availability-infrastructure.visual-check.1440x900.light.png",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/architecture/high-availability-infrastructure.visual-check.2048x1320.dark.png",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/architecture/high-availability-infrastructure.visual-check.2048x1320.light.png",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/architecture/high-availability-infrastructure.visual-check.html",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/architecture/high-availability-infrastructure.visual-check.json",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/audits/APOLLO_ADMIN_FULL_AUDIT_REPORT.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/audits/APOLLO_ECOMMERCE_FULL_AUDIT_REPORT.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/audits/AUDIT_FINDINGS.json",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/audits/AUDIT_FIX_CHECKLIST.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/audits/FIX_P0_001_REPORT.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/audits/FIX_P0_002_REPORT.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/audits/FIX_P0_003_REPORT.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/audits/FIX_P0_004_REPORT.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/audits/FIX_P0_005_REPORT.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/audits/PRODUCTION_API_WEBHOOK_ACTIVATION_REPORT.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/audits/SECURITY_SECRET_ROTATION_CHECKLIST.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/audits/SUPERPOWER_FULL_API_WEBHOOK_RECOVERY_REPORT.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/audits/planning.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/backend-tooling-plan.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/ecommerce-architecture-contract.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "docs/tooling-status.md",
+    "role": "Documentation",
+    "desc": "Engineering architecture diagrams, audit reports, and statutory runbooks"
+  },
+  {
+    "file": "public/Drain_clips.webp",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/apollo-a6-shipping-label.html",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/auto_timer.webp",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/captions.vtt",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/cpvc_upvc.webp",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/gi_pipe_clamp.webp",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/hero.webm",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/llms.txt",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/logo.webp",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/manifest.json",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/pump.webp",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/robots.txt",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/sitemap.xml",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/solar_cleaning_fullset.webp",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/solar_sprinkler.webp",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "public/sw.js",
+    "role": "Public Static Asset",
+    "desc": "WebP product visuals, vector logos, PWA manifest, or service worker"
+  },
+  {
+    "file": "scripts/audit_eapollo.py",
+    "role": "Automation Script",
+    "desc": "Playwright trace visualizer, E2E evidence generator, and audit utilities"
+  },
+  {
+    "file": "scripts/e2e_remediation_evidence.mjs",
+    "role": "Automation Script",
+    "desc": "Playwright trace visualizer, E2E evidence generator, and audit utilities"
+  },
+  {
+    "file": "scripts/open-latest-trace.mjs",
+    "role": "Automation Script",
+    "desc": "Playwright trace visualizer, E2E evidence generator, and audit utilities"
+  },
+  {
+    "file": "src/app/(auth)/login/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/(auth)/register/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/(shop)/cart/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/(shop)/checkout/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/(shop)/products/[slug]/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/about/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/account/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/admin/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/api/inquiries/route.ts",
+    "role": "Next.js Route",
+    "desc": "Serverless API endpoint handler for inquiries (replaces MongoDB with atomic queue)"
+  },
+  {
+    "file": "src/app/b2b/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/contact/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/installation/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/layout.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/orders/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/store/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/app/wishlist/page.tsx",
+    "role": "UI Page / Layout",
+    "desc": "Next.js App Router root layout or localized page view"
+  },
+  {
+    "file": "src/components/Background.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/ComparisonTable.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/FAQ.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/Footer.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/Hero.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/InstallationGuide.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/PdfCatalog.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/ProductCard.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/TrustedBy.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/WhatsAppButton.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/WhyUs.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/admin/ApeProductListingWizard.tsx",
+    "role": "UI Admin Component",
+    "desc": "Industrial operations, catalog wizard, audit trail, dispatch, or returns panel"
+  },
+  {
+    "file": "src/components/admin/AuditTrailDrawer.tsx",
+    "role": "UI Admin Component",
+    "desc": "Industrial operations, catalog wizard, audit trail, dispatch, or returns panel"
+  },
+  {
+    "file": "src/components/admin/CiCdPipelineAuditPanel.tsx",
+    "role": "UI Admin Component",
+    "desc": "Industrial operations, catalog wizard, audit trail, dispatch, or returns panel"
+  },
+  {
+    "file": "src/components/admin/ComboVariantBuilderModal.tsx",
+    "role": "UI Admin Component",
+    "desc": "Industrial operations, catalog wizard, audit trail, dispatch, or returns panel"
+  },
+  {
+    "file": "src/components/admin/ContractorInquiryDesk.tsx",
+    "role": "UI Admin Component",
+    "desc": "Industrial operations, catalog wizard, audit trail, dispatch, or returns panel"
+  },
+  {
+    "file": "src/components/admin/CouponManagementPanel.tsx",
+    "role": "UI Admin Component",
+    "desc": "Industrial operations, catalog wizard, audit trail, dispatch, or returns panel"
+  },
+  {
+    "file": "src/components/admin/CustomerManagementPanel.tsx",
+    "role": "UI Admin Component",
+    "desc": "Industrial operations, catalog wizard, audit trail, dispatch, or returns panel"
+  },
+  {
+    "file": "src/components/admin/EnterpriseDispatchConsole.tsx",
+    "role": "UI Admin Component",
+    "desc": "Industrial operations, catalog wizard, audit trail, dispatch, or returns panel"
+  },
+  {
+    "file": "src/components/admin/FactoryReorderModal.tsx",
+    "role": "UI Admin Component",
+    "desc": "Industrial operations, catalog wizard, audit trail, dispatch, or returns panel"
+  },
+  {
+    "file": "src/components/admin/PaymentReconciliationPanel.tsx",
+    "role": "UI Admin Component",
+    "desc": "Industrial operations, catalog wizard, audit trail, dispatch, or returns panel"
+  },
+  {
+    "file": "src/components/admin/ReturnsManagementPanel.tsx",
+    "role": "UI Admin Component",
+    "desc": "Industrial operations, catalog wizard, audit trail, dispatch, or returns panel"
+  },
+  {
+    "file": "src/components/admin/StandardTaxInvoice.tsx",
+    "role": "UI Admin Component",
+    "desc": "Industrial operations, catalog wizard, audit trail, dispatch, or returns panel"
+  },
+  {
+    "file": "src/components/admin/StandardThermalShippingLabel.tsx",
+    "role": "UI Admin Component",
+    "desc": "Industrial operations, catalog wizard, audit trail, dispatch, or returns panel"
+  },
+  {
+    "file": "src/components/admin/SuperAdminDashboard.tsx",
+    "role": "UI Admin Component",
+    "desc": "Industrial operations, catalog wizard, audit trail, dispatch, or returns panel"
+  },
+  {
+    "file": "src/components/admin/__tests__/SuperAdminDashboardSecurity.test.tsx",
+    "role": "Frontend Test",
+    "desc": "Admin dashboard security and backdoor eradication unit test"
+  },
+  {
+    "file": "src/components/auth/AddressModal.tsx",
+    "role": "UI Auth Component",
+    "desc": "Customer login, MSG91 4-digit OTP, and customer profile dialog"
+  },
+  {
+    "file": "src/components/auth/AuthModal.tsx",
+    "role": "UI Auth Component",
+    "desc": "Customer login, MSG91 4-digit OTP, and customer profile dialog"
+  },
+  {
+    "file": "src/components/auth/CustomerAccountModal.tsx",
+    "role": "UI Auth Component",
+    "desc": "Customer login, MSG91 4-digit OTP, and customer profile dialog"
+  },
+  {
+    "file": "src/components/auth/__tests__/AuthModal.test.tsx",
+    "role": "Frontend Test",
+    "desc": "OTP login modal and numeric input constraint test"
+  },
+  {
+    "file": "src/components/b2b/B2BPortal.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/cart/CartDrawer.tsx",
+    "role": "UI Cart Component",
+    "desc": "Interactive slide-over cart drawer and line-item controller"
+  },
+  {
+    "file": "src/components/cart/CartItem.tsx",
+    "role": "UI Cart Component",
+    "desc": "Interactive slide-over cart drawer and line-item controller"
+  },
+  {
+    "file": "src/components/checkout/CartDrawer.tsx",
+    "role": "UI Checkout Component",
+    "desc": "Prepaid UPI and COD dual-mode checkout modal and slide-over drawer"
+  },
+  {
+    "file": "src/components/checkout/CheckoutModal.tsx",
+    "role": "UI Checkout Component",
+    "desc": "Prepaid UPI and COD dual-mode checkout modal and slide-over drawer"
+  },
+  {
+    "file": "src/components/checkout/__tests__/CartDrawerCheckout.test.tsx",
+    "role": "Frontend Test",
+    "desc": "Cart drawer and checkout invariant verification test"
+  },
+  {
+    "file": "src/components/layout/AppLayout.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/layout/Footer.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/layout/MobileNav.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/layout/Navbar.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/logistics/GstInvoice.tsx",
+    "role": "UI Logistics Component",
+    "desc": "India Post thermal label, Speed Post tracker, and GST tax invoice modal"
+  },
+  {
+    "file": "src/components/logistics/LiveOrderTracker.tsx",
+    "role": "UI Logistics Component",
+    "desc": "India Post thermal label, Speed Post tracker, and GST tax invoice modal"
+  },
+  {
+    "file": "src/components/logistics/ThermalShippingLabel.tsx",
+    "role": "UI Logistics Component",
+    "desc": "India Post thermal label, Speed Post tracker, and GST tax invoice modal"
+  },
+  {
+    "file": "src/components/logistics/__tests__/GstInvoice.test.tsx",
+    "role": "Frontend Test",
+    "desc": "Statutory GST invoice formatting and print test"
+  },
+  {
+    "file": "src/components/pages/AboutPage.tsx",
+    "role": "UI Page View",
+    "desc": "Individual page content components (Store, About, Contact, Account, Wishlist)"
+  },
+  {
+    "file": "src/components/pages/ContactPage.tsx",
+    "role": "UI Page View",
+    "desc": "Individual page content components (Store, About, Contact, Account, Wishlist)"
+  },
+  {
+    "file": "src/components/pages/CustomerAccountPage.tsx",
+    "role": "UI Page View",
+    "desc": "Individual page content components (Store, About, Contact, Account, Wishlist)"
+  },
+  {
+    "file": "src/components/pages/InstallationPage.tsx",
+    "role": "UI Page View",
+    "desc": "Individual page content components (Store, About, Contact, Account, Wishlist)"
+  },
+  {
+    "file": "src/components/pages/StorePage.tsx",
+    "role": "UI Page View",
+    "desc": "Individual page content components (Store, About, Contact, Account, Wishlist)"
+  },
+  {
+    "file": "src/components/pages/WishlistPage.tsx",
+    "role": "UI Page View",
+    "desc": "Individual page content components (Store, About, Contact, Account, Wishlist)"
+  },
+  {
+    "file": "src/components/product/PriceTag.tsx",
+    "role": "UI Product Component",
+    "desc": "Dual B2B/B2C price tags, product cards, and catalog grid presentation"
+  },
+  {
+    "file": "src/components/product/ProductCard.tsx",
+    "role": "UI Product Component",
+    "desc": "Dual B2B/B2C price tags, product cards, and catalog grid presentation"
+  },
+  {
+    "file": "src/components/product/ProductGrid.tsx",
+    "role": "UI Product Component",
+    "desc": "Dual B2B/B2C price tags, product cards, and catalog grid presentation"
+  },
+  {
+    "file": "src/components/reports/ReportingSuite.tsx",
+    "role": "UI Component",
+    "desc": "Global layout navigation, Hero banner, FAQ, Footer, or WhatsApp widget"
+  },
+  {
+    "file": "src/components/storefront/BuyerCatalog.tsx",
+    "role": "UI Storefront Component",
+    "desc": "Customer-facing PDP, catalog browsing, flash deals, and BOM sizing tools"
+  },
+  {
+    "file": "src/components/storefront/FlashDealBanner.tsx",
+    "role": "UI Storefront Component",
+    "desc": "Customer-facing PDP, catalog browsing, flash deals, and BOM sizing tools"
+  },
+  {
+    "file": "src/components/storefront/Header.tsx",
+    "role": "UI Storefront Component",
+    "desc": "Customer-facing PDP, catalog browsing, flash deals, and BOM sizing tools"
+  },
+  {
+    "file": "src/components/storefront/PincodeDeliveryChecker.tsx",
+    "role": "UI Storefront Component",
+    "desc": "Customer-facing PDP, catalog browsing, flash deals, and BOM sizing tools"
+  },
+  {
+    "file": "src/components/storefront/ProductDetail.tsx",
+    "role": "UI Storefront Component",
+    "desc": "Customer-facing PDP, catalog browsing, flash deals, and BOM sizing tools"
+  },
+  {
+    "file": "src/components/storefront/ProductGrid.tsx",
+    "role": "UI Storefront Component",
+    "desc": "Customer-facing PDP, catalog browsing, flash deals, and BOM sizing tools"
+  },
+  {
+    "file": "src/components/storefront/SolarBOMCalculator.tsx",
+    "role": "UI Storefront Component",
+    "desc": "Customer-facing PDP, catalog browsing, flash deals, and BOM sizing tools"
+  },
+  {
+    "file": "src/components/storefront/__tests__/ProductDetailFrameConfirm.test.tsx",
+    "role": "Frontend Test",
+    "desc": "Frame thickness confirmation & PDP interaction test"
+  },
+  {
+    "file": "src/components/ui/Button.tsx",
+    "role": "UI Primitive",
+    "desc": "Reusable base design system primitives (Button, Input, Modal)"
+  },
+  {
+    "file": "src/components/ui/Input.tsx",
+    "role": "UI Primitive",
+    "desc": "Reusable base design system primitives (Button, Input, Modal)"
+  },
+  {
+    "file": "src/components/ui/Modal.tsx",
+    "role": "UI Primitive",
+    "desc": "Reusable base design system primitives (Button, Input, Modal)"
+  },
+  {
+    "file": "src/constants/index.ts",
+    "role": "Configuration / Style",
+    "desc": "Global Tailwind stylesheet or Next.js configuration"
+  },
+  {
+    "file": "src/data/mockData.ts",
+    "role": "Catalog Seed Data",
+    "desc": "Authentic 7 Apollo catalog products, mock users, organizations, and sample orders"
+  },
+  {
+    "file": "src/hooks/useAuth.ts",
+    "role": "React Hook",
+    "desc": "Custom hooks for authentication, cart mutations, and debounced input"
+  },
+  {
+    "file": "src/hooks/useCart.ts",
+    "role": "React Hook",
+    "desc": "Custom hooks for authentication, cart mutations, and debounced input"
+  },
+  {
+    "file": "src/hooks/useDebounce.ts",
+    "role": "React Hook",
+    "desc": "Custom hooks for authentication, cart mutations, and debounced input"
+  },
+  {
+    "file": "src/index.css",
+    "role": "Configuration / Style",
+    "desc": "Global Tailwind stylesheet or Next.js configuration"
+  },
+  {
+    "file": "src/lib/ecommerce/__tests__/ecommerceSafety.test.ts",
+    "role": "Core Lib Test",
+    "desc": "E-commerce safety, provider adapters, and webhook idempotency test suite"
+  },
+  {
+    "file": "src/lib/ecommerce/orderStateMachine.ts",
+    "role": "Core Library",
+    "desc": "Order state machine, provider registry, and webhook idempotency store"
+  },
+  {
+    "file": "src/lib/ecommerce/providers.ts",
+    "role": "Core Library",
+    "desc": "Order state machine, provider registry, and webhook idempotency store"
+  },
+  {
+    "file": "src/lib/ecommerce/types.ts",
+    "role": "Core Library",
+    "desc": "Order state machine, provider registry, and webhook idempotency store"
+  },
+  {
+    "file": "src/lib/ecommerce/webhookIdempotency.ts",
+    "role": "Core Library",
+    "desc": "Order state machine, provider registry, and webhook idempotency store"
+  },
+  {
+    "file": "src/lib/navigation.tsx",
+    "role": "Core Library",
+    "desc": "Tailwind styling utilities and navigation helpers"
+  },
+  {
+    "file": "src/lib/observability/health.ts",
+    "role": "Observability",
+    "desc": "Structured logging, Sentry error tracking, PostHog telemetry, and health check"
+  },
+  {
+    "file": "src/lib/observability/logger.ts",
+    "role": "Observability",
+    "desc": "Structured logging, Sentry error tracking, PostHog telemetry, and health check"
+  },
+  {
+    "file": "src/lib/observability/posthog.ts",
+    "role": "Observability",
+    "desc": "Structured logging, Sentry error tracking, PostHog telemetry, and health check"
+  },
+  {
+    "file": "src/lib/observability/sentry.ts",
+    "role": "Observability",
+    "desc": "Structured logging, Sentry error tracking, PostHog telemetry, and health check"
+  },
+  {
+    "file": "src/lib/seo-keywords.ts",
+    "role": "Core Library",
+    "desc": "Tailwind styling utilities and navigation helpers"
+  },
+  {
+    "file": "src/lib/seo/__tests__/seoValidation.test.ts",
+    "role": "Core Lib Test",
+    "desc": "Schema.org structured data validator test suite"
+  },
+  {
+    "file": "src/lib/seo/schemaValidator.ts",
+    "role": "Core Library",
+    "desc": "JSON-LD structured data generators and SEO schema validation"
+  },
+  {
+    "file": "src/lib/utils.ts",
+    "role": "Core Library",
+    "desc": "Tailwind styling utilities and navigation helpers"
+  },
+  {
+    "file": "src/models/__tests__/Inquiry.test.ts",
+    "role": "Model Test",
+    "desc": "Contractor inquiry validation and file queue test suite"
+  },
+  {
+    "file": "src/services/__tests__/apiService.test.ts",
+    "role": "Frontend Service Test",
+    "desc": "Service unit tests for CEPT, GSTR-1, MSG91, Razorpay, TOTP, Logistics"
+  },
+  {
+    "file": "src/services/__tests__/ceptIndiaPostService.test.ts",
+    "role": "Frontend Service Test",
+    "desc": "Service unit tests for CEPT, GSTR-1, MSG91, Razorpay, TOTP, Logistics"
+  },
+  {
+    "file": "src/services/__tests__/gstr1CsvService.test.ts",
+    "role": "Frontend Service Test",
+    "desc": "Service unit tests for CEPT, GSTR-1, MSG91, Razorpay, TOTP, Logistics"
+  },
+  {
+    "file": "src/services/__tests__/logisticsService.test.ts",
+    "role": "Frontend Service Test",
+    "desc": "Service unit tests for CEPT, GSTR-1, MSG91, Razorpay, TOTP, Logistics"
+  },
+  {
+    "file": "src/services/__tests__/msg91OtpService.test.ts",
+    "role": "Frontend Service Test",
+    "desc": "Service unit tests for CEPT, GSTR-1, MSG91, Razorpay, TOTP, Logistics"
+  },
+  {
+    "file": "src/services/__tests__/razorpayService.test.ts",
+    "role": "Frontend Service Test",
+    "desc": "Service unit tests for CEPT, GSTR-1, MSG91, Razorpay, TOTP, Logistics"
+  },
+  {
+    "file": "src/services/__tests__/totpService.test.ts",
+    "role": "Frontend Service Test",
+    "desc": "Service unit tests for CEPT, GSTR-1, MSG91, Razorpay, TOTP, Logistics"
+  },
+  {
+    "file": "src/services/api/authApi.ts",
+    "role": "API Client",
+    "desc": "Unified Axios/Fetch client layer interfacing with FastAPI backend"
+  },
+  {
+    "file": "src/services/api/catalogApi.ts",
+    "role": "API Client",
+    "desc": "Unified Axios/Fetch client layer interfacing with FastAPI backend"
+  },
+  {
+    "file": "src/services/api/client.ts",
+    "role": "API Client",
+    "desc": "Unified Axios/Fetch client layer interfacing with FastAPI backend"
+  },
+  {
+    "file": "src/services/api/index.ts",
+    "role": "API Client",
+    "desc": "Unified Axios/Fetch client layer interfacing with FastAPI backend"
+  },
+  {
+    "file": "src/services/api/inventoryApi.ts",
+    "role": "API Client",
+    "desc": "Unified Axios/Fetch client layer interfacing with FastAPI backend"
+  },
+  {
+    "file": "src/services/api/orderApi.ts",
+    "role": "API Client",
+    "desc": "Unified Axios/Fetch client layer interfacing with FastAPI backend"
+  },
+  {
+    "file": "src/services/api/paymentApi.ts",
+    "role": "API Client",
+    "desc": "Unified Axios/Fetch client layer interfacing with FastAPI backend"
+  },
+  {
+    "file": "src/services/api/pricingApi.ts",
+    "role": "API Client",
+    "desc": "Unified Axios/Fetch client layer interfacing with FastAPI backend"
+  },
+  {
+    "file": "src/services/api/quoteApi.ts",
+    "role": "API Client",
+    "desc": "Unified Axios/Fetch client layer interfacing with FastAPI backend"
+  },
+  {
+    "file": "src/services/api/systemApi.ts",
+    "role": "API Client",
+    "desc": "Unified Axios/Fetch client layer interfacing with FastAPI backend"
+  },
+  {
+    "file": "src/services/apiService.ts",
+    "role": "Frontend Domain Service",
+    "desc": "Domain service for CEPT logistics, GSTR-1 Excel, MSG91 OTP, Razorpay"
+  },
+  {
+    "file": "src/services/cart.service.ts",
+    "role": "Frontend Domain Service",
+    "desc": "Domain service for CEPT logistics, GSTR-1 Excel, MSG91 OTP, Razorpay"
+  },
+  {
+    "file": "src/services/catalogService.ts",
+    "role": "Frontend Domain Service",
+    "desc": "Domain service for CEPT logistics, GSTR-1 Excel, MSG91 OTP, Razorpay"
+  },
+  {
+    "file": "src/services/ceptIndiaPostService.ts",
+    "role": "Frontend Domain Service",
+    "desc": "Domain service for CEPT logistics, GSTR-1 Excel, MSG91 OTP, Razorpay"
+  },
+  {
+    "file": "src/services/gstr1CsvService.ts",
+    "role": "Frontend Domain Service",
+    "desc": "Domain service for CEPT logistics, GSTR-1 Excel, MSG91 OTP, Razorpay"
+  },
+  {
+    "file": "src/services/logisticsService.ts",
+    "role": "Frontend Domain Service",
+    "desc": "Domain service for CEPT logistics, GSTR-1 Excel, MSG91 OTP, Razorpay"
+  },
+  {
+    "file": "src/services/msg91OtpService.ts",
+    "role": "Frontend Domain Service",
+    "desc": "Domain service for CEPT logistics, GSTR-1 Excel, MSG91 OTP, Razorpay"
+  },
+  {
+    "file": "src/services/order.service.ts",
+    "role": "Frontend Domain Service",
+    "desc": "Domain service for CEPT logistics, GSTR-1 Excel, MSG91 OTP, Razorpay"
+  },
+  {
+    "file": "src/services/product.service.ts",
+    "role": "Frontend Domain Service",
+    "desc": "Domain service for CEPT logistics, GSTR-1 Excel, MSG91 OTP, Razorpay"
+  },
+  {
+    "file": "src/services/quoteService.ts",
+    "role": "Frontend Domain Service",
+    "desc": "Domain service for CEPT logistics, GSTR-1 Excel, MSG91 OTP, Razorpay"
+  },
+  {
+    "file": "src/services/razorpayService.ts",
+    "role": "Frontend Domain Service",
+    "desc": "Domain service for CEPT logistics, GSTR-1 Excel, MSG91 OTP, Razorpay"
+  },
+  {
+    "file": "src/services/totpService.ts",
+    "role": "Frontend Domain Service",
+    "desc": "Domain service for CEPT logistics, GSTR-1 Excel, MSG91 OTP, Razorpay"
+  },
+  {
+    "file": "src/store/__tests__/useStore.test.ts",
+    "role": "State Store Test",
+    "desc": "Zustand cart, multi-tier pricing, and order lifecycle test suite"
+  },
+  {
+    "file": "src/store/useStore.ts",
+    "role": "Global State (Zustand)",
+    "desc": "Authoritative client store managing catalog, cart, user session, and quotes"
+  },
+  {
+    "file": "src/test/b2b_cod_moq_limit.test.ts",
+    "role": "Quality Gate Test",
+    "desc": "Nyquist invariant, B2B MOQ/COD limits, and rounding rule verification tests"
+  },
+  {
+    "file": "src/test/codRoundingMultiple.test.ts",
+    "role": "Quality Gate Test",
+    "desc": "Nyquist invariant, B2B MOQ/COD limits, and rounding rule verification tests"
+  },
+  {
+    "file": "src/test/frontendQuality.test.ts",
+    "role": "Quality Gate Test",
+    "desc": "Nyquist invariant, B2B MOQ/COD limits, and rounding rule verification tests"
+  },
+  {
+    "file": "src/test/gate2c_buyer_catalog_quote.test.ts",
+    "role": "Quality Gate Test",
+    "desc": "Nyquist invariant, B2B MOQ/COD limits, and rounding rule verification tests"
+  },
+  {
+    "file": "src/test/setup.ts",
+    "role": "Quality Gate Test",
+    "desc": "Nyquist invariant, B2B MOQ/COD limits, and rounding rule verification tests"
+  },
+  {
+    "file": "src/types/env.d.ts",
+    "role": "TypeScript Types",
+    "desc": "Authoritative TypeScript interfaces for catalog, orders, quotes, and users"
+  },
+  {
+    "file": "src/types/index.ts",
+    "role": "TypeScript Types",
+    "desc": "Authoritative TypeScript interfaces for catalog, orders, quotes, and users"
+  },
+  {
+    "file": "src/utils/__tests__/gstCalculations.test.ts",
+    "role": "Utility Test",
+    "desc": "Unit tests for GST arithmetic, number-to-words, and storage migration"
+  },
+  {
+    "file": "src/utils/__tests__/numberToWords.test.ts",
+    "role": "Utility Test",
+    "desc": "Unit tests for GST arithmetic, number-to-words, and storage migration"
+  },
+  {
+    "file": "src/utils/gstCalculations.ts",
+    "role": "Utility Function",
+    "desc": "Authoritative GST arithmetic, number-to-words, i18n, and localStorage migration"
+  },
+  {
+    "file": "src/utils/i18n.ts",
+    "role": "Utility Function",
+    "desc": "Authoritative GST arithmetic, number-to-words, i18n, and localStorage migration"
+  },
+  {
+    "file": "src/utils/numberToWords.ts",
+    "role": "Utility Function",
+    "desc": "Authoritative GST arithmetic, number-to-words, i18n, and localStorage migration"
+  },
+  {
+    "file": "src/utils/storageMigration.ts",
+    "role": "Utility Function",
+    "desc": "Authoritative GST arithmetic, number-to-words, i18n, and localStorage migration"
+  }
+]

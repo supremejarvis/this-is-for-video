@@ -44,10 +44,13 @@ async def get_admin_user_or_dev(
         pass
 
     if settings.ENVIRONMENT == "development":
-        stmt = select(User).where(User.email == settings.ADMIN_INIT_EMAIL)
-        admin_user = (await db.execute(stmt)).scalar_one_or_none()
-        if admin_user:
-            return admin_user
+        try:
+            stmt = select(User).where(User.email == settings.ADMIN_INIT_EMAIL)
+            admin_user = (await db.execute(stmt)).scalar_one_or_none()
+            if admin_user:
+                return admin_user
+        except Exception:
+            pass
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -63,8 +66,6 @@ def _extract_expected_version(if_match: str | None, body_version: int | None) ->
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid If-Match header value.") from None
     if body_version is not None:
         return body_version
-    if settings.ENVIRONMENT == "development":
-        return None
     raise HTTPException(
         status_code=status.HTTP_428_PRECONDITION_REQUIRED,
         detail="Update requires expected version in body or If-Match header.",
@@ -100,6 +101,7 @@ def _to_variant_response(
         b2c_price=b2c_price,
         b2b_price=b2b_price,
         b2b_tier_pricing=b2b_tier_pricing or [],
+        status=variant.status,
         created_at=variant.created_at,
     )
 
@@ -155,6 +157,7 @@ def _map_product_response(product: Product) -> ProductResponse:
         hsn_code=product.hsn_code,
         is_active=product.is_active,
         is_archived=product.is_archived,
+        status=product.status,
         version=product.version,
         variants=variants,
         created_at=product.created_at,
@@ -184,12 +187,13 @@ async def create_product(
 async def list_products(
     db: Annotated[AsyncSession, Depends(get_db)],
     include_archived: Annotated[bool, Query()] = False,
+    include_drafts: Annotated[bool, Query()] = False,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[ProductResponse]:
-    """List catalog products and their variants."""
+    """List catalog products and their variants (Buyer storefront returns only published products)."""
     products = await CatalogService.list_products(
-        db, include_archived=include_archived, limit=limit, offset=offset
+        db, include_archived=include_archived, include_drafts=include_drafts, limit=limit, offset=offset
     )
     return [_map_product_response(p) for p in products]
 
@@ -199,9 +203,12 @@ async def get_product(
     product_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     include_archived: Annotated[bool, Query()] = False,
+    include_drafts: Annotated[bool, Query()] = False,
 ) -> ProductResponse:
     """Get single product with dynamic variants and current stock."""
-    product = await CatalogService.get_product(db, product_id, include_archived=include_archived)
+    product = await CatalogService.get_product(
+        db, product_id, include_archived=include_archived, include_drafts=include_drafts
+    )
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found.")
     return _map_product_response(product)

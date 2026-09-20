@@ -37,6 +37,10 @@ export default function RegisterPage() {
       setError('Please enter a valid 10-digit mobile number.');
       return;
     }
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
     if (accountType === 'B2B' && (!companyName.trim() || !gstin.trim())) {
       setError('Company Name and GSTIN are required for B2B Registration.');
       return;
@@ -49,7 +53,7 @@ export default function RegisterPage() {
     setCurrentUser({
       id: userId,
       name,
-      email: email || `${mobile}@apolloengineering.in`,
+      email: email.trim() || `${mobile}@apolloengineering.co.in`,
       phone: mobile,
       role: userRole,
       isPrime: false,

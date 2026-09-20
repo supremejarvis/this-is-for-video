@@ -39,15 +39,15 @@ export const ProductDetail: React.FC = () => {
       {
         sellerId: 'seller_apollo_mfg',
         sellerName: 'Apollo Engineering (Direct Factory Hub 382430)',
-        rating: 4.9,
-        ratingCount: 1850,
+        rating: selectedProduct.rating || 0,
+        ratingCount: selectedProduct.reviewCount || 0,
         fulfillmentType: 'FBF',
-        price: currentVariant?.b2cPrice || 20,
+        price: currentVariant?.b2cPrice || 0,
         shippingFee: 0,
         deliveryDays: 1,
-        stock: currentVariant?.inventory || 50000,
+        stock: currentVariant?.inventory || 0,
         isWinningBuyBox: true,
-        buyBoxScore: 98.5
+        buyBoxScore: 100
       }
     ];
 
@@ -81,28 +81,14 @@ export const ProductDetail: React.FC = () => {
 
   // Strict Login Gate: B2B wholesale rate is ONLY active if customer has a logged-in B2B account
   const isB2BUser = Boolean(appMode === 'B2B' || (currentUser?.role && currentUser.role.includes('B2B')));
-  let currentUnitPrice = currentVariant.b2cPrice || 20;
+  let currentUnitPrice = typeof currentVariant.b2cPrice === 'number' && currentVariant.b2cPrice > 0
+    ? currentVariant.b2cPrice 
+    : (currentVariant.mrp ? Math.round(currentVariant.mrp / 1.5) : 0);
   let activeTierDiscount = 0;
 
-  if (isDrainClip) {
-    if (isB2BUser) {
-      if (combinedDrainClipQty >= 2500 || selectedQty >= 2500) {
-        currentUnitPrice = 10.00;
-        activeTierDiscount = 50.0;
-      } else if (combinedDrainClipQty >= 1000 || selectedQty >= 1000) {
-        currentUnitPrice = 15.00;
-        activeTierDiscount = 25.0;
-      } else {
-        currentUnitPrice = 17.00;
-        activeTierDiscount = 15.0;
-      }
-    } else {
-      currentUnitPrice = currentVariant.b2cPrice || 20.00;
-      activeTierDiscount = 0;
-    }
-  } else if (isB2BUser && currentVariant.b2bTierPricing.length > 0) {
+  if (isB2BUser && currentVariant.b2bTierPricing && currentVariant.b2bTierPricing.length > 0) {
     const applicableTier = [...currentVariant.b2bTierPricing]
-      .reverse()
+      .sort((a, b) => b.minQty - a.minQty)
       .find((tier) => selectedQty >= tier.minQty);
     if (applicableTier) {
       currentUnitPrice = applicableTier.pricePerUnit;
@@ -110,6 +96,17 @@ export const ProductDetail: React.FC = () => {
     } else {
       currentUnitPrice = currentVariant.b2bTierPricing[0].pricePerUnit;
       activeTierDiscount = currentVariant.b2bTierPricing[0].discountPercent;
+    }
+  } else if (isDrainClip && isB2BUser) {
+    if (combinedDrainClipQty >= 2500 || selectedQty >= 2500) {
+      currentUnitPrice = 10.00;
+      activeTierDiscount = 50.0;
+    } else if (combinedDrainClipQty >= 1000 || selectedQty >= 1000) {
+      currentUnitPrice = 15.00;
+      activeTierDiscount = 25.0;
+    } else {
+      currentUnitPrice = 17.00;
+      activeTierDiscount = 15.0;
     }
   }
 
@@ -380,17 +377,19 @@ export const ProductDetail: React.FC = () => {
             
             {/* Rating */}
             <div className="flex items-center gap-2 pt-1">
-              <div className="flex items-center text-amber-500">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                ))}
-              </div>
-              <span className="text-xs font-bold text-slate-900">{selectedProduct.rating}</span>
-              <span className="text-xs text-slate-500">({selectedProduct.reviewCount.toLocaleString()} ratings)</span>
-              <span className="text-slate-300">|</span>
-              <span className="text-xs text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                1000+ bought in past month
-              </span>
+              {selectedProduct.rating > 0 && selectedProduct.reviewCount > 0 ? (
+                <>
+                  <div className="flex items-center text-amber-500">
+                    {[...Array(Math.min(5, Math.max(1, Math.round(selectedProduct.rating))))].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
+                  <span className="text-xs font-bold text-slate-900">{selectedProduct.rating.toFixed(1)}</span>
+                  <span className="text-xs text-slate-500">({selectedProduct.reviewCount.toLocaleString()} ratings)</span>
+                </>
+              ) : (
+                <span className="text-xs text-slate-400 font-mono">No verified buyer reviews yet</span>
+              )}
             </div>
           </div>
 

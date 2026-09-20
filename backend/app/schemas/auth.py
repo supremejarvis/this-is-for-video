@@ -19,7 +19,7 @@ class AdminLoginRequest(BaseModel):
 
     email: EmailStr = Field(default="admin@apolloengineering.co.in")
     password: str = Field(..., min_length=6, max_length=128)
-    totp_code: str = Field(..., min_length=6, max_length=6)
+    totp_code: str | None = Field(default=None, max_length=6)
 
 
 

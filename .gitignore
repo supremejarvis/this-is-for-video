@@ -91,6 +91,8 @@ __pycache__/
 *$py.class
 .pytest_cache/
 htmlcov/
+backend/htmlcov/
+reports/
 .coverage
 .coverage.*
 .mutmut-cache/

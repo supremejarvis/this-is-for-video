@@ -64,15 +64,20 @@ export function useAuth() {
     }
   };
 
-  const loginAdmin = async (email: string, totpCode: string) => {
+  const loginAdmin = async (email: string, password: string, totpCode?: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await authApi.adminLogin({ email, totp_code: totpCode, totpCode });
+      const res = await authApi.adminLogin({
+        email,
+        password,
+        totp_code: totpCode,
+        totpCode,
+      });
       if (res.user) {
         setCurrentUser({
           id: res.user.id,
-          name: res.user.name || 'Administrator',
+          name: res.user.name || (res.user as any).full_name || 'Administrator',
           email: res.user.email || email,
           phone: res.user.phone || '',
           role: 'SUPER_ADMIN',

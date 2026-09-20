@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useStore } from '../store/useStore';
-import { INITIAL_ORDERS } from '../data/mockData';
+import { INITIAL_ORDERS, MOCK_PRODUCTS } from '../data/mockData';
 import { CartItem } from '../types';
 
 describe('Frontend Quality & E-Commerce Business Logic Test Suite', () => {
   beforeEach(() => {
-    // Reset Zustand store state before each test
+    // Reset Zustand store state with isolated test fixture data
     useStore.setState({
+      products: [...MOCK_PRODUCTS],
       cart: [],
       selectedProduct: null,
       orders: INITIAL_ORDERS,

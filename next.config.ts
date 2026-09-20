@@ -1,8 +1,8 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  output: process.env.DOCKER_BUILD === '1' ? 'standalone' : undefined,
   reactStrictMode: true,
-  serverExternalPackages: ['mongoose'],
   async rewrites() {
     const backendUrl = process.env.FASTAPI_BACKEND_URL || 'http://127.0.0.1:8000';
     return [

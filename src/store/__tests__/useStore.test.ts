@@ -1,11 +1,52 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useStore } from '../useStore';
 import { DeliveryAddress, CartItem } from '../../types';
+import { MOCK_PRODUCTS } from '../../data/mockData';
+import { ApiProduct } from '../../services/catalogService';
+
+const mockApiProducts: ApiProduct[] = MOCK_PRODUCTS.map(p => ({
+  id: p.asin,
+  sku_prefix: p.asin,
+  name: p.title,
+  description: p.description,
+  hsn_code: '73269099',
+  is_active: p.isLive,
+  is_archived: false,
+  version: 1,
+  created_at: p.createdAt || '2026-01-01T00:00:00Z',
+  updated_at: p.createdAt || '2026-01-01T00:00:00Z',
+  category: p.category,
+  image: p.variants[0]?.images?.[0] || '/logo.webp',
+  variants: p.variants.map(v => ({
+    id: v.sku,
+    product_id: p.asin,
+    sku: v.sku,
+    fit_mode: 'EXACT',
+    frame_thickness_mm: null,
+    min_thickness_mm: null,
+    max_thickness_mm: null,
+    display_label: v.title,
+    frame_thickness: '',
+    pack_size: 1,
+    is_active: true,
+    is_archived: false,
+    version: 1,
+    available_stock: v.inventory,
+    unit_price: v.b2cPrice,
+    tax_mode: 'GST_INCLUSIVE',
+    created_at: p.createdAt || '2026-01-01T00:00:00Z',
+  })),
+  rawProduct: p
+}));
 
 describe('Zustand State Store Actions & Order Workflow', () => {
   beforeEach(() => {
     useStore.getState().clearCart();
     useStore.getState().setAppMode('B2C');
+    useStore.setState({ 
+      products: JSON.parse(JSON.stringify(MOCK_PRODUCTS)),
+      apiCatalogProducts: JSON.parse(JSON.stringify(mockApiProducts))
+    });
   });
 
   it('initializes with default products and empty cart', () => {

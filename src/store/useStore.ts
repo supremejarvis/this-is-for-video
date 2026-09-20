@@ -1009,47 +1009,10 @@ const initialOrders: Order[] = DEFAULT_SAMPLE_ORDERS;
 const initialDeletedProductAsins: string[] = [];
 export const deletedProductAsinsSet = new Set<string>(initialDeletedProductAsins);
 
-// Deterministic server-safe catalog initialization
+// Deterministic server-safe catalog initialization (single source of truth in PostgreSQL)
 const initialProducts: Product[] = [];
 const initialWishlist: WishlistItem[] = [];
-const initialReviews = loadStored<ProductReview[]>('apollo_reviews', [
-  {
-    id: 'rev_001',
-    asin: LEGACY_ASIN_SPRINKLER,
-    userId: 'u_customer_b2c',
-    userName: 'Rajesh K. (Solar EPC Contractor)',
-    rating: 5,
-    title: 'Best SS304 Sprinkler for Solar Panel Cleaning',
-    body: 'Outstanding quality! The 180° water curtain is perfectly uniform. No shadow spots on panels. Using these across 50MW rooftop installations in Gujarat. Direct factory dispatch from Kathwada was super fast.',
-    isVerifiedPurchase: true,
-    helpfulCount: 24,
-    createdAt: '2026-07-15T10:30:00Z'
-  },
-  {
-    id: 'rev_002',
-    asin: LEGACY_ASIN_SPRINKLER,
-    userId: 'u_epc_procure',
-    userName: 'Nilesh P. (Plant Procurement Head)',
-    rating: 5,
-    title: 'Industrial grade quality at wholesale price',
-    body: 'We ordered 500 units for our EPC project. B2B pricing was excellent. The SS304 material is genuine — we tested with acid. 10-Year Rust-Proof Warranty gives confidence for large installations.',
-    isVerifiedPurchase: true,
-    helpfulCount: 18,
-    createdAt: '2026-08-02T14:20:00Z'
-  },
-  {
-    id: 'rev_003',
-    asin: LEGACY_ASIN_DRAINCLIPS,
-    userId: 'u_customer_b2c',
-    userName: 'Manish S. (Rooftop Owner)',
-    rating: 4,
-    title: 'Good drain clips, easy installation',
-    body: 'Clips fit perfectly on 35mm GI pipes. Installation took 10 minutes. Minor suggestion — include a small installation manual in the package.',
-    isVerifiedPurchase: true,
-    helpfulCount: 7,
-    createdAt: '2026-08-10T09:15:00Z'
-  }
-]);
+const initialReviews = loadStored<ProductReview[]>('apollo_reviews', []);
 const initialCoupons = loadStored<Coupon[]>('apollo_coupons', [
   {
     id: 'coup_001',
@@ -1337,12 +1300,14 @@ export function mapApiProductToProduct(ap: ApiProduct, existingProducts: Product
   const variants: ProductVariant[] = (ap.variants && ap.variants.length > 0)
     ? ap.variants.map((v) => {
         const matchingLocalV = pMatch?.variants?.find((lv: any) => lv.sku === v.sku || (v.frame_thickness_mm && lv.attributes?.size && parseFloat(lv.attributes.size) === Number(v.frame_thickness_mm)));
-        const price = (matchingLocalV?.b2cPrice !== undefined && matchingLocalV?.b2cPrice !== null)
-          ? matchingLocalV.b2cPrice
-          : (v.unit_price ?? 20);
-        const inv = (matchingLocalV?.inventory !== undefined && matchingLocalV?.inventory !== null)
-          ? matchingLocalV.inventory
-          : (v.available_stock ?? 100);
+        const rawBackendPrice = (v as any).b2c_price ?? v.unit_price;
+        const price = (rawBackendPrice !== undefined && rawBackendPrice !== null && !isNaN(Number(rawBackendPrice)))
+          ? Number(rawBackendPrice)
+          : (matchingLocalV?.b2cPrice ?? 20);
+        const rawBackendStock = v.available_stock;
+        const inv = (rawBackendStock !== undefined && rawBackendStock !== null && !isNaN(Number(rawBackendStock)))
+          ? Number(rawBackendStock)
+          : (matchingLocalV?.inventory ?? 100);
 
         return {
           sku: v.sku,
@@ -1383,86 +1348,62 @@ export function mapApiProductToProduct(ap: ApiProduct, existingProducts: Product
         }
       ]);
 
-  const sellerListings: Record<string, SellerListing[]> = pMatch?.sellerListings || {};
+  const sellerListings: Record<string, SellerListing[]> = {};
   variants.forEach((v) => {
-    if (!sellerListings[v.sku]) {
-      sellerListings[v.sku] = [
-        {
-          sellerId: 'seller_apollo_mfg',
-          sellerName: 'Apollo Engineering (Direct Factory Hub 382430)',
-          rating: 4.9,
-          ratingCount: 1850,
-          fulfillmentType: 'FBF',
-          price: v.b2cPrice || 20,
-          shippingFee: 0,
-          deliveryDays: 1,
-          stock: v.inventory || 50000,
-          isWinningBuyBox: true,
-          buyBoxScore: 98.5
-        }
-      ];
-    }
+    sellerListings[v.sku] = [
+      {
+        sellerId: 'seller_apollo_mfg',
+        sellerName: 'Apollo Engineering (Direct Factory Hub 382430)',
+        rating: 5.0,
+        ratingCount: 1,
+        fulfillmentType: 'FBF',
+        price: v.b2cPrice || 0,
+        shippingFee: 0,
+        deliveryDays: 1,
+        stock: v.inventory || 0,
+        isWinningBuyBox: true,
+        buyBoxScore: 100
+      }
+    ];
   });
 
   return {
     asin: assignedAsin,
-    title: pMatch?.title || ap.name,
-    brand: pMatch?.brand || ap.brand || 'Apollo Engineering',
+    title: ap.name,
+    brand: 'Apollo Engineering',
     category,
-    subCategory: pMatch?.subCategory || 'Solar Cleaning Hardware',
-    description: pMatch?.description || ap.description || `${ap.name} manufactured at Kathwada Factory Hub.`,
-    highlights: pMatch?.highlights || ap.highlights || [
+    subCategory: 'Solar Cleaning Hardware',
+    description: ap.description || `${ap.name} manufactured at Kathwada Factory Hub.`,
+    highlights: [
       'Direct Factory Dispatch from Kathwada GIDC (382430)',
       '100% Guaranteed Industrial Grade Quality',
       'GST Statutory Invoice Included with 18% ITC Support'
     ],
-    rating: pMatch?.rating || ap.rating || 4.9,
-    reviewCount: pMatch?.reviewCount || ap.reviewCount || 18,
     variants,
-    selectedVariantSku: variants[0]?.sku || 'SKU-01',
+    selectedVariantSku: variants[0]?.sku || '',
     sellerListings,
-    aPlusContent: pMatch?.aPlusContent || [],
-    badges: pMatch?.badges || (ap.badges as any) || ['PRIME', 'BEST_SELLER', 'ENTERPRISE_ASSURED'],
-    isLive: pMatch ? (pMatch.isLive !== false) : (ap.is_active !== false),
-    createdAt: pMatch?.createdAt || ap.created_at || new Date().toISOString(),
+    aPlusContent: [],
+    badges: ['PRIME', 'ENTERPRISE_ASSURED'],
+    rating: ap.rating || 0,
+    reviewCount: ap.reviewCount || 0,
+    isLive: ap.is_active && !ap.is_archived,
+    createdAt: ap.created_at || new Date().toISOString(),
     lastUpdated: new Date().toISOString()
   };
 }
 
-export function syncCatalogProducts(products: Product[], existingApi: ApiProduct[] = []): ApiProduct[] {
-  // When backend products exist, sync them with local products
+export function syncCatalogProducts(_products: Product[], existingApi: ApiProduct[] = []): ApiProduct[] {
+  // Authoritative PostgreSQL backend is the single source of truth
   if (existingApi && existingApi.length > 0) {
     const validBackendProducts: ApiProduct[] = [];
-    const matchedProductAsins = new Set<string>();
 
     for (const ap of existingApi) {
-      // Match UI presentation metadata (images, badges, reviews)
-      const pMatch = products.find(p => 
-        p.asin === ap.id || 
-        p.asin === ap.sku_prefix || 
-        (p.variants && p.variants.some(v => v.sku === ap.sku_prefix || v.sku.startsWith(ap.sku_prefix))) ||
-        (ap.sku_prefix === 'APE-SC' && p.asin === 'AP-DRAINCLIPS-02') ||
-        (ap.sku_prefix === 'AE-SPRINKLER' && p.asin === 'AP-SPRINKLER-01') ||
-        (ap.sku_prefix === 'AE-CLAMP-GI' && p.asin === 'AP-GICLAMP-03') ||
-        (ap.sku_prefix === 'AE-PIPE-FITTING' && p.asin === 'AP-FITTINGTEE-04') ||
-        (ap.sku_prefix === 'AE-PUMP-DC' && p.asin === 'AP-PUMP-06') ||
-        (ap.sku_prefix === 'AE-TIMER-AUTO' && p.asin === 'AP-TIMER-07') ||
-        (ap.sku_prefix === 'AE-KIT-FULL' && p.asin === 'AP-FULLKIT-05')
-      );
-
-      // Check if deleted by ID, SKU prefix, or mapped frontend ASIN
-      const isDeleted = !ap ||
-        deletedProductAsinsSet.has(ap.id) ||
-        deletedProductAsinsSet.has(ap.sku_prefix) ||
-        (pMatch && deletedProductAsinsSet.has(pMatch.asin));
-
-      if (isDeleted) {
+      if (!ap || ap.is_archived) {
         continue;
       }
 
-      if (pMatch) {
-        matchedProductAsins.add(pMatch.asin);
-      }
+      // Match corresponding product in _products if available
+      const matchingLocalProd = _products.find(p => p.asin === ap.id || (ap.rawProduct && ap.rawProduct.asin === p.asin) || p.asin === ap.sku_prefix);
 
       // Resolve high-resolution official WebP image
       let defaultImg = '/solar_sprinkler.webp';
@@ -1476,136 +1417,75 @@ export function syncCatalogProducts(products: Product[], existingApi: ApiProduct
       else if (cleanPrefix.includes('TIMER') || cleanName.includes('timer')) defaultImg = '/auto_timer.webp';
       else if (cleanPrefix.includes('KIT') || cleanName.includes('kit') || cleanName.includes('full set')) defaultImg = '/solar_cleaning_fullset.webp';
 
-      const primaryImg = (pMatch as any)?.image || pMatch?.variants?.[0]?.images?.[0] || pMatch?.aPlusContent?.[0]?.imageUrl || defaultImg;
-      const allImgs = pMatch?.variants?.flatMap(v => v.images || [])?.length ? pMatch.variants.flatMap(v => v.images || []) : [primaryImg];
+      const primaryImg = ap.image || defaultImg;
+      const allImgs = (ap.images && ap.images.length > 0) ? ap.images : [primaryImg];
 
-      const category = (cleanPrefix.includes('SC') || cleanName.includes('drain') || cleanPrefix.includes('SPRINKLER') || cleanName.includes('sprinkler')) ? 'SS304 GRADE' :
-                       (cleanPrefix.includes('CLAMP') || cleanPrefix.includes('GI') || cleanName.includes('gi ')) ? 'GI SERIES' :
-                       (cleanPrefix.includes('FITTING') || cleanPrefix.includes('PIPE') || cleanName.includes('fitting')) ? 'FITTING SERIES' :
-                       (cleanPrefix.includes('PUMP') || cleanName.includes('pump')) ? 'POWER SERIES' :
-                       (cleanPrefix.includes('TIMER') || cleanName.includes('timer')) ? 'CONTROL SERIES' :
-                       (cleanPrefix.includes('KIT') || cleanName.includes('kit')) ? 'COMPLETE KIT' : 'SS304 GRADE';
+      const category = matchingLocalProd?.category || (
+        (cleanPrefix.includes('SC') || cleanName.includes('drain') || cleanPrefix.includes('SPRINKLER') || cleanName.includes('sprinkler')) ? 'SS304 GRADE' :
+        (cleanPrefix.includes('CLAMP') || cleanPrefix.includes('GI') || cleanName.includes('gi ')) ? 'GI SERIES' :
+        (cleanPrefix.includes('FITTING') || cleanPrefix.includes('PIPE') || cleanName.includes('fitting')) ? 'FITTING SERIES' :
+        (cleanPrefix.includes('PUMP') || cleanName.includes('pump')) ? 'POWER SERIES' :
+        (cleanPrefix.includes('TIMER') || cleanName.includes('timer')) ? 'CONTROL SERIES' :
+        (cleanPrefix.includes('KIT') || cleanName.includes('kit')) ? 'COMPLETE KIT' : 'SS304 GRADE'
+      );
 
       const syncedVariants = (ap.variants || []).map(av => {
-        const matchingV = pMatch?.variants?.find(v =>
-          v.sku === av.sku ||
-          (av.frame_thickness_mm && v.attributes?.size && parseFloat(v.attributes.size) === Number(av.frame_thickness_mm))
-        ) || (pMatch?.variants?.length === 1 ? pMatch.variants[0] : undefined);
-        
-        // Respect admin-edited price and stock if set locally
-        const rawPrice = (matchingV?.b2cPrice !== undefined && matchingV?.b2cPrice !== null)
-          ? matchingV.b2cPrice
-          : (pMatch?.variants?.[0]?.b2cPrice !== undefined && pMatch?.variants?.[0]?.b2cPrice !== null
-              ? pMatch.variants[0].b2cPrice
-              : av.unit_price);
-        const parsedPrice = typeof rawPrice === 'number' ? rawPrice : (parseFloat(String(rawPrice)) || 20);
-
-        const stock = (matchingV?.inventory !== undefined && matchingV?.inventory !== null)
-          ? matchingV.inventory
-          : (pMatch?.variants?.[0]?.inventory !== undefined && pMatch?.variants?.[0]?.inventory !== null
-              ? pMatch.variants[0].inventory
-              : (typeof av.available_stock === 'number' ? av.available_stock : 100));
+        const matchingLocalVar = matchingLocalProd?.variants.find(v => v.sku === av.sku);
+        const rawPrice = matchingLocalVar?.b2cPrice ?? (av as any).b2c_price ?? av.unit_price ?? 0;
+        const parsedPrice = typeof rawPrice === 'number' ? rawPrice : (parseFloat(String(rawPrice)) || 0);
+        const stock = matchingLocalVar?.inventory ?? (typeof av.available_stock === 'number' ? av.available_stock : 0);
+        const tierPricing = matchingLocalVar?.b2bTierPricing || (av as any).b2b_tier_pricing || av.b2bTierPricing || [];
 
         return {
           ...av,
-          display_label: matchingV?.title || av.display_label || av.sku || 'Standard',
-          images: matchingV?.images || allImgs,
+          display_label: av.display_label || av.sku || 'Standard',
+          images: av.images && av.images.length > 0 ? av.images : allImgs,
           available_stock: stock,
-          unit_price: parsedPrice, // Authoritative price
-          mrp: matchingV?.mrp || Math.round(parsedPrice * 1.5),
-          b2bTierPricing: (matchingV?.b2bTierPricing && matchingV.b2bTierPricing.length > 0)
-            ? matchingV.b2bTierPricing
-            : (pMatch?.variants?.[0]?.b2bTierPricing || []),
-          weightGrams: matchingV?.weightGrams,
-          hsnCode: matchingV?.hsnCode || av.hsnCode || ap.hsn_code,
+          unit_price: parsedPrice,
+          mrp: av.mrp || Math.round(parsedPrice * 1.5),
+          b2bTierPricing: tierPricing,
+          weightGrams: av.weightGrams || (cleanPrefix.includes('SPRINKLER') ? 180 : 25),
+          hsnCode: av.hsnCode || ap.hsn_code || '73269099',
           tax_mode: av.tax_mode || 'GST_INCLUSIVE',
-          b2bMoq: pMatch?.b2bMoq || matchingV?.b2bMoq || 50,
+          b2bMoq: 50,
           b2cPrice: parsedPrice,
-          b2bPrice: matchingV?.b2bTierPricing?.[0]?.pricePerUnit || pMatch?.variants?.[0]?.b2bTierPricing?.[0]?.pricePerUnit || Math.round(parsedPrice * 0.72),
+          b2bPrice: (tierPricing && tierPricing[0]?.pricePerUnit) || Math.round(parsedPrice * 0.75),
         } as any;
       });
-
-      // Merge extra variants added by admin in pMatch that aren't yet in backend
-      const matchedSkus = new Set((ap.variants || []).map(av => av.sku));
-      const extraVariants = (pMatch?.variants || [])
-        .filter(mv => !matchedSkus.has(mv.sku))
-        .map(mv => ({
-          id: `${ap.id}-${mv.sku}`,
-          product_id: ap.id,
-          sku: mv.sku,
-          fit_mode: (mv.attributes?.size && mv.attributes.size.includes('mm')) ? 'EXACT' : 'NOT_APPLICABLE',
-          frame_thickness_mm: mv.attributes?.size ? parseFloat(mv.attributes.size) || null : null,
-          min_thickness_mm: null,
-          max_thickness_mm: null,
-          display_label: mv.title || `${pMatch?.title} (${mv.sku})`,
-          frame_thickness: mv.attributes?.size || 'Standard',
-          pack_size: mv.attributes?.packSize ? parseInt(mv.attributes.packSize.replace(/\D/g, '')) || 1 : 1,
-          is_active: true,
-          is_archived: false,
-          version: 1,
-          available_stock: mv.inventory ?? 100,
-          unit_price: mv.b2cPrice ?? 20,
-          mrp: mv.mrp || Math.round((mv.b2cPrice ?? 20) * 1.5),
-          b2bTierPricing: mv.b2bTierPricing || [],
-          images: mv.images || allImgs,
-          weightGrams: mv.weightGrams,
-          hsnCode: mv.hsnCode || ap.hsn_code,
-          tax_mode: 'GST_INCLUSIVE',
-          created_at: new Date().toISOString(),
-          b2bMoq: pMatch?.b2bMoq || mv.b2bMoq || 50,
-          b2cPrice: mv.b2cPrice ?? 20,
-          b2bPrice: mv.b2bTierPricing?.[0]?.pricePerUnit || Math.round((mv.b2cPrice ?? 20) * 0.72),
-        })) as any[];
 
       const converted: ApiProduct = {
         id: ap.id,
         sku_prefix: ap.sku_prefix,
-        name: pMatch?.title || ap.name,
-        description: pMatch?.description !== undefined ? pMatch.description : (ap.description || ''),
-        hsn_code: pMatch?.variants?.[0]?.hsnCode || ap.hsn_code || '73269099',
-        is_active: pMatch ? (pMatch.isLive !== false) : (ap.is_active ?? true),
-        is_archived: ap.is_archived || false,
+        name: matchingLocalProd?.title || ap.name,
+        description: matchingLocalProd?.description || ap.description || '',
+        hsn_code: ap.hsn_code || '73269099',
+        is_active: matchingLocalProd ? Boolean(matchingLocalProd.isLive) : ap.is_active,
+        is_archived: ap.is_archived,
         version: ap.version || 1,
         created_at: ap.created_at || new Date().toISOString(),
-        updated_at: pMatch?.lastUpdated || ap.updated_at || new Date().toISOString(),
-        category: pMatch?.category || category,
+        updated_at: ap.updated_at || new Date().toISOString(),
+        category,
         image: primaryImg,
         images: allImgs,
-        brand: pMatch?.brand || 'Apollo Engineering',
-        rating: pMatch?.rating || 4.9,
-        reviewCount: pMatch?.reviewCount || 340,
-        badges: pMatch?.badges || ['DIRECT_FACTORY', 'PRIME'],
-        highlights: pMatch?.highlights && pMatch.highlights.length > 0 ? pMatch.highlights : [
+        brand: 'Apollo Engineering',
+        badges: ['PRIME', 'ENTERPRISE_ASSURED'],
+        highlights: [
           'Direct Factory Dispatch from Kathwada GIDC (382430)',
           '100% Guaranteed Industrial Grade Quality',
           'GST Statutory Invoice Included with 18% ITC Support'
         ],
-        rawProduct: pMatch || undefined,
-        variants: [...syncedVariants, ...extraVariants]
+        variants: syncedVariants,
+        rawProduct: matchingLocalProd || ap.rawProduct
       };
 
       validBackendProducts.push(converted);
     }
 
-    // Merge any products added by Admin that do not exist in backend yet
-    for (const p of products) {
-      if (!p || !p.asin || matchedProductAsins.has(p.asin) || deletedProductAsinsSet.has(p.asin)) {
-        continue;
-      }
-      validBackendProducts.push(mapProductToApiProduct(p, 1, ['NEW_LAUNCH']));
-    }
-
     return validBackendProducts;
   }
 
-  // Fallback offline catalog from stored products
-  const apiMap = new Map<string, ApiProduct>();
-  products.forEach(p => {
-    if (!p || !p.asin || deletedProductAsinsSet.has(p.asin)) return;
-    apiMap.set(p.asin, mapProductToApiProduct(p, 340, []));
-  });
-
-  return Array.from(apiMap.values());
+  // If backend catalog has zero products, return empty array — NEVER substitute demo products
+  return [];
 }
 
 let catalogBroadcastChannel: BroadcastChannel | null = null;
@@ -2129,128 +2009,135 @@ selectProductVariant: (asin, sku) => {
       }).catch(() => {});
     }
   },
-  addNewProduct: (newProd) => {
-    const existing = get().products.filter(p => p.asin !== newProd.asin);
-    const updated = [newProd, ...existing];
-    const catalogState = commitCatalogProductsUpdate(
-      updated,
-      get().selectedProduct,
-      get().apiCatalogProducts,
-      newProd.asin
-    );
-    set(catalogState);
-    get().showToast(`Product ASIN ${newProd.asin} published live to Apollo catalog`, 'success');
-
-    // Attempt background persistence with FastAPI backend
+  addNewProduct: async (newProd) => {
     const primaryV = newProd.variants?.[0];
-    catalogApi.createProduct({
-      sku_prefix: primaryV?.sku?.split('-').slice(0, 2).join('-') || newProd.asin,
-      name: newProd.title,
-      description: newProd.description || '',
-      hsn_code: primaryV?.hsnCode || '73269099',
-      is_active: newProd.isLive !== false,
-      variants: (newProd.variants || []).map(v => ({
-        sku: v.sku,
-        fit_mode: (v.attributes?.size && v.attributes.size.includes('mm')) ? 'EXACT' : 'NOT_APPLICABLE',
-        frame_thickness_mm: v.attributes?.size ? parseFloat(v.attributes.size) || null : null,
-        display_label: v.title || `${newProd.title} (${v.sku})`,
+    const rawPrefix = primaryV?.sku?.split('-').slice(0, 2).join('-') || newProd.asin.replace(/[^a-zA-Z0-9_-]/g, '');
+    const cleanPrefix = rawPrefix.slice(0, 48).toUpperCase();
+
+    // Clean variants matching backend ProductVariantCreate schema (extra="forbid")
+    const backendVariants = (newProd.variants || []).map((v, idx) => {
+      const isExact = !!(v.attributes?.size && v.attributes.size.includes('mm'));
+      const thickness = isExact ? parseFloat(v.attributes?.size || '') || null : null;
+      return {
+        sku: (v.sku || `${cleanPrefix}-${idx + 1}`).slice(0, 50).toUpperCase(),
+        fit_mode: isExact && thickness ? 'EXACT' : 'NOT_APPLICABLE',
+        frame_thickness_mm: isExact && thickness ? thickness : null,
+        display_label: (v.title || `${newProd.title} (${v.sku})`).slice(0, 100),
+        frame_thickness: v.attributes?.size || 'Standard',
         pack_size: 1,
-        available_stock: v.inventory ?? 100,
-        unit_price: v.b2cPrice ?? 20,
-      } as any))
-    }).then(() => {
-      get().fetchApiCatalog();
-    }).catch(() => {});
+        initial_stock: v.inventory ?? 0,
+      };
+    });
+
+    try {
+      const created = await catalogApi.createProduct({
+        sku_prefix: cleanPrefix,
+        name: newProd.title,
+        description: newProd.description || '',
+        hsn_code: primaryV?.hsnCode || '73269099',
+        variants: backendVariants as any,
+        is_active: newProd.isLive !== false
+      });
+
+      if (created && created.id) {
+        const b2cPrice = primaryV?.b2cPrice ?? 0;
+        const b2bTiers = primaryV?.b2bTierPricing && primaryV.b2bTierPricing.length > 0
+          ? primaryV.b2bTierPricing
+          : [{ minQty: 50, pricePerUnit: Math.round(b2cPrice * 0.75) }];
+
+        await catalogApi.updateProduct(created.id, {
+          name: newProd.title,
+          description: newProd.description || '',
+          hsn_code: primaryV?.hsnCode || '73269099',
+          is_active: newProd.isLive !== false,
+          version: created.version || 1,
+          b2c_price: b2cPrice,
+          b2b_tier_pricing: b2bTiers,
+          inventory_stock: primaryV?.inventory ?? 0
+        } as any);
+
+        get().showToast(`Product ${newProd.title} created successfully in authoritative catalog`, 'success');
+      }
+      await get().fetchApiCatalog();
+    } catch (err: any) {
+      console.error('Backend product creation error:', err);
+      get().showToast(err?.message || 'Failed to create product in backend catalog.', 'error');
+    }
   },
-  updateProduct: (asin, updates) => {
-    const updated = get().products.map((p) => p.asin === asin ? { ...p, ...updates } : p);
+  updateProduct: async (asin, updates) => {
+    // 1. Optimistically update local products & apiCatalogProducts immediately
+    const updated = get().products.map((p) => (p.asin === asin ? { ...p, ...updates } : p));
     const catalogState = commitCatalogProductsUpdate(
       updated,
       get().selectedProduct,
       get().apiCatalogProducts,
       asin
     );
-    // Recalculate cart items immediately if pricing or tiers updated
-    const revaluedCart = recalculateCartVolumeTiers(get().cart, get().appMode, updated);
-    saveSessionCart(revaluedCart);
-    set({ ...catalogState, cart: revaluedCart });
-    get().showToast(`Product ${asin} updated successfully`, 'success');
+    set(catalogState);
 
-    // Background sync to backend if backend product exists
-    const matchingBackend = get().apiCatalogProducts.find(p => p.id === asin || p.sku_prefix === asin || p.rawProduct?.asin === asin);
-    if (matchingBackend && matchingBackend.id) {
-      catalogApi.updateProduct(matchingBackend.id, {
-        name: updates.title || matchingBackend.name,
-        description: updates.description || matchingBackend.description,
-        is_active: updates.isLive !== undefined ? updates.isLive : matchingBackend.is_active,
-        version: matchingBackend.version || 1,
-      }).then(() => {
-        get().fetchApiCatalog();
-      }).catch(() => {});
-    }
-  },
-  deleteProduct: (asin) => {
-    // 1. Record deleted ASIN to persistent set & storage
-    deletedProductAsinsSet.add(asin);
-
-    // Cross-map known ASINs to backend sku_prefix
-    const asinToBackendPrefix: Record<string, string> = {
-      'AP-SPRINKLER-01': 'AE-SPRINKLER',
-      'AP-DRAINCLIPS-02': 'APE-SC',
-      'AP-GICLAMP-03': 'AE-CLAMP-GI',
-      'AP-FITTINGTEE-04': 'AE-PIPE-FITTING',
-      'AP-PUMP-06': 'AE-PUMP-DC',
-      'AP-TIMER-07': 'AE-TIMER-AUTO',
-      'AP-FULLKIT-05': 'AE-KIT-FULL',
-    };
-    const mappedPrefix = asinToBackendPrefix[asin];
-    if (mappedPrefix) {
-      deletedProductAsinsSet.add(mappedPrefix);
-    }
-
-    // Find any backend product in apiCatalogProducts that matches this asin or prefix
-    const matchingBackendProds = get().apiCatalogProducts.filter(p =>
+    // 2. Identify backend catalog product and sync to authoritative FastAPI backend
+    const matchingBackend = get().apiCatalogProducts.find(p =>
       p.id === asin ||
       p.sku_prefix === asin ||
-      p.rawProduct?.asin === asin ||
-      (mappedPrefix && (p.sku_prefix === mappedPrefix || p.id === mappedPrefix))
+      (p.rawProduct && p.rawProduct.asin === asin) ||
+      (p.variants && p.variants.some(v => v.sku === asin || v.sku.startsWith(asin)))
     );
-    matchingBackendProds.forEach(p => {
-      deletedProductAsinsSet.add(p.id);
-      deletedProductAsinsSet.add(p.sku_prefix);
-      catalogApi.archiveProduct(p.id).then(() => {
-        get().fetchApiCatalog();
-      }).catch(() => {});
-    });
 
-    const deletedList = loadStored<string[]>('apollo_deleted_products', []);
-    Array.from(deletedProductAsinsSet).forEach(item => {
-      if (!deletedList.includes(item)) deletedList.push(item);
-    });
-    saveStored('apollo_deleted_products', deletedList);
+    if (matchingBackend && matchingBackend.id) {
+      const primaryUpdatedV = updates.variants?.[0];
+      const payload: Record<string, any> = {
+        name: updates.title || matchingBackend.name,
+        description: updates.description !== undefined ? updates.description : matchingBackend.description,
+        is_active: updates.isLive !== undefined ? updates.isLive : matchingBackend.is_active,
+        version: matchingBackend.version || 1,
+      };
 
-    // 2. Remove from products
-    const updated = get().products.filter((p) => p.asin !== asin);
-    saveStored('apollo_products', updated);
-    broadcastCatalogUpdate(updated);
+      if (primaryUpdatedV?.hsnCode) payload.hsn_code = primaryUpdatedV.hsnCode;
+      if (primaryUpdatedV?.b2cPrice !== undefined) payload.b2c_price = primaryUpdatedV.b2cPrice;
+      if (primaryUpdatedV?.b2bTierPricing) payload.b2b_tier_pricing = primaryUpdatedV.b2bTierPricing;
+      if (primaryUpdatedV?.inventory !== undefined) payload.inventory_stock = primaryUpdatedV.inventory;
 
-    // 3. Clear selected product if it was deleted
+      try {
+        await catalogApi.updateProduct(matchingBackend.id, payload as any);
+        get().showToast(`Product ${updates.title || matchingBackend.name} updated in backend catalog.`, 'success');
+        await get().fetchApiCatalog();
+      } catch (err: any) {
+        console.error('Backend product update error:', err);
+      }
+    }
+  },
+  deleteProduct: async (asin) => {
+    const matchingBackend = get().apiCatalogProducts.find(p =>
+      p.id === asin ||
+      p.sku_prefix === asin ||
+      (p.rawProduct && p.rawProduct.asin === asin) ||
+      (p.variants && p.variants.some(v => v.sku === asin || v.sku.startsWith(asin)))
+    );
+
+    // 1. Optimistically delete from both products and apiCatalogProducts
+    const filteredProducts = get().products.filter(p => p.asin !== asin);
+    const filteredApi = get().apiCatalogProducts.filter(p => p.id !== asin && p.rawProduct?.asin !== asin && p.sku_prefix !== asin);
     const currSelected = get().selectedProduct;
-    const updatedSelected = (currSelected && (currSelected.asin === asin || (currSelected as any).id === asin)) ? null : currSelected;
+    const newSelected = (currSelected && (currSelected.asin === asin || (currSelected as any).id === asin)) ? null : currSelected;
 
-    // 4. Remove comprehensively from apiCatalogProducts via syncCatalogProducts
-    const remainingApi = get().apiCatalogProducts.filter(p =>
-      p.id !== asin &&
-      p.sku_prefix !== asin &&
-      p.rawProduct?.asin !== asin &&
-      (!mappedPrefix || (p.sku_prefix !== mappedPrefix && p.id !== mappedPrefix)) &&
-      !deletedProductAsinsSet.has(p.id) &&
-      !deletedProductAsinsSet.has(p.sku_prefix)
-    );
-    const updatedApi = syncCatalogProducts(updated, remainingApi);
+    set({
+      products: filteredProducts,
+      apiCatalogProducts: filteredApi,
+      selectedProduct: newSelected
+    });
+    saveStored('apollo_products', filteredProducts);
+    broadcastCatalogUpdate(filteredProducts);
 
-    set({ products: updated, selectedProduct: updatedSelected, apiCatalogProducts: updatedApi });
-    get().showToast(`Product ASIN ${asin} deleted from catalog`, 'info');
+    // 2. Archive on authoritative FastAPI backend
+    if (matchingBackend && matchingBackend.id) {
+      try {
+        await catalogApi.archiveProduct(matchingBackend.id);
+        get().showToast(`Product ${matchingBackend.name} archived successfully.`, 'success');
+        await get().fetchApiCatalog();
+      } catch (err: any) {
+        console.error('Backend product archive error:', err);
+      }
+    }
   },
   updateVariantDetails: (asin, sku, updates) => {
     const validUpdateKeys = new Set([
@@ -2567,7 +2454,7 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       const apiVariant = apiProduct?.variants?.find((v) => v.sku === itemData.sku);
 
       // Resolve available inventory (support both inventory and available_stock fields)
-      const availableStock = productVariant?.inventory ?? (apiVariant as any)?.available_stock ?? 1000;
+      const availableStock = productVariant?.inventory ?? (apiVariant as any)?.available_stock ?? 50000;
 
       const checkTotalQty = existingQty + effectiveAddQty;
       if (availableStock < checkTotalQty) {
@@ -2747,10 +2634,10 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
     try {
       const prods = await catalogApi.getCatalog();
       if (prods && prods.length > 0) {
-        const merged = syncCatalogProducts(get().products, prods);
-        const frontendProducts = merged.map((ap) => mapApiProductToProduct(ap, get().products));
+        const synced = syncCatalogProducts([], prods);
+        const frontendProducts = synced.map((ap) => mapApiProductToProduct(ap));
         set({
-          apiCatalogProducts: merged,
+          apiCatalogProducts: synced,
           products: frontendProducts,
           apiCatalogLoading: false,
           apiCatalogError: null,
@@ -2758,22 +2645,22 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
         saveStored('apollo_products', frontendProducts);
         broadcastCatalogUpdate(frontendProducts);
       } else {
-        // Backend returned empty catalog
-        set({ apiCatalogProducts: [], apiCatalogLoading: false, apiCatalogError: null });
+        // Backend returned empty catalog — show clean empty state, NEVER demo catalog
+        set({ 
+          apiCatalogProducts: [], 
+          products: [], 
+          apiCatalogLoading: false, 
+          apiCatalogError: null 
+        });
+        saveStored('apollo_products', []);
+        broadcastCatalogUpdate([]);
       }
     } catch {
-      // Backend unreachable — keep existing catalog products if any, show error
-      const existing = get().apiCatalogProducts;
-      set({ apiCatalogLoading: false, apiCatalogError: 'Backend catalog service unavailable. Showing cached products.' });
-      if (existing.length === 0) {
-        // Try to build from locally stored products
-        const localProducts = get().products;
-        if (localProducts.length > 0) {
-          const merged = syncCatalogProducts(localProducts, []);
-          const frontendProducts = merged.map((ap) => mapApiProductToProduct(ap, localProducts));
-          set({ apiCatalogProducts: merged, products: frontendProducts });
-        }
-      }
+      // Backend unreachable — show explicit error state, NEVER fallback to mock products
+      set({ 
+        apiCatalogLoading: false, 
+        apiCatalogError: 'Backend catalog service unavailable. Please check your network connection and retry.' 
+      });
     }
   },
 

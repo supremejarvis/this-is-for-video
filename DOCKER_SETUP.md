@@ -1,153 +1,124 @@
-# Apollo E-Commerce Docker Setup
+# 🏛️ Apollo Engineering Docker Containerization Setup
 
-## Quick Start
+Comprehensive guide for containerizing and running the Apollo Engineering E-Commerce platform using Docker and Docker Compose.
 
-### Development (with hot reload)
+---
+
+## ⚡ Quick Start
+
+### 1. Development Mode (with Live Hot Reload)
 
 ```bash
-docker compose -f docker-compose.dev.yml up --pull always
+docker compose -f docker-compose.dev.yml up --build
 ```
 
-Access:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- PostgreSQL: localhost:5432
+**Access Endpoints:**
+- 🌐 **Frontend (Next.js 15 Dev)**: [http://localhost:3000](http://localhost:3000)
+- 🚀 **Backend API (FastAPI)**: [http://localhost:8000](http://localhost:8000)
+- 📖 **Interactive API Docs**: [http://localhost:8000/api/v1/docs](http://localhost:8000/api/v1/docs)
+- 🗄️ **PostgreSQL 16**: `localhost:5432` (`user: postgres`, `db: apollo_dev`)
 
-### Production
+---
 
-1. Create `.env` file:
+### 2. Production Mode
+
+1. **Configure Environment:**
+   ```bash
+   cp .env.example .env
+   # Ensure POSTGRES_PASSWORD and SECRET_KEY are configured
+   ```
+
+2. **Build and Launch All Containers:**
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. **Check Container Status:**
+   ```bash
+   docker compose ps
+   docker compose logs -f backend
+   ```
+
+---
+
+## 📦 Container Specifications
+
+### 🚀 Backend Container (`backend/Dockerfile`)
+- **Base Image**: `python:3.12-slim` (Multi-stage build)
+- **Port**: `8000`
+- **Security**: Non-root user `appuser` (UID `1001`)
+- **Key Enhancements**:
+  - Pre-compiled wheels in builder stage for fast layer caching.
+  - Debian Bookworm base guarantees pre-compiled wheels for `asyncpg`, `uvloop`, `argon2-cffi`, and `pydantic-core`.
+  - **Alembic Entrypoint (`docker-entrypoint.sh`)**: Automatically waits for PostgreSQL socket readiness and executes `alembic upgrade head` before Uvicorn startup.
+  - **Healthcheck**: Real-time probe against `http://localhost:8000/api/v1/health`.
+
+### 🌐 Frontend Container (`Dockerfile`)
+- **Base Image**: `node:22-alpine` (Multi-stage standalone build)
+- **Port**: `3000` (Mapped to `80:3000` and `3000:3000`)
+- **Security**: Non-root user `nextjs` (UID `1001`)
+- **Key Enhancements**:
+  - Leverages Next.js 15 `output: 'standalone'` bundling.
+  - Eliminates bulky `node_modules` in final production image (~120MB total footprint).
+  - Preserves SSR, Next.js App Router dynamic routes, and API rewrites to `FASTAPI_BACKEND_URL`.
+  - **Healthcheck**: Probes root URL `http://localhost:3000/`.
+
+### 🗄️ Database Container (`postgres:16-alpine`)
+- **Base Image**: `postgres:16-alpine`
+- **Port**: `5432`
+- **Persistence**: Named volume `postgres_data`
+- **Initialization**: Automatically mounts `setup_postgres_constraints.sql` into `/docker-entrypoint-initdb.d/`.
+
+---
+
+## 🛠️ Standalone Docker Build Commands
+
+### Build Backend Individually:
 ```bash
-cp .env.example .env
-# Edit .env and set required values (POSTGRES_PASSWORD, etc.)
+cd backend
+docker build -t apollo-backend:latest .
 ```
 
-2. Build and run:
+### Run Backend Standalone:
 ```bash
-docker compose up --pull always -d
+docker run -d \
+  --name apollo_backend \
+  -p 8000:8000 \
+  -e DATABASE_URL="postgresql+asyncpg://postgres:password@host.docker.internal:5432/apollo" \
+  apollo-backend:latest
 ```
 
-Access:
-- Frontend + API: http://localhost
-- PostgreSQL: localhost:5432
-
-## Image Specs
-
-### Frontend (Nginx)
-- **Base**: node:22-alpine (builder) → nginx:alpine
-- **Size**: ~45MB
-- **Port**: 80
-- **Features**:
-  - Multi-stage build (strips node runtime)
-  - Gzip compression
-  - 1-year cache for static assets
-  - API proxy to backend
-  - SPA routing (all routes → index.html)
-  - Security headers (CORS, X-Frame-Options, CSP)
-  - Health check: HTTP GET /index.html
-
-### Backend (FastAPI)
-- **Base**: python:3.12-alpine (builder) → python:3.12-alpine
-- **Size**: ~180MB
-- **Port**: 8000
-- **Features**:
-  - Multi-stage build (pre-compiled wheels for faster installs)
-  - Non-root user (uid 1001)
-  - Async PostgreSQL driver (asyncpg)
-  - Health check: HTTP GET /docs
-  - Hot reload in dev, optimized start in prod
-
-### Database (PostgreSQL)
-- **Image**: postgres:16-alpine
-- **Port**: 5432
-- **Dev**: tmpfs (ephemeral)
-- **Prod**: Named volume (`postgres_data`) for persistence
-
-## Environment Variables
-
-### Backend (docker-compose.yml)
-```
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=<generate-strong-password>
-POSTGRES_DB=apollo
-DATABASE_URL=postgresql+asyncpg://postgres:<password>@postgres:5432/apollo
-```
-
-### Frontend (docker-compose.yml)
-```
-BACKEND_URL=http://backend:8000
-VITE_API_URL=<production-api-url>
-GEMINI_API_KEY=<your-key>
-```
-
-## Build & Push to Registry
-
-Images are built and pushed via GitHub Actions on push to `main` or `develop` branches.
-
-Registry: `ghcr.io/<owner>/<repo>`
-
-Tag format:
-- `main` → `ghcr.io/...:<branch>`
-- Semantic versioning (Git tags) → `ghcr.io/.../v1.0.0`
-- PR commits → `ghcr.io/...:<sha>`
-
-**Manual build:**
+### Build Frontend Individually:
 ```bash
-# Frontend
 docker build -t apollo-frontend:latest .
-
-# Backend
-docker build -t apollo-backend:latest -f backend/Dockerfile .
 ```
 
-## Optimization Details
-
-### Layer Caching
-- Frontend: Separate `package*.json` copy before source (cache hits if deps unchanged)
-- Backend: Pre-compiled wheels in builder stage (single install in runtime)
-
-### Security
-- Non-root user in backend
-- Security headers in nginx
-- Health checks for all services
-- No secrets baked into images (use .env / secrets management)
-
-### Networking
-- Bridge network `apollo-network` (prod) / `apollo-dev-network` (dev)
-- Backend/Frontend communicate via service DNS (`http://backend:8000`)
-- All services on same network for zero-config discovery
-
-## Testing
-
-Run via GitHub Actions (`.github/workflows/docker-build-push.yml`):
-- Backend: pytest with coverage
-- Frontend: Vitest + Playwright E2E
-- Coverage reports uploaded to Codecov
-
-Local test run:
+### Run Frontend Standalone:
 ```bash
-npm run test:unit
-npm run test:e2e
-cd backend && pytest tests/
+docker run -d \
+  --name apollo_frontend \
+  -p 3000:3000 \
+  -e FASTAPI_BACKEND_URL="http://host.docker.internal:8000" \
+  apollo-frontend:latest
 ```
 
-## Troubleshooting
+---
 
-**Backend won't connect to DB:**
-```bash
-docker logs apollo_backend_prod
-# Check DATABASE_URL in .env
-# Verify postgres is healthy: docker ps | grep postgres
-```
+## 🔍 Troubleshooting & Logs
 
-**Frontend can't reach backend:**
-```bash
-# Dev: API proxy is localhost:8000 (set in vite.config.ts)
-# Prod: Nginx proxy is http://backend:8000 (nginx.conf)
-```
-
-**Clean slate:**
-```bash
-docker compose down -v  # Remove volumes
-docker system prune -a  # Remove dangling images
-```
-
+- **Inspect Backend Logs:**
+  ```bash
+  docker logs -f apollo_backend_prod
+  ```
+- **Inspect Frontend Logs:**
+  ```bash
+  docker logs -f apollo_frontend_prod
+  ```
+- **Inspect PostgreSQL Logs:**
+  ```bash
+  docker logs -f apollo_postgres_prod
+  ```
+- **Stop and Reset Volumes (Clean Slate):**
+  ```bash
+  docker compose down -v
+  ```

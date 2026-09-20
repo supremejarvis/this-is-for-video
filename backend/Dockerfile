@@ -1,48 +1,75 @@
-# Multi-stage build for FastAPI backend
-FROM python:3.12-alpine AS builder
+# ==============================================================================
+# 🏛️ Apollo Engineering - FastAPI Production Backend Container
+# Multi-stage build with Debian Slim, non-root security user & Alembic entrypoint
+# ==============================================================================
+
+# Stage 1: Build Dependencies & Pre-compiled Wheels
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache gcc musl-dev postgresql-dev
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Copy requirements
-COPY backend/requirements.txt .
+# Install minimal build tools for C-extensions (asyncpg, argon2-cffi, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create wheels (pre-compiled packages) for faster installs
-RUN pip install --no-cache-dir --upgrade pip wheel && \
-    pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
+# Copy dependency definition
+COPY requirements.txt .
 
-# Runtime stage
-FROM python:3.12-alpine
+# Install Python packages into isolated user directory
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --user -r requirements.txt
+
+# ==============================================================================
+# Stage 2: Minimal Production Runtime
+# ==============================================================================
+FROM python:3.12-slim AS runtime
 
 WORKDIR /app
 
-# Install runtime dependencies
-RUN apk add --no-cache postgresql-client
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/home/appuser/.local/bin:$PATH" \
+    PYTHONPATH=/app
 
-# Copy wheels from builder
-COPY --from=builder /app/wheels /wheels
+# Install runtime PostgreSQL client library & curl
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install packages from wheels
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir /wheels/*
+# Create secure non-root user (UID 1001)
+RUN useradd -u 1001 -m -s /bin/bash appuser
 
-# Copy application code
-COPY backend/app ./app
-COPY backend/alembic ./alembic
-COPY backend/alembic.ini .
+# Copy installed packages from builder stage
+COPY --from=builder /root/.local /home/appuser/.local
 
-# Create non-root user
-RUN addgroup -g 1001 appgroup && adduser -D -u 1001 -G appgroup appuser
+# Copy application source, migrations and entrypoint script
+COPY app ./app
+COPY alembic ./alembic
+COPY alembic.ini .
+COPY docker-entrypoint.sh .
+
+# Ensure entrypoint is executable and appuser owns application directory
+RUN chmod +x docker-entrypoint.sh && \
+    chown -R appuser:appuser /app /home/appuser
+
+# Switch to non-root user
 USER appuser
 
-# Expose port
+# Expose FastAPI listening port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')" || exit 1
+# Authoritative Healthcheck (pings live /api/v1/health endpoint)
+HEALTHCHECK --interval=20s --timeout=5s --start-period=15s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')" || exit 1
 
-# Start FastAPI
+# Execute database migration entrypoint before launching Uvicorn
+ENTRYPOINT ["./docker-entrypoint.sh"]
+
+# Default start command for FastAPI server
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

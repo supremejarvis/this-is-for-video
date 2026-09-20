@@ -25,22 +25,25 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: apollo_backend_prod
     restart: always
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-apollo}
       PYTHONUNBUFFERED: 1
+      HOST: 0.0.0.0
+      PORT: 8000
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
-      interval: 30s
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 20s
       timeout: 5s
+      start_period: 15s
       retries: 3
     networks:
       - apollo-network
@@ -52,15 +55,20 @@ services:
     container_name: apollo_frontend_prod
     restart: always
     ports:
-      - "80:80"
+      - "3000:3000"
+      - "80:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
-      BACKEND_URL: http://backend:8000
+      FASTAPI_BACKEND_URL: http://backend:8000
+      NODE_ENV: production
+      PORT: 3000
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/index.html"]
-      interval: 30s
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 20s
       timeout: 5s
+      start_period: 10s
       retries: 3
     networks:
       - apollo-network

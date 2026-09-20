@@ -1,52 +1,110 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongoose';
-import { Inquiry } from '@/models/Inquiry';
+import fs from 'fs';
+import path from 'path';
+
+export interface InquiryRecord {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  companyName?: string;
+  gstin?: string;
+  solarCapacityKw?: number;
+  pincode: string;
+  city?: string;
+  state?: string;
+  message?: string;
+  inquiryType: 'SOLAR_CONTRACTOR' | 'BULK_PURCHASE' | 'GENERAL_INQUIRY' | 'SIZE_VERIFICATION';
+  status: 'NEW' | 'CONTACTED' | 'QUOTED' | 'CLOSED';
+  createdAt: string;
+  updatedAt: string;
+}
+
+const INQUIRIES_FILE = path.join(process.cwd(), '.planning', 'inquiries.json');
+
+function loadInquiries(): InquiryRecord[] {
+  try {
+    if (fs.existsSync(INQUIRIES_FILE)) {
+      const data = fs.readFileSync(INQUIRIES_FILE, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch {
+    // Fallback to empty list on read error
+  }
+  return [];
+}
+
+function saveInquiries(inquiries: InquiryRecord[]): void {
+  try {
+    const dir = path.dirname(INQUIRIES_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(INQUIRIES_FILE, JSON.stringify(inquiries.slice(0, 500), null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Failed to persist inquiry:', err);
+  }
+}
 
 export async function GET() {
-  try {
-    await connectToDatabase();
-    const inquiries = await Inquiry.find({}).sort({ createdAt: -1 }).limit(50).lean();
-    return NextResponse.json({
-      success: true,
-      count: inquiries.length,
-      data: inquiries,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error?.message || 'Failed to connect to MongoDB / retrieve inquiries',
-        timestamp: new Date().toISOString(),
-      },
-      { status: 500 }
-    );
-  }
+  const inquiries = loadInquiries();
+  return NextResponse.json({
+    success: true,
+    count: inquiries.length,
+    data: inquiries,
+    timestamp: new Date().toISOString(),
+  });
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    await connectToDatabase();
 
-    const newInquiry = await Inquiry.create({
-      name: body.name,
-      phone: body.phone,
-      email: body.email || '',
-      companyName: body.companyName || '',
-      gstin: body.gstin || '',
+    // Validation
+    const name = String(body.name || '').trim();
+    const phone = String(body.phone || '').replace(/\D/g, '');
+    const pincode = String(body.pincode || '').trim();
+
+    if (!name || name.length < 2) {
+      return NextResponse.json(
+        { success: false, error: 'Full name must be at least 2 characters.' },
+        { status: 400 }
+      );
+    }
+
+    if (phone.length < 10) {
+      return NextResponse.json(
+        { success: false, error: 'Please enter a valid 10-digit Indian mobile number.' },
+        { status: 400 }
+      );
+    }
+
+    const newInquiry: InquiryRecord = {
+      id: `INQ-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+      name,
+      phone,
+      email: body.email ? String(body.email).trim() : '',
+      companyName: body.companyName ? String(body.companyName).trim() : '',
+      gstin: body.gstin ? String(body.gstin).trim().toUpperCase() : '',
       solarCapacityKw: Number(body.solarCapacityKw || 0),
-      pincode: body.pincode,
-      city: body.city || '',
-      state: body.state || '',
-      message: body.message || '',
+      pincode: pincode || '382430',
+      city: body.city ? String(body.city).trim() : '',
+      state: body.state ? String(body.state).trim() : '',
+      message: body.message ? String(body.message).trim() : '',
       inquiryType: body.inquiryType || 'GENERAL_INQUIRY',
-    });
+      status: 'NEW',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const inquiries = loadInquiries();
+    inquiries.unshift(newInquiry);
+    saveInquiries(inquiries);
 
     return NextResponse.json(
       {
         success: true,
-        message: 'Inquiry submitted successfully via Mongoose',
+        message: 'Inquiry registered successfully in Apollo Engineering Call Desk queue.',
         data: newInquiry,
         timestamp: new Date().toISOString(),
       },
@@ -56,7 +114,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || 'Failed to submit inquiry via Mongoose',
+        error: error?.message || 'Failed to submit inquiry',
         timestamp: new Date().toISOString(),
       },
       { status: 400 }

@@ -92,13 +92,19 @@ async def verify_csrf(
         )
 
 
-def require_roles(allowed_roles: list[UserRole]) -> Callable[..., Any]:
+def require_roles(*allowed_roles: UserRole | list[UserRole] | Sequence[UserRole]) -> Callable[..., Any]:
     """RBAC Guard: Enforce that authenticated user possesses one of the authorized roles."""
+    flat_roles: list[UserRole] = []
+    for r in allowed_roles:
+        if isinstance(r, (list, tuple, set)):
+            flat_roles.extend(r)
+        else:
+            flat_roles.append(r)
 
     async def role_checker(
         user: Annotated[User, Depends(get_current_user)],
     ) -> User:
-        if user.role not in allowed_roles:
+        if user.role not in flat_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Forbidden: Insufficient privileges for role {user.role}.",

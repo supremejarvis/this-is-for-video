@@ -1,17 +1,15 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
-import { ProductCard } from '../ProductCard';
+import React, { useState, useEffect } from 'react';
 import { PdfCatalog } from '../PdfCatalog';
 import { TrustedBy } from '../TrustedBy';
 import { SolarBOMCalculator } from '../storefront/SolarBOMCalculator';
 import { BuyerCatalog } from '../storefront/BuyerCatalog';
 import { useStore } from '../../store/useStore';
-import { Flame, Building2, Truck, CheckCircle2, ArrowRight } from 'lucide-react';
-import { ORIGIN_HUB_PINCODE } from '../../constants';
+import { Building2 } from 'lucide-react';
 
 export const StorePage: React.FC = () => {
-  const { products, searchQuery, selectedCategory, setSelectedCategory, appMode, setAppMode, currentUser, setIsAuthModalOpen } = useStore();
+  const { appMode, currentUser } = useStore();
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -19,80 +17,6 @@ export const StorePage: React.FC = () => {
 
   const isB2B = Boolean(appMode === 'B2B' || (currentUser?.role && currentUser.role.includes('B2B')));
   const displayIsB2B = mounted ? isB2B : false;
-
-  const categories = [
-    'ALL',
-    'SS304 GRADE',
-    'GI SERIES',
-    'FITTING SERIES',
-    'COMPLETE KIT',
-    'POWER SERIES',
-    'CONTROL SERIES'
-  ];
-
-  // Derive unified display products from central store products
-  const displayProducts = useMemo(() => {
-    return products.map((p, idx) => {
-      const primaryVariant = p.variants?.[0];
-      const number = String(idx + 1).padStart(2, '0');
-      const material = primaryVariant?.attributes?.material || p.category || 'SS304 Grade';
-      const image = primaryVariant?.images?.[0] || p.aPlusContent?.[0]?.imageUrl || '/solar_sprinkler.webp';
-      const price = String(primaryVariant?.b2cPrice || '220');
-
-      return {
-        asin: p.asin,
-        number,
-        name: p.title,
-        material,
-        tag: p.badges?.[0]?.replace(/_/g, ' ') || (idx === 0 ? 'BEST SELLER' : 'ORIGINAL APEX'),
-        image,
-        images: primaryVariant?.images || [image],
-        videoUrl: p.videoUrl,
-        description: p.description,
-        features: p.highlights && p.highlights.length > 0 ? p.highlights : [
-          'Shadow-Less Design — Minimizes shading on solar cells',
-          'Uniform 180° Water Curtain Spread',
-          'Low Water Consumption (4–7 LPM)',
-          '100% SS304 Guaranteed Durability',
-          '10-Year Rust-Proof Warranty on eligible SS304 Drain Clips and Sprinklers. Warranty covers rust/corrosion only.'
-        ],
-        specs: primaryVariant ? [
-          `Material: ${material}`,
-          `SKU: ${primaryVariant.sku}`,
-          `HSN: ${primaryVariant.hsnCode || '84248990'}`,
-          `Weight: ${primaryVariant.weightGrams || 200}g`,
-          `GST: ${primaryVariant.gstRatePercent || 18}% Incl.`
-        ] : [
-          'Material: SS304 Stainless Steel',
-          'HSN: 84248990',
-          'GST: 18% Incl.'
-        ],
-        price,
-        sku: primaryVariant?.sku,
-        reverse: idx % 2 !== 0
-      };
-    });
-  }, [products]);
-
-  // Memoized filter calculation for instant 60fps search
-  const filteredProducts = useMemo(() => {
-    return displayProducts.filter((p) => {
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch = !q || 
-        p.name.toLowerCase().includes(q) || 
-        p.material.toLowerCase().includes(q) || 
-        (p.description && p.description.toLowerCase().includes(q));
-
-      const matchesCategory = selectedCategory === 'ALL' || 
-        p.material.toUpperCase().includes(selectedCategory.toUpperCase()) || 
-        p.name.toUpperCase().includes(selectedCategory.toUpperCase()) ||
-        (selectedCategory === 'COMPLETE KIT' && p.number === '05') ||
-        (selectedCategory === 'POWER SERIES' && p.number === '06') ||
-        (selectedCategory === 'CONTROL SERIES' && p.number === '07');
-
-      return matchesSearch && matchesCategory;
-    });
-  }, [displayProducts, searchQuery, selectedCategory]);
 
   return (
     <div className="min-h-screen py-6 px-4 sm:px-6 lg:px-8 space-y-12 w-full max-w-7xl mx-auto animate-fadeIn">

@@ -8,7 +8,8 @@ import {
   MessageSquare, ShoppingCart, Lock, KeyRound, Mail, Clock, Search, 
   ChevronRight, Filter, BarChart3, Users, Send, AlertCircle, Sparkles, LogOut, Save, Sliders, Volume2,
   Tag, RotateCcw, Eye, Percent, Calendar, QrCode, Smartphone, Copy, CheckCircle, PhoneCall,
-  Building2, ExternalLink, CheckSquare, Square, ArrowRight, FileSpreadsheet, Zap
+  Building2, ExternalLink, CheckSquare, Square, ArrowRight, FileSpreadsheet, Zap,
+  CreditCard
 } from 'lucide-react';
 import { useNavigate } from '../../lib/navigation';
 import { useStore } from '../../store/useStore';
@@ -33,6 +34,15 @@ import { totpService } from '../../services/totpService';
 import { authApi } from '../../services/api';
 import { ComboVariantBuilderModal } from './ComboVariantBuilderModal';
 import { EnterpriseDispatchConsole } from './EnterpriseDispatchConsole';
+import { CategoryAttributeManager } from './CategoryAttributeManager';
+import { PriceListManager } from './PriceListManager';
+import { VariantCatalogManager } from './VariantCatalogManager';
+import { WarehouseInventoryConsole } from './WarehouseInventoryConsole';
+import { OrderManagementConsole } from './OrderManagementConsole';
+import { ShippingFulfillmentConsole } from './ShippingFulfillmentConsole';
+import { PaymentReconciliationConsole } from './PaymentReconciliationConsole';
+import { ReturnsDeskConsole } from './ReturnsDeskConsole';
+import { AccountingLedgerConsole } from './AccountingLedgerConsole';
 import { 
   filterOrdersByPeriod, 
   filterOrdersByDateRange,
@@ -550,32 +560,34 @@ export const SuperAdminDashboard: React.FC = () => {
   // ─────────────────────────────────────────────────────────────────────────────
   // 🧭 DASHBOARD NAVIGATION TABS (ENTERPRISE INDUSTRIAL PILLARS - URL SYNCED ADM-001)
   // ─────────────────────────────────────────────────────────────────────────────
-  const getInitialAdminTab = (): 'PRODUCTS' | 'ORDERS' | 'CUSTOMERS' | 'INQUIRIES' | 'COUPONS' | 'RETURNS' | 'REPORTS' => {
+  type AdminTab = 'PRODUCTS' | 'VARIANTS' | 'CATEGORIES_ATTRIBUTES' | 'PRICE_LISTS' | 'INVENTORY' | 'ORDERS' | 'SHIPPING' | 'PAYMENTS' | 'CUSTOMERS' | 'INQUIRIES' | 'COUPONS' | 'RETURNS' | 'REPORTS' | 'ACCOUNTING';
+
+  const getInitialAdminTab = (): AdminTab => {
     try {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab')?.toUpperCase();
-      if (tab && ['PRODUCTS', 'ORDERS', 'CUSTOMERS', 'INQUIRIES', 'COUPONS', 'RETURNS', 'REPORTS'].includes(tab)) {
+      if (tab && ['PRODUCTS', 'VARIANTS', 'CATEGORIES_ATTRIBUTES', 'PRICE_LISTS', 'INVENTORY', 'ORDERS', 'SHIPPING', 'PAYMENTS', 'CUSTOMERS', 'INQUIRIES', 'COUPONS', 'RETURNS', 'REPORTS', 'ACCOUNTING'].includes(tab)) {
         return tab as any;
       }
     } catch {}
     return 'PRODUCTS';
   };
 
-  const getInitialOrdersView = (): 'DISPATCH_PIPELINE' | 'FINAL_ORDERS' | 'PENDING_CARTS' => {
+  const getInitialOrdersView = (): 'DISPATCH_PIPELINE' | 'FINAL_ORDERS' | 'PENDING_CARTS' | 'SAGA_PIPELINE' => {
     try {
       const params = new URLSearchParams(window.location.search);
       const view = params.get('view')?.toUpperCase();
-      if (view && ['DISPATCH_PIPELINE', 'FINAL_ORDERS', 'PENDING_CARTS'].includes(view)) {
+      if (view && ['DISPATCH_PIPELINE', 'FINAL_ORDERS', 'PENDING_CARTS', 'SAGA_PIPELINE'].includes(view)) {
         return view as any;
       }
     } catch {}
     return 'DISPATCH_PIPELINE';
   };
 
-  const [activeAdminTab, setActiveAdminTab] = useState<'PRODUCTS' | 'ORDERS' | 'CUSTOMERS' | 'INQUIRIES' | 'COUPONS' | 'RETURNS' | 'REPORTS'>(getInitialAdminTab);
+  const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>(getInitialAdminTab);
   
-  // Orders Sub-tab: Dispatch Pipeline vs Final Orders vs Pending Carts
-  const [ordersViewMode, setOrdersViewMode] = useState<'DISPATCH_PIPELINE' | 'FINAL_ORDERS' | 'PENDING_CARTS'>(getInitialOrdersView);
+  // Orders Sub-tab: Dispatch Pipeline vs Final Orders vs Pending Carts vs Distributed Saga
+  const [ordersViewMode, setOrdersViewMode] = useState<'DISPATCH_PIPELINE' | 'FINAL_ORDERS' | 'PENDING_CARTS' | 'SAGA_PIPELINE'>(getInitialOrdersView);
 
   // ADM-001: Sync admin navigation tabs to URL query params and support browser Back/Forward navigation
   useEffect(() => {
@@ -605,7 +617,7 @@ export const SuperAdminDashboard: React.FC = () => {
       try {
         const params = new URLSearchParams(window.location.search);
         const tab = params.get('tab')?.toUpperCase();
-        if (tab && ['PRODUCTS', 'ORDERS', 'CUSTOMERS', 'INQUIRIES', 'COUPONS', 'RETURNS', 'REPORTS'].includes(tab)) {
+        if (tab && ['PRODUCTS', 'VARIANTS', 'CATEGORIES_ATTRIBUTES', 'PRICE_LISTS', 'INVENTORY', 'ORDERS', 'SHIPPING', 'PAYMENTS', 'CUSTOMERS', 'INQUIRIES', 'COUPONS', 'RETURNS', 'REPORTS', 'ACCOUNTING'].includes(tab)) {
           setActiveAdminTab(tab as any);
         }
         const view = params.get('view')?.toUpperCase();
@@ -658,11 +670,11 @@ export const SuperAdminDashboard: React.FC = () => {
     setEditTitle(p.title);
     setEditCategory(p.category);
     setEditDescription(p.description || '');
-    setEditB2cPrice(v?.b2cPrice || 20);
-    setEditMrp(v?.mrp || 35);
-    setEditStock(v?.inventory || 1000);
-    setEditHsn(v?.hsnCode || '73269099');
-    setEditImageUrl(v?.images?.[0] || p.aPlusContent?.[0]?.imageUrl || '/Drain_clips.webp');
+    setEditB2cPrice(typeof v?.b2cPrice === 'number' ? v.b2cPrice : 0);
+    setEditMrp(typeof v?.mrp === 'number' ? v.mrp : Math.round((v?.b2cPrice || 0) * 1.5));
+    setEditStock(typeof v?.inventory === 'number' ? v.inventory : 0);
+    setEditHsn(v?.hsnCode || (p as any).hsn_code || (p as any).hsnCode || '');
+    setEditImageUrl(v?.images?.[0] || p.aPlusContent?.[0]?.imageUrl || '/logo.webp');
 
     if (v?.b2bTierPricing && v.b2bTierPricing.length > 0) {
       setEditB2bTiers(v.b2bTierPricing.map(t => ({
@@ -746,6 +758,9 @@ export const SuperAdminDashboard: React.FC = () => {
     });
 
     setEditingProduct(null);
+    try {
+      fetchApiCatalog();
+    } catch {}
     showToast(`Product "${editTitle}" updated with B2C ₹${editB2cPrice} and ${formattedTiers.length} B2B volume tiers!`, 'success');
   };
 
@@ -1166,7 +1181,7 @@ export const SuperAdminDashboard: React.FC = () => {
       p.title.toLowerCase().includes(adminSearchQuery.toLowerCase()) ||
       p.asin.toLowerCase().includes(adminSearchQuery.toLowerCase()) ||
       p.category.toLowerCase().includes(adminSearchQuery.toLowerCase()) ||
-      p.variants.some(v => v.sku.toLowerCase().includes(adminSearchQuery.toLowerCase()) || (v.hsnCode || '').includes(adminSearchQuery));
+      ((p.variants || []).some(v => v.sku.toLowerCase().includes(adminSearchQuery.toLowerCase()) || (v.hsnCode || '').includes(adminSearchQuery)));
 
     if (!matchesSearch) return false;
 
@@ -1174,14 +1189,14 @@ export const SuperAdminDashboard: React.FC = () => {
 
     if (catalogTabFilter === 'ACTIVE') return p.isLive;
     if (catalogTabFilter === 'INACTIVE') return !p.isLive;
-    if (catalogTabFilter === 'LOW_STOCK') return p.variants.some(v => (v.inventory || 0) < 100);
+    if (catalogTabFilter === 'LOW_STOCK') return (p.variants || []).some(v => (v.inventory || 0) < 100);
     if (catalogTabFilter === 'COMBO') return p.isComboBundle;
 
     return true;
   });
 
   const totalCatalogInventory = products.reduce((acc, p) => 
-    acc + p.variants.reduce((vAcc, v) => vAcc + (v.inventory || 0), 0), 0
+    acc + (p.variants || []).reduce((vAcc, v) => vAcc + (v.inventory || 0), 0), 0
   );
 
   const toggleSelectAllAsins = () => {
@@ -1798,17 +1813,25 @@ export const SuperAdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main 7 Enterprise Pillars Navigation Bar (Role-Filtered) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 bg-white/90 backdrop-blur-md p-2 rounded-2xl border border-slate-200 shadow-md">
+      {/* Main Enterprise Pillars Navigation Bar (Role-Filtered) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 xl:grid-cols-14 gap-2 bg-white/90 backdrop-blur-md p-2 rounded-2xl border border-slate-200 shadow-md">
         {[
-          { id: 'PRODUCTS', label: 'Inventory & Catalog', icon: Package, count: `${products.length} Items`, allowedRoles: ['SUPER_ADMIN'] },
-          { id: 'ORDERS', label: 'Fulfillment & Dispatch', icon: Truck, count: `${unshippedCount} To Ship`, allowedRoles: ['SUPER_ADMIN', 'WAREHOUSE_DISPATCH'] },
-          { id: 'CUSTOMERS', label: 'Customers & B2B Desk', icon: Users, count: 'Registry & GSTIN', allowedRoles: ['SUPER_ADMIN'] },
-          { id: 'INQUIRIES', label: 'Contractor Calls', icon: PhoneCall, count: `${contractorInquiries.length} Leads`, allowedRoles: ['SUPER_ADMIN'] },
-          { id: 'COUPONS', label: 'Coupons & Offers', icon: Tag, count: `${coupons.filter(c => c.isActive).length} Active`, allowedRoles: ['SUPER_ADMIN'] },
-          { id: 'RETURNS', label: 'Returns & Sizing', icon: RotateCcw, count: `${returnRequests.length} Requests`, allowedRoles: ['SUPER_ADMIN', 'WAREHOUSE_DISPATCH'] },
-          { id: 'REPORTS', label: 'GSTR-1 & Reports', icon: BarChart3, count: `₹${(totalGMV / 1000).toFixed(1)}k GMV`, allowedRoles: ['SUPER_ADMIN', 'ACCOUNTANT'] },
+          { id: 'PRODUCTS', label: 'Products', icon: Package, count: `${products.length} Items`, allowedRoles: ['SUPER_ADMIN'] },
+          { id: 'VARIANTS', label: 'Variants', icon: Layers, count: 'Combinations', allowedRoles: ['SUPER_ADMIN'] },
+          { id: 'CATEGORIES_ATTRIBUTES', label: 'Taxonomy', icon: Tag, count: 'Categories/Axes', allowedRoles: ['SUPER_ADMIN'] },
+          { id: 'PRICE_LISTS', label: 'Pricing & Slabs', icon: DollarSign, count: 'GST Engine', allowedRoles: ['SUPER_ADMIN', 'ACCOUNTANT'] },
+          { id: 'INVENTORY', label: 'Warehouses', icon: Building2, count: 'Multi-Hub', allowedRoles: ['SUPER_ADMIN', 'WAREHOUSE_DISPATCH'] },
+          { id: 'ORDERS', label: 'Orders', icon: ShoppingCart, count: `${orders.length} Orders`, allowedRoles: ['SUPER_ADMIN', 'WAREHOUSE_DISPATCH'] },
+          { id: 'SHIPPING', label: 'Logistics', icon: Truck, count: 'Speed Post', allowedRoles: ['SUPER_ADMIN', 'WAREHOUSE_DISPATCH'] },
+          { id: 'PAYMENTS', label: 'Payments', icon: CreditCard, count: 'Reconciliation', allowedRoles: ['SUPER_ADMIN', 'ACCOUNTANT'] },
+          { id: 'RETURNS', label: 'Returns', icon: RotateCcw, count: `${returnRequests.length} Cases`, allowedRoles: ['SUPER_ADMIN', 'WAREHOUSE_DISPATCH'] },
+          { id: 'CUSTOMERS', label: 'Customers', icon: Users, count: 'B2B Registry', allowedRoles: ['SUPER_ADMIN'] },
+          { id: 'INQUIRIES', label: 'Contractor Desk', icon: PhoneCall, count: `${contractorInquiries.length} Leads`, allowedRoles: ['SUPER_ADMIN'] },
+          { id: 'COUPONS', label: 'Coupons', icon: Percent, count: `${coupons.filter(c => c.isActive).length} Active`, allowedRoles: ['SUPER_ADMIN'] },
+          { id: 'REPORTS', label: 'GSTR-1 & Audit', icon: BarChart3, count: `₹${(totalGMV / 1000).toFixed(1)}k GMV`, allowedRoles: ['SUPER_ADMIN', 'ACCOUNTANT'] },
+          { id: 'ACCOUNTING', label: 'Accounting Ledger', icon: Landmark, count: 'Double-Entry', allowedRoles: ['SUPER_ADMIN', 'ACCOUNTANT'] },
         ]
+
           .filter(tab => tab.allowedRoles.includes(activeAdminRole))
           .map((tab) => {
             const Icon = tab.icon;
@@ -2048,7 +2071,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   { id: 'ALL', label: 'All Products', count: products.length },
                   { id: 'ACTIVE', label: 'Active', count: products.filter(p => p.isLive).length },
                   { id: 'INACTIVE', label: 'Inactive', count: products.filter(p => !p.isLive).length },
-                  { id: 'LOW_STOCK', label: 'Low Stock (<100)', count: products.filter(p => p.variants.some(v => (v.inventory || 0) < 100)).length },
+                  { id: 'LOW_STOCK', label: 'Low Stock (<100)', count: products.filter(p => (p.variants || []).some(v => (v.inventory || 0) < 100)).length },
                   { id: 'COMBO', label: 'Combo Kits', count: products.filter(p => p.isComboBundle).length }
                 ].map(tab => {
                   const isActive = catalogTabFilter === tab.id;
@@ -2215,20 +2238,36 @@ export const SuperAdminDashboard: React.FC = () => {
                     <tr>
                       <td colSpan={9} className="p-12 text-center text-slate-500">
                         <Package className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                        <div className="font-bold text-slate-700">No products matched your search or filters.</div>
-                        <div className="text-xs text-slate-400 mt-1">Try clearing filters or search terms.</div>
+                        <div className="font-bold text-slate-700">
+                          {products.length === 0 ? 'No products in catalog' : 'No products matched your search or filters.'}
+                        </div>
+                        <div className="text-xs text-slate-400 mt-1 mb-3">
+                          {products.length === 0 ? 'Get started by creating your first product.' : 'Try clearing filters or search terms.'}
+                        </div>
+                        {products.length === 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setProductForWizard('NEW')}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0054A6] hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Add your first product</span>
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ) : (
                     filteredProductsList.map((p, pIdx) => {
-                      const selectedVariant = p.variants.find((v) => v.sku === p.selectedVariantSku) || p.variants[0];
+                      const selectedVariant = (p.variants && p.variants.length > 0)
+                        ? (p.variants.find((v) => v.sku === p.selectedVariantSku) || p.variants[0])
+                        : null;
                       const isSelected = selectedAsins.includes(p.asin);
-                      const b2cPrice = selectedVariant.b2cPrice || 0;
-                      const mrp = selectedVariant.mrp || 0;
-                      const b2bPrice = selectedVariant.b2bTierPricing?.[0]?.pricePerUnit || Math.round(b2cPrice * 0.7);
+                      const b2cPrice = selectedVariant?.b2cPrice || 0;
+                      const mrp = selectedVariant?.mrp || 0;
+                      const b2bPrice = selectedVariant?.b2bTierPricing?.[0]?.pricePerUnit || Math.round(b2cPrice * 0.7);
                       const discountPercent = mrp > b2cPrice ? Math.round(((mrp - b2cPrice) / mrp) * 100) : 0;
-                      const currentMoq = p.b2bMoq || selectedVariant.b2bMoq || selectedVariant.b2bTierPricing?.[0]?.minQty || 50;
-                      const unit = selectedVariant.unitOfMeasure || p.unitOfMeasure || 'PCS';
+                      const currentMoq = p.b2bMoq || selectedVariant?.b2bMoq || selectedVariant?.b2bTierPricing?.[0]?.minQty || 50;
+                      const unit = selectedVariant?.unitOfMeasure || p.unitOfMeasure || 'PCS';
 
                       return (
                         <tr
@@ -2281,7 +2320,7 @@ export const SuperAdminDashboard: React.FC = () => {
                           <td className="p-3.5 text-center">
                             <div className="w-14 h-14 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shadow-xs overflow-hidden mx-auto">
                               <img
-                                src={selectedVariant.images?.[0] || p.aPlusContent?.[0]?.imageUrl || '/logo.webp'}
+                                src={selectedVariant?.images?.[0] || p.aPlusContent?.[0]?.imageUrl || '/logo.webp'}
                                 alt={p.title}
                                 className="w-full h-full object-contain hover:scale-110 transition-transform duration-200"
                               />
@@ -2315,11 +2354,11 @@ export const SuperAdminDashboard: React.FC = () => {
                                   <ExternalLink className="w-2.5 h-2.5" /> Buyer Catalog Link
                                 </a>
                                 <span className="text-slate-500 text-[11px]">
-                                  SKU: <strong className="text-slate-700 font-semibold">{selectedVariant.sku}</strong>
+                                  SKU: <strong className="text-slate-700 font-semibold">{selectedVariant?.sku || p.asin}</strong>
                                 </span>
                                 <span className="text-slate-300">•</span>
-                                <span className="text-slate-500 text-[11px]" title={`${selectedVariant.gstRatePercent || 18}% Statutory GST`}>
-                                  HSN: {selectedVariant.hsnCode || '84248990'} ({selectedVariant.gstRatePercent || 18}% GST)
+                                <span className="text-slate-500 text-[11px]" title={`${selectedVariant?.gstRatePercent || 18}% Statutory GST`}>
+                                  HSN: {selectedVariant?.hsnCode || '84248990'} ({selectedVariant?.gstRatePercent || 18}% GST)
                                 </span>
                               </div>
 
@@ -2382,7 +2421,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                 <span className="text-[10px] text-slate-500 font-sans font-normal"> /{unit}</span>
                               </div>
                               <div className="flex flex-col items-end gap-1">
-                                {selectedVariant.b2bTierPricing && selectedVariant.b2bTierPricing.length > 1 ? (
+                                {selectedVariant?.b2bTierPricing && selectedVariant.b2bTierPricing.length > 1 ? (
                                   <div className="flex flex-wrap items-center justify-end gap-1 max-w-[170px]">
                                     {selectedVariant.b2bTierPricing.map((tier, tIdx) => (
                                       <span
@@ -2410,8 +2449,8 @@ export const SuperAdminDashboard: React.FC = () => {
                           <td className="p-3.5 text-center">
                             <StockEditableInput
                               asin={p.asin}
-                              sku={selectedVariant.sku}
-                              currentStock={selectedVariant.inventory || 0}
+                              sku={selectedVariant?.sku || p.asin}
+                              currentStock={selectedVariant?.inventory || 0}
                               unit={unit}
                             />
                           </td>
@@ -2529,8 +2568,24 @@ export const SuperAdminDashboard: React.FC = () => {
               >
                 <Clock className="w-3.5 h-3.5" /> Pending Carts ({pendingCarts.length})
               </button>
+
+              <button
+                onClick={() => setOrdersViewMode('SAGA_PIPELINE')}
+                className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+                  ordersViewMode === 'SAGA_PIPELINE'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-md'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" /> Distributed Saga Orders
+              </button>
             </div>
           </div>
+
+          {/* TAB 2.0: DISTRIBUTED ORDER SAGA PIPELINE */}
+          {ordersViewMode === 'SAGA_PIPELINE' && (
+            <OrderManagementConsole />
+          )}
 
           {/* TAB 2.0: ENTERPRISE SEQUENTIAL DISPATCH PIPELINE */}
           {ordersViewMode === 'DISPATCH_PIPELINE' && (
@@ -3852,11 +3907,43 @@ export const SuperAdminDashboard: React.FC = () => {
       )}
 
       {/* ───────────────────────────────────────────────────────────────────────────── */}
-      {/* 🔄 PILLAR 5: RETURNS & REFUNDS MANAGEMENT */}
+      {/* 🔄 PILLAR 5: RETURNS & FRAME SIZING INSPECTION DESK */}
       {/* ───────────────────────────────────────────────────────────────────────────── */}
       {activeAdminTab === 'RETURNS' && (
-        <ReturnsManagementPanel />
+        <ReturnsDeskConsole />
       )}
+
+      {/* ───────────────────────────────────────────────────────────────────────────── */}
+      {/* 🧱 ENTERPRISE CATALOG PILLARS: VARIANTS, TAXONOMY & PRICING */}
+      {/* ───────────────────────────────────────────────────────────────────────────── */}
+      {activeAdminTab === 'VARIANTS' && (
+        <VariantCatalogManager onOpenComboBuilder={() => setIsComboBuilderOpen(true)} />
+      )}
+
+      {activeAdminTab === 'CATEGORIES_ATTRIBUTES' && (
+        <CategoryAttributeManager />
+      )}
+
+      {activeAdminTab === 'PRICE_LISTS' && (
+        <PriceListManager />
+      )}
+
+      {activeAdminTab === 'INVENTORY' && (
+        <WarehouseInventoryConsole />
+      )}
+
+      {activeAdminTab === 'SHIPPING' && (
+        <ShippingFulfillmentConsole />
+      )}
+
+      {activeAdminTab === 'PAYMENTS' && (
+        <PaymentReconciliationConsole />
+      )}
+
+      {activeAdminTab === 'ACCOUNTING' && (
+        <AccountingLedgerConsole />
+      )}
+
 
       {/* ✏️ EDIT PRODUCT & B2B MULTI-TIER PRICING MODAL */}
       {editingProduct && (
@@ -4069,6 +4156,7 @@ export const SuperAdminDashboard: React.FC = () => {
       {/* ───────────────────────────────────────────────────────────────────────────── */}
       {productForWizard !== null && (
         <ApeProductListingWizard
+          key={productForWizard === 'NEW' ? 'new-product' : productForWizard.asin}
           initialProduct={productForWizard === 'NEW' ? null : productForWizard}
           onClose={() => setProductForWizard(null)}
           onSaved={() => {

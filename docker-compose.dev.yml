@@ -24,8 +24,8 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: apollo_backend_dev
     restart: unless-stopped
     environment:
@@ -55,9 +55,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      VITE_API_URL: http://localhost:8000
-      DISABLE_HMR: 'false'
-    command: sh -c "npm ci && npm run dev"
+      FASTAPI_BACKEND_URL: http://backend:8000
+      PORT: 3000
+    command: sh -c "npm run dev"
     depends_on:
       - backend
     networks:

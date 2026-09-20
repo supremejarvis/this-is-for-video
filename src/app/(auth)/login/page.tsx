@@ -19,7 +19,8 @@ export default function LoginPage() {
   const [devOtp, setDevOtp] = useState<string | null>(null);
 
   // Admin state
-  const [adminEmail, setAdminEmail] = useState('');
+  const [adminEmail, setAdminEmail] = useState('admin@apolloengineering.co.in');
+  const [adminPassword, setAdminPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
 
   const [localError, setLocalError] = useState<string | null>(null);
@@ -60,15 +61,15 @@ export default function LoginPage() {
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
-    if (!adminEmail || !totpCode) {
-      setLocalError('Please enter email and 6-digit TOTP code.');
+    if (!adminEmail || !adminPassword) {
+      setLocalError('Please enter admin email and password.');
       return;
     }
     try {
-      await loginAdmin(adminEmail, totpCode);
+      await loginAdmin(adminEmail, adminPassword, totpCode || undefined);
       router.push('/admin');
     } catch (err: any) {
-      setLocalError(err?.message || 'Admin authentication failed');
+      setLocalError(err?.message || 'Admin authentication failed. Please verify your credentials.');
     }
   };
 
@@ -223,15 +224,31 @@ export default function LoginPage() {
                   type="email"
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
-                  placeholder="admin@apolloengineering.com"
+                  placeholder="admin@apolloengineering.co.in"
                   className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
-                  6-Digit Authenticator TOTP
+                  Master Password
                 </label>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    6-Digit Authenticator TOTP
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-mono">(Optional if 2FA disabled)</span>
+                </div>
                 <input
                   type="text"
                   maxLength={6}

@@ -118,7 +118,7 @@ class CatalogService:
             name=data.name.strip(),
             description=data.description,
             hsn_code=data.hsn_code.strip(),
-            is_active=True,
+            is_active=bool(data.is_active),
             is_archived=False,
             created_at=utcnow(),
             updated_at=utcnow(),
@@ -277,7 +277,7 @@ class CatalogService:
 
     @classmethod
     async def get_product(
-        cls, db: AsyncSession, product_id: uuid.UUID, include_archived: bool = False
+        cls, db: AsyncSession, product_id: uuid.UUID, include_archived: bool = False, include_drafts: bool = False
     ) -> Product | None:
         """Fetch product with active/archived variants and inventory relations."""
         stmt = (
@@ -291,21 +291,23 @@ class CatalogService:
         )
         if not include_archived:
             stmt = stmt.where(Product.is_archived.is_(False))
+        if not include_drafts:
+            stmt = stmt.where(Product.is_active.is_(True))
 
         return (await db.execute(stmt)).scalar_one_or_none()
 
     @classmethod
     async def get_product_required(
-        cls, db: AsyncSession, product_id: uuid.UUID, include_archived: bool = False
+        cls, db: AsyncSession, product_id: uuid.UUID, include_archived: bool = False, include_drafts: bool = False
     ) -> Product:
-        product = await cls.get_product(db, product_id, include_archived=include_archived)
+        product = await cls.get_product(db, product_id, include_archived=include_archived, include_drafts=include_drafts)
         if not product:
             raise ProductNotFoundException(f"Product with ID '{product_id}' not found.")
         return product
 
     @classmethod
     async def list_products(
-        cls, db: AsyncSession, include_archived: bool = False, limit: int = 100, offset: int = 0
+        cls, db: AsyncSession, include_archived: bool = False, include_drafts: bool = False, limit: int = 100, offset: int = 0
     ) -> Sequence[Product]:
         """List products with pagination."""
         stmt = (
@@ -321,6 +323,8 @@ class CatalogService:
         )
         if not include_archived:
             stmt = stmt.where(Product.is_archived.is_(False))
+        if not include_drafts:
+            stmt = stmt.where(Product.is_active.is_(True))
 
         return (await db.execute(stmt)).scalars().all()
 

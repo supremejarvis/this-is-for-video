@@ -1,0 +1,19 @@
+[
+  {
+    "id": "INQ-1789821448056-62ZA",
+    "name": "Ramesh Patel",
+    "phone": "9876543210",
+    "email": "",
+    "companyName": "Gujarat Solar EPC",
+    "gstin": "",
+    "solarCapacityKw": 50,
+    "pincode": "382430",
+    "city": "",
+    "state": "",
+    "message": "Need 500 pcs SS304 drain clips",
+    "inquiryType": "GENERAL_INQUIRY",
+    "status": "NEW",
+    "createdAt": "2026-09-19T12:37:28.056Z",
+    "updatedAt": "2026-09-19T12:37:28.056Z"
+  }
+]

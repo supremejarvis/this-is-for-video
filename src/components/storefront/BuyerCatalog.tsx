@@ -16,7 +16,7 @@ const CATALOG_CATEGORIES = [
 
 export const BuyerCatalog: React.FC = () => {
   const { 
-    apiCatalogProducts, apiCatalogLoading, products,
+    apiCatalogProducts, apiCatalogLoading, apiCatalogError, products,
     fetchApiCatalog, addToCart, selectedLanguage, setSelectedProduct,
     setIsCartDrawerOpen, searchQuery, selectedCategory, setSelectedCategory,
     appMode, currentUser, currentOrg
@@ -47,46 +47,31 @@ export const BuyerCatalog: React.FC = () => {
     fetchApiCatalog();
   }, [fetchApiCatalog]);
 
-  // Production catalog filtering: remove test fixtures, deduplicate, filter by search/category
+  // Production catalog filtering: deduplicate, ensure active status, filter by search/category
   const filteredProducts = useMemo(() => {
-    const testPattern = /test|rbac|concurrency|reconciliation|exclusion|header match|thickness|currency|oversubscription|mock|draft|fixture|bulk|rails/i;
-    const testSkuPattern = /TEST|COMMIT|IDEMP|APE-TAX|APE-MOQ|APE-PR|CONCUR|LATE|EXP|ORDER|CHECK/i;
+    const seenNames = new Set<string>();
+    const seenIds = new Set<string>();
+    const validProducts: ApiProduct[] = [];
 
-const seenNames = new Set<string>();
-      const seenIds = new Set<string>();
-      const validProducts: ApiProduct[] = [];
+    // Map through authoritative apiCatalogProducts
+    for (const p of apiCatalogProducts) {
+      if (!p.is_active || (p as any).is_archived) continue;
 
-      // Map through apiCatalogProducts
-      for (const p of apiCatalogProducts) {
-        if (!p.is_active || testPattern.test(p.name)) continue;
+      const validVariants = (p.variants || []).filter(v => v.is_active !== false && !(v as any).is_archived);
+      if (validVariants.length === 0) continue;
 
-        // Remove Complete Kit / Turnkey Kit bundle card from general catalog grid as requested
-        if (
-          p.id === 'AP-FULLKIT-05' || 
-          p.sku_prefix === 'AE-KIT-FULL' ||
-          p.name.toLowerCase().includes('complete automatic solar panel cleaning system kit') ||
-          p.name.toLowerCase().includes('solar cleaning sprinkler set') ||
-          p.name.toLowerCase().includes('complete installation kit') ||
-          (p as any).isComboBundle
-        ) {
-          continue;
-        }
+      // Group by canonical name AND id to avoid duplicates
+      const normName = p.name.trim().toLowerCase();
+      const normId = p.id.trim();
+      if (seenNames.has(normName) || seenIds.has(normId)) continue;
+      seenNames.add(normName);
+      seenIds.add(normId);
 
-        const validVariants = (p.variants || []).filter(v => !testSkuPattern.test(v.sku));
-        if (validVariants.length === 0) continue;
-
-        // Group by canonical name AND id to avoid duplicates between local store and backend
-        const normName = p.name.trim().toLowerCase();
-        const normId = p.id.trim();
-        if (seenNames.has(normName) || seenIds.has(normId)) continue;
-        seenNames.add(normName);
-        seenIds.add(normId);
-
-        validProducts.push({
-          ...p,
-          variants: validVariants
-        });
-      }
+      validProducts.push({
+        ...p,
+        variants: validVariants
+      });
+    }
 
     // Filter by search query and category
     return validProducts.filter((p) => {
@@ -169,18 +154,18 @@ const seenNames = new Set<string>();
         subCategory: 'Solar Hardware',
         description: p.description || p.name,
         highlights: p.highlights || ['Industrial Grade Reliability', 'Direct Factory Dispatch from Kathwada 382430'],
-        rating: p.rating || 4.9,
-        reviewCount: p.reviewCount || 120,
+        rating: p.rating || 0,
+        reviewCount: p.reviewCount || 0,
         isLive: true,
-        badges: (p.badges || ['BEST_SELLER']) as any,
+        badges: (p.badges || []) as any,
         createdAt: p.created_at,
         selectedVariantSku: p.variants[0]?.sku || p.id,
         variants: p.variants.map(v => ({
           sku: v.sku,
           title: v.display_label,
           attributes: { size: v.frame_thickness || 'Standard', material: getMaterialLabel(p) },
-          mrp: v.mrp || Math.round((v.unit_price || 220) * 1.5),
-          b2cPrice: v.unit_price || 220,
+          mrp: v.mrp || Math.round((v.unit_price || 0) * 1.5),
+          b2cPrice: v.unit_price || 0,
           b2bTierPricing: v.b2bTierPricing || [],
           inventory: v.available_stock,
           barcode: v.sku,
@@ -203,20 +188,26 @@ const seenNames = new Set<string>();
     const productImage = getProductImage(product);
     const quantityToAdd = customQty !== undefined ? customQty : getSelectedQty(product.id);
 
-    // Use variant unit_price when available and valid; otherwise fall back to first variant price or default
+    // Use variant unit_price when available and valid; otherwise fall back to first variant price or 0
     const variantBasePrice = typeof variant.unit_price === 'number' && variant.unit_price > 0
       ? variant.unit_price
-      : (variant.mrp ? Math.round(variant.mrp / 1.5) : 220);
+      : (variant.mrp ? Math.round(variant.mrp / 1.5) : 0);
 
     // Check for B2B-specific tier pricing
     let finalUnitPrice = variantBasePrice;
     if (isB2B) {
-      const isDrainItem = Boolean(
+      if (variant.b2bTierPricing && variant.b2bTierPricing.length > 0) {
+        const matchingTier = [...variant.b2bTierPricing]
+          .sort((a, b) => (b.minQty || b.min_quantity || 0) - (a.minQty || a.min_quantity || 0))
+          .find((t) => quantityToAdd >= (t.minQty || t.min_quantity || 0));
+        finalUnitPrice = matchingTier 
+          ? Number(matchingTier.pricePerUnit || matchingTier.unit_price) 
+          : Number(variant.b2bTierPricing[0].pricePerUnit || variant.b2bTierPricing[0].unit_price);
+      } else if (Boolean(
         product.name.toLowerCase().includes('drain') ||
         product.sku_prefix === 'APE-SC' ||
         variant.sku.startsWith('APE-SC')
-      );
-      if (isDrainItem) {
+      )) {
         if (quantityToAdd >= 2500) {
           finalUnitPrice = 10;
         } else if (quantityToAdd >= 1000) {
@@ -224,13 +215,6 @@ const seenNames = new Set<string>();
         } else {
           finalUnitPrice = 17;
         }
-      } else if (variant.b2bTierPricing && variant.b2bTierPricing.length > 0) {
-        const matchingTier = [...variant.b2bTierPricing]
-          .sort((a, b) => (b.minQty || b.min_quantity || 0) - (a.minQty || a.min_quantity || 0))
-          .find((t) => quantityToAdd >= (t.minQty || t.min_quantity || 0));
-        finalUnitPrice = matchingTier 
-          ? Number(matchingTier.pricePerUnit || matchingTier.unit_price) 
-          : Number(variant.b2bTierPricing[0].pricePerUnit || variant.b2bTierPricing[0].unit_price);
       } else if ((variant as any).b2bPrice) {
         finalUnitPrice = (variant as any).b2bPrice;
       } else {
@@ -314,17 +298,43 @@ const seenNames = new Set<string>();
         </div>
       )}
 
+      {/* Error State with Retry Button */}
+      {!apiCatalogLoading && apiCatalogError && (
+        <div className="bg-red-50 rounded-2xl p-8 border border-red-200 text-center space-y-4 max-w-lg mx-auto" role="alert">
+          <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+            <Layers className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="font-bold text-red-900 text-base">Catalog Service Offline</h3>
+            <p className="text-xs text-red-600 mt-1">{apiCatalogError}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => fetchApiCatalog()}
+            className="px-4 py-2 bg-[#0054A6] hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
+
       {/* Empty State */}
-      {!apiCatalogLoading && filteredProducts.length === 0 && (
+      {!apiCatalogLoading && !apiCatalogError && filteredProducts.length === 0 && (
         <div className="bg-white rounded-2xl p-12 border border-slate-200 text-center space-y-3">
           <Layers className="w-12 h-12 text-slate-400 mx-auto" />
-          <h3 className="font-bold text-slate-800 text-lg">No Products Found</h3>
-          <p className="text-xs text-slate-500">No products match your selected category or search term.</p>
+          <h3 className="font-bold text-slate-800 text-lg">
+            {apiCatalogProducts.length === 0 ? 'No products available' : 'No Products Found'}
+          </h3>
+          <p className="text-xs text-slate-500">
+            {apiCatalogProducts.length === 0 
+              ? 'Our catalog is currently being updated. Please check back shortly.' 
+              : 'No products match your selected category or search term.'}
+          </p>
         </div>
       )}
 
       {/* Live Product Cards */}
-      {!apiCatalogLoading && filteredProducts.length > 0 && (
+      {!apiCatalogLoading && !apiCatalogError && filteredProducts.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {filteredProducts.map((product, index) => {
             const isKit = product.name.toLowerCase().includes('kit') || (product.category && product.category.toLowerCase().includes('kit'));
@@ -340,7 +350,7 @@ const seenNames = new Set<string>();
             const displayVariant = currentVariant || fallbackVariant;
             const retailUnitPrice = typeof displayVariant?.unit_price === 'number' && displayVariant.unit_price > 0
               ? displayVariant.unit_price
-              : (displayVariant?.mrp ? Math.round(displayVariant.mrp / 1.5) : 220);
+              : (displayVariant?.mrp ? Math.round(displayVariant.mrp / 1.5) : 0);
 
             const b2bTierPrice = displayVariant?.b2bTierPricing?.[0]?.pricePerUnit 
               || (displayVariant as any)?.b2bPrice 

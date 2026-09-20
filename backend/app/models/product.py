@@ -27,6 +27,12 @@ class FitMode(enum.StrEnum):
     NOT_APPLICABLE = "NOT_APPLICABLE"
 
 
+class ProductStatus(enum.StrEnum):
+    DRAFT = "DRAFT"
+    PUBLISHED = "PUBLISHED"
+    ARCHIVED = "ARCHIVED"
+
+
 class Product(Base):
     __tablename__ = "products"
 
@@ -45,6 +51,14 @@ class Product(Base):
 
     variants: Mapped[list["ProductVariant"]] = relationship("ProductVariant", back_populates="product", cascade="all, delete-orphan")
     price_versions: Mapped[list["PriceVersion"]] = relationship("PriceVersion", back_populates="product", cascade="all, delete-orphan")
+
+    @property
+    def status(self) -> ProductStatus:
+        if self.is_archived:
+            return ProductStatus.ARCHIVED
+        if self.is_active:
+            return ProductStatus.PUBLISHED
+        return ProductStatus.DRAFT
 
 
 class ProductVariant(Base):
@@ -74,6 +88,14 @@ class ProductVariant(Base):
     product: Mapped["Product"] = relationship("Product", back_populates="variants")
     inventory_item: Mapped["InventoryItem"] = relationship("InventoryItem", back_populates="variant", uselist=False)
     price_versions: Mapped[list["PriceVersion"]] = relationship("PriceVersion", back_populates="variant", cascade="all, delete-orphan")
+
+    @property
+    def status(self) -> ProductStatus:
+        if self.is_archived:
+            return ProductStatus.ARCHIVED
+        if self.is_active:
+            return ProductStatus.PUBLISHED
+        return ProductStatus.DRAFT
 
     def __init__(self, **kwargs: Any) -> None:
         if "frame_thickness" in kwargs and ("frame_thickness_mm" not in kwargs or kwargs.get("frame_thickness_mm") is None):

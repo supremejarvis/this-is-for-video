@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.models.product import FitMode
+from app.models.product import FitMode, ProductStatus
 
 
 class ProductVariantCreate(BaseModel):
@@ -108,6 +108,7 @@ class ProductVariantResponse(BaseModel):
     pack_size: int
     is_active: bool
     is_archived: bool
+    status: ProductStatus = ProductStatus.PUBLISHED
     version: int = 1
     available_stock: int = 0
     unit_price: Decimal | None = None
@@ -125,6 +126,7 @@ class ProductCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=255, description="Product title")
     description: str | None = Field(default=None, description="Detailed product description")
     hsn_code: str = Field(default="73269099", min_length=4, max_length=20, description="Statutory HSN code")
+    is_active: bool = Field(default=False, description="Initial publication state (False = DRAFT, True = PUBLISHED)")
     variants: list[ProductVariantCreate] = Field(default_factory=list, description="Initial variants to configure")
 
 
@@ -152,6 +154,7 @@ class ProductResponse(BaseModel):
     hsn_code: str
     is_active: bool
     is_archived: bool
+    status: ProductStatus = ProductStatus.PUBLISHED
     version: int = 1
     variants: list[ProductVariantResponse] = Field(default_factory=list)
     created_at: datetime

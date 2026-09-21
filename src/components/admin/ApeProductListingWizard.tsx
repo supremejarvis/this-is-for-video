@@ -8,7 +8,7 @@ import {
   Truck, Tag, Box, Info, ExternalLink, Clock, CreditCard, RotateCcw, BadgeCheck,
   Printer, Download, FileSpreadsheet, Scale, BarChart2, CheckCircle
 } from 'lucide-react';
-import { Product, ProductVariant, APlusModule, SellerListing } from '../../types';
+import { Product, ProductVariant, APlusModule, SellerListing, ComboComponentItem } from '../../types';
 import { useStore } from '../../store/useStore';
 import { ORIGIN_HUB_PINCODE, ORIGIN_HUB_NAME } from '../../services/logisticsService';
 
@@ -38,12 +38,6 @@ const UNITS_OF_MEASURE = [
   { value: 'ROLL', label: 'ROLL (Rolls - Wire / Seal Tape)' }
 ];
 
-const DEFAULT_DRAIN_CLIP_B2B_TIERS = [
-  { minQty: 1, pricePerUnit: 17, discountPercent: 15 },
-  { minQty: 1000, pricePerUnit: 15, discountPercent: 25 },
-  { minQty: 2500, pricePerUnit: 10, discountPercent: 50 }
-];
-
 interface ManualSampleItem {
   size: string;
   sku: string;
@@ -53,14 +47,6 @@ interface ManualSampleItem {
   inventory: number;
   barcode: string;
 }
-
-const DEFAULT_SAMPLE_MANUAL_ITEMS: ManualSampleItem[] = [
-  { size: '28mm', sku: 'APE-DC-28MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1000, barcode: 'B0GSSF4SBB' },
-  { size: '30mm', sku: 'APE-DC-30MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1500, barcode: 'B0GSRXJFD9' },
-  { size: '33mm', sku: 'APE-DC-33MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1000, barcode: 'B0GSS295GM' },
-  { size: '35mm', sku: 'APE-DC-35MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 2500, barcode: 'B0H3ZJ1J5L' },
-  { size: '40mm', sku: 'APE-DC-40MM', b2cPrice: 22, b2bPrice: 16, b2bMoq: 50, inventory: 1200, barcode: 'B0GSRSG56R' }
-];
 
 interface DefaultVariantPackagingOpts {
   fsnSuffix?: string | number;
@@ -78,21 +64,23 @@ interface DefaultVariantPackagingOpts {
 
 function getDefaultVariantPackaging(opts: DefaultVariantPackagingOpts = {}) {
   return {
-    lowStockThreshold: opts.lowStockThreshold || 50,
-    barcode: opts.barcode || `8908511${Math.floor(100000 + Math.random() * 900000)}`,
+    lowStockThreshold: opts.lowStockThreshold || 10,
+    barcode: opts.barcode || '',
     flipkartFsn: opts.fsnSuffix !== undefined
       ? `FSN-APE-${opts.fsnSuffix}`
-      : `FSN-APE-${Math.floor(1000 + Math.random() * 9000)}`,
-    images: [opts.image || '/Drain_clips.webp'],
-    weightGrams: opts.weight || 25,
+      : '',
+    images: opts.image ? [opts.image] : [],
+    weightGrams: opts.weight || 0,
     dimensionsCm: {
-      length: opts.length || 5,
-      width: opts.width || 5,
-      height: opts.height || 5
+      length: opts.length || 0,
+      width: opts.width || 0,
+      height: opts.height || 0
     },
     hsnCode: opts.hsn || '73269099',
-    gstRatePercent: opts.gst || 18,
+    gstRatePercent: opts.gst !== undefined ? opts.gst : 18,
     unitOfMeasure: (opts.uom || 'PCS') as any
+  };
+}
   };
 }
 
@@ -221,7 +209,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
   // Manual 5-Item Custom Builder state (Add 5 items manually)
   const [isManualBuilderOpen, setIsManualBuilderOpen] = useState(false);
   const [manualEntryMode, setManualEntryMode] = useState<'TABLE' | 'QUICK'>('TABLE');
-  const [manualItems, setManualItems] = useState<ManualSampleItem[]>(DEFAULT_SAMPLE_MANUAL_ITEMS);
+  const [manualItems, setManualItems] = useState<ManualSampleItem[]>([]);
 
   // Active Wizard Tab: If new product, start on DETAILS (Tab 1), else start on VARIATIONS (Tab 3)
   const [activeListingTab, setActiveListingTab] = useState<'DETAILS' | 'MEDIA' | 'VARIATIONS' | 'OFFER' | 'COMPLIANCE'>(
@@ -233,8 +221,8 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
   // ─────────────────────────────────────────────────────────────────────────
   const [title, setTitle] = useState(initialProduct?.title || '');
   const [brand, setBrand] = useState(initialProduct?.brand || 'Apollo Engineering');
-  const [modelNumber, setModelNumber] = useState(initialProduct?.modelNumber || (isNewProduct ? '' : 'APE-DC-35MM'));
-  const [partNumber, setPartNumber] = useState(initialProduct?.partNumber || (isNewProduct ? '' : '73269099-SS'));
+  const [modelNumber, setModelNumber] = useState(initialProduct?.modelNumber || '');
+  const [partNumber, setPartNumber] = useState(initialProduct?.partNumber || '');
   const [category, setCategory] = useState(initialProduct?.category || 'SS304 GRADE');
   const [subCategory, setSubCategory] = useState(initialProduct?.subCategory || 'Solar Cleaning Hardware');
   const [description, setDescription] = useState(initialProduct?.description || '');
@@ -243,30 +231,41 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
     initialProduct?.unitOfMeasure || initialProduct?.variants?.[0]?.unitOfMeasure || 'PCS'
   );
   
+  // First-Class Combo Kit / Bundle State
+  const [isComboBundle, setIsComboBundle] = useState<boolean>(
+    Boolean(initialProduct?.isComboBundle || initialProduct?.variants?.[0]?.isComboVariant)
+  );
+  const [comboComponents, setComboComponents] = useState<ComboComponentItem[]>(
+    initialProduct?.comboComponents || initialProduct?.variants?.[0]?.comboComponents || []
+  );
+
+  // Bundle Component Entry Inputs
+  const [newComponentAsin, setNewComponentAsin] = useState('');
+  const [newComponentTitle, setNewComponentTitle] = useState('');
+  const [newComponentSku, setNewComponentSku] = useState('');
+  const [newComponentQty, setNewComponentQty] = useState(1);
+  const [newComponentPrice, setNewComponentPrice] = useState(0);
+  const [newComponentSpecs, setNewComponentSpecs] = useState('');
+
   const [highlights, setHighlights] = useState<string[]>(
     initialProduct?.highlights && initialProduct.highlights.length > 0 
       ? initialProduct.highlights 
-      : [
-          '100% Guaranteed AISI SS304 Stainless Steel Construction (Corrosion Proof)',
-          'AetherWash Shadowless Uniform Water Curtain for Rapid Dust Removal',
-          '10-Year Rust-Proof Warranty on eligible SS304 Drain Clips and Sprinklers. Warranty covers rust/corrosion only.',
-          'Direct Kathwada GIDC Factory Hub Dispatch (Ahmedabad 382430)'
-        ]
+      : []
   );
   const [newHighlightInput, setNewHighlightInput] = useState('');
 
   const [targetAudience, setTargetAudience] = useState<string[]>(
     initialProduct?.targetAudience && initialProduct.targetAudience.length > 0
       ? initialProduct.targetAudience
-      : ['Utility MW Solar Farms', 'Industrial Rooftop PV', 'Commercial Solar Parks', 'Agricultural Solar Pumps']
+      : []
   );
   const [newAudienceInput, setNewAudienceInput] = useState('');
 
-  const [hsnCode, setHSNCode] = useState(initialProduct?.variants[0]?.hsnCode || '73269099');
+  const [hsnCode, setHSNCode] = useState(initialProduct?.variants?.[0]?.hsnCode || '73269099');
   const [gstRate, setGstRate] = useState<number>(
-    initialProduct?.variants[0]?.gstRatePercent !== undefined ? initialProduct.variants[0].gstRatePercent : 18
+    initialProduct?.variants?.[0]?.gstRatePercent !== undefined ? initialProduct.variants[0].gstRatePercent : 18
   );
-  const [includeAPlusComparison, setIncludeAPlusComparison] = useState(true);
+  const [includeAPlusComparison, setIncludeAPlusComparison] = useState(false);
 
   // Industrial Catalog Vital Info Identifiers
   const [productIdType, setProductIdType] = useState<'ASIN' | 'UPC' | 'EAN' | 'GTIN_EXEMPTION'>('ASIN');
@@ -326,12 +325,12 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
     size: true,
     numberOfItems: false,
     color: false,
-    material: true,
+    material: false,
     itemShape: false,
     orientation: false,
   });
 
-  const [variationTheme, setVariationTheme] = useState<string>('Size, Material');
+  const [variationTheme, setVariationTheme] = useState<string>('Size');
 
   const handleVariationThemeChange = (newTheme: string) => {
     setVariationTheme(newTheme);
@@ -349,8 +348,6 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
   const [newSizeInput, setNewSizeInput] = useState('');
   const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
   const [printingBarcodeVariant, setPrintingBarcodeVariant] = useState<ProductVariant | null>(null);
-  const [isListingImportModalOpen, setIsListingImportModalOpen] = useState(false);
-  const [listingImportText, setListingImportText] = useState('');
 
   const [variantsList, setVariantsList] = useState<ProductVariant[]>(() => {
     if (initialProduct?.variants && initialProduct.variants.length > 0) {
@@ -358,35 +355,29 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
         ...v,
         b2bMoq: v.b2bMoq || initialProduct.b2bMoq || v.b2bTierPricing?.[0]?.minQty || 50,
         flipkartFsn: v.flipkartFsn || `FSN-APE-${(i + 1).toString().padStart(4, '0')}`,
-        lowStockThreshold: v.lowStockThreshold || 50,
+        lowStockThreshold: v.lowStockThreshold || 10,
         gstRatePercent: v.gstRatePercent !== undefined ? v.gstRatePercent : 18,
         unitOfMeasure: (v.unitOfMeasure || initialProduct.unitOfMeasure || 'PCS') as any
       }));
     }
 
-    // Default starter variant for a new product
-    const starterSku = `APE-${Math.random().toString(36).substring(2, 6).toUpperCase()}-01`;
+    // Clean blank starter variant for a new product
     return [
       {
-        sku: starterSku,
-        title: 'Standard Variant - 35mm',
-        attributes: { size: '35mm', material: 'SS304' },
-        mrp: 120,
-        b2cPrice: 20,
-        b2bTierPricing: [{ minQty: 50, pricePerUnit: 12.75, discountPercent: 36 }],
-        inventory: 500,
-        ...getDefaultVariantPackaging({
-          weight: 48,
-          length: 8,
-          width: 4,
-          height: 3
-        })
+        sku: '',
+        title: 'Standard',
+        attributes: { size: 'Standard' },
+        mrp: 0,
+        b2cPrice: 0,
+        b2bTierPricing: [{ minQty: 50, pricePerUnit: 0, discountPercent: 0 }],
+        inventory: 0,
+        ...getDefaultVariantPackaging()
       }
     ];
   });
 
-  const [defaultB2cPrice, setDefaultB2cPrice] = useState(initialProduct?.variants?.[0]?.b2cPrice || 20);
-  const [defaultMrp, setDefaultMrp] = useState(initialProduct?.variants?.[0]?.mrp || 120);
+  const [defaultB2cPrice, setDefaultB2cPrice] = useState(initialProduct?.variants?.[0]?.b2cPrice || 0);
+  const [defaultMrp, setDefaultMrp] = useState(initialProduct?.variants?.[0]?.mrp || 0);
   const [b2bTiers, setB2bTiers] = useState<{ minQty: number; pricePerUnit: number; discountPercent?: number }[]>(() => {
     if (initialProduct?.variants?.[0]?.b2bTierPricing && initialProduct.variants[0].b2bTierPricing.length > 0) {
       return initialProduct.variants[0].b2bTierPricing.map(t => ({
@@ -396,13 +387,11 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
       }));
     }
     return [
-      { minQty: 1, pricePerUnit: 17, discountPercent: 15 },
-      { minQty: 1000, pricePerUnit: 15, discountPercent: 25 },
-      { minQty: 2500, pricePerUnit: 10, discountPercent: 50 },
+      { minQty: 50, pricePerUnit: 0, discountPercent: 0 }
     ];
   });
-  const defaultB2bPrice = b2bTiers[0]?.pricePerUnit || 17;
-  const defaultB2bMinQty = b2bTiers[0]?.minQty || 1;
+  const defaultB2bPrice = b2bTiers[0]?.pricePerUnit || 0;
+  const defaultB2bMinQty = b2bTiers[0]?.minQty || 50;
 
   const handleAddB2bTier = () => {
     const lastTier = b2bTiers[b2bTiers.length - 1];
@@ -755,13 +744,13 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
   const handleAddBlankManualRow = () => {
     const nextNum = variantsList.length + 1;
     const newVariant: ProductVariant = {
-      sku: `APE-CUSTOM-${nextNum}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
-      title: `${title || 'Apollo Product'} - Item ${nextNum}`,
-      attributes: { size: `Option ${nextNum}`, material: 'AISI SS304' },
-      mrp: defaultMrp || 35,
-      b2cPrice: defaultB2cPrice || 22,
-      b2bTierPricing: [{ minQty: defaultB2bMinQty || 50, pricePerUnit: defaultB2bPrice || 16, discountPercent: 27 }],
-      inventory: 500,
+      sku: '',
+      title: `Variant ${nextNum}`,
+      attributes: { size: `Option ${nextNum}` },
+      mrp: defaultMrp || 0,
+      b2cPrice: defaultB2cPrice || 0,
+      b2bTierPricing: [{ minQty: defaultB2bMinQty || 50, pricePerUnit: defaultB2bPrice || 0, discountPercent: 0 }],
+      inventory: 0,
       ...getDefaultVariantPackaging({
         image: image1,
         weight: itemWeight,
@@ -774,275 +763,45 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
       })
     };
     setVariantsList(prev => [...prev, newVariant]);
-    showToast(`Added manual blank row #${nextNum}! Type directly in the matrix table.`, 'success');
+    showToast(`Added blank variant row #${nextNum}`, 'success');
   };
 
-  const handleGenerateIndustrialTitle = () => {
-    const brandStr = brand || 'Apollo Engineering';
-    const materialStr = category.includes('SS304') ? 'AISI SS304 Stainless Steel' : 'Heavy Duty Industrial';
-    const sizeStr = variantsList.length >= 5 
-      ? '(Universal 5-Size Fit: 28mm, 30mm, 33mm, 35mm, 40mm Frames)'
-      : variantsList.length > 1 
-      ? `(${variantsList.map(v => v.attributes.size).filter(Boolean).join('/')} Frames)`
-      : `(${variantsList[0]?.attributes?.size || '35mm'} Frame)`;
-    const generated = `${brandStr} ${materialStr} Solar Panel Water Drain Clips ${sizeStr} - Auto Capillary Siphon Sludge Cleaner - Pack of 50`;
-    setTitle(generated.slice(0, 200));
-    showToast('Generated standard industrial title!', 'success');
+  const handleSelectCatalogProductForBundle = (selectedAsin: string) => {
+    setNewComponentAsin(selectedAsin);
+    const prod = products.find(p => p.asin === selectedAsin);
+    if (prod) {
+      setNewComponentTitle(prod.title);
+      setNewComponentSku(prod.variants[0]?.sku || prod.asin);
+      setNewComponentPrice(prod.variants[0]?.b2cPrice || 0);
+    }
   };
 
-  const handleFormatBulletsToIndustrialStandard = () => {
-    const formatted = highlights.map((hl) => {
-      if (/^\[.+\]/.test(hl)) return hl;
-      const clean = hl.replace(/^[•\-\*⚠️]\s*/, '').trim();
-      const parts = clean.split(/[–—\-:]/);
-      if (parts.length >= 2 && parts[0].length < 35) {
-        const headline = parts[0].trim().toUpperCase().replace(/[^A-Z0-9\s]/g, '');
-        const body = parts.slice(1).join(' - ').trim();
-        return `[${headline}] - ${body}`;
-      }
-      const words = clean.split(' ');
-      const headline = words.slice(0, 3).join(' ').toUpperCase().replace(/[^A-Z0-9\s]/g, '');
-      const body = words.slice(3).join(' ');
-      return `[${headline}] - ${body || clean}`;
-    });
-    setHighlights(formatted);
-    showToast('Formatted bullet points to [HEADLINE] standard!', 'success');
-  };
-
-  const handleLoadSampleIndustrialImages = () => {
-    setImage1('/Drain_clips.webp');
-    setImage2('/solar_sprinkler.webp');
-    setImage3('/gi_pipe_clamp.webp');
-    setImage4('/Drain_clips.webp');
-    setImage5('/solar_sprinkler.webp');
-    setImage6('/gi_pipe_clamp.webp');
-    showToast('Loaded complete 6-image compliant gallery!', 'success');
-  };
-
-  const handleLoadApolloDrainClipsPreset = () => {
-    setTitle('Apollo Engineering AISI SS304 Solar Panel Water Drain Clips (28mm, 30mm, 33mm, 35mm, 40mm) - Auto Siphon - Pack of 50');
-    setBrand('Apollo Engineering');
-    setModelNumber('APE-DC-SS304-5SET');
-    setCategory('SS304 GRADE');
-    setSubCategory('Auto Drain Clips');
-    setHSNCode('73269099');
-    setGstRate(18);
-    setUnitOfMeasure('PCS');
-    setProductIdType('ASIN');
-    setProductIdValue('B0H3ZJ1J5L');
-    setDescription(
-      '⚠️ Important Notice: Measure Before You Order. Please ensure you measure your solar panel frame thickness accurately before placing your order. This product is designed specifically to fit 28mm / 30mm / 33mm / 35mm / 40mm frames to ensure proper fitting and optimal performance.\n\n' +
-      'Key Features & Benefits:\n' +
-      '• [PREMIUM SS304 BUILD] – Made from certified high-grade AISI SS304 stainless steel for maximum durability, ultimate corrosion resistance, and 25+ years outdoor service life.\n' +
-      '• [CAPILLARY DRAINAGE] – Smartly engineered to quickly siphon away trapped rainwater and morning dew from solar panel frame corners.\n' +
-      '• [ELIMINATES MUD BELT] – Prevents dirty water residue marks ("mud belt") and dark spots that diminish solar power harvest.\n' +
-      '• [PROTECTS AGAINST PID] – Minimizes the risk of PID degradation, cell hotspots, and module thermal damage.\n' +
-      '• [ZERO MAINTENANCE] – Tool-free snap-on fit with no moving parts or maintenance required.'
-    );
-    setHighlights([
-      '[MEASURE FRAME THICKNESS FIRST] - Engineered for precision fit on 28mm, 30mm, 33mm, 35mm, and 40mm aluminum solar module frames.',
-      '[AUTO CAPILLARY SIPHON ACTION] - Continuously siphons standing rainwater and morning dew, eliminating dirty sludge and mud belt formation.',
-      '[PREVENTS PID & CELL HOTSPOTS] - Prevents dust accumulation at panel bottom edges, eliminating PID degradation and module fire hazards.',
-      '[100% AISI SS304 STAINLESS STEEL] - Weatherproof and impervious to UV radiation, coastal humidity, and salt spray with 25+ years life.',
-      '[TOOL-FREE SNAP-ON MOUNTING] - Snaps firmly onto panel frames in under 10 seconds per clip without screws or special tools.',
-      '[DIRECT FACTORY DISPATCH] - Dispatched directly from Apollo Engineering Manufacturing Hub at Kathwada GIDC, Ahmedabad (382430).'
-    ]);
-    setImage1('/Drain_clips.webp');
-    setImage2('/solar_sprinkler.webp');
-    setImage3('/gi_pipe_clamp.webp');
-    setImage4('/Drain_clips.webp');
-    setImage5('/solar_sprinkler.webp');
-    setImage6('/gi_pipe_clamp.webp');
-
-    const drainClips5Sizes: ProductVariant[] = [
-      {
-        sku: 'APE-SC-28.00MM',
-        title: 'Apollo SS304 Solar Drain Clip - 28mm Frame Size',
-        attributes: { size: '28mm', material: 'AISI SS304', packSize: 'Pack of 50' },
-        mrp: 35,
-        b2cPrice: 22,
-        b2bTierPricing: DEFAULT_DRAIN_CLIP_B2B_TIERS,
-        inventory: 2500,
-        lowStockThreshold: 100,
-        barcode: 'B0GSSF4SBB',
-        flipkartFsn: 'FSN-APE-DC28',
-        images: ['/Drain_clips.webp'],
-        weightGrams: 25,
-        dimensionsCm: { length: 5, width: 5, height: 5 },
-        hsnCode: '73269099',
-        gstRatePercent: 18,
-        unitOfMeasure: 'PCS'
-      },
-      {
-        sku: 'APE-SC-30.00MM',
-        title: 'Apollo SS304 Solar Drain Clip - 30mm Frame Size',
-        attributes: { size: '30mm', material: 'AISI SS304', packSize: 'Pack of 50' },
-        mrp: 35,
-        b2cPrice: 22,
-        b2bTierPricing: DEFAULT_DRAIN_CLIP_B2B_TIERS,
-        inventory: 3500,
-        lowStockThreshold: 100,
-        barcode: 'B0GSRXJFD9',
-        flipkartFsn: 'FSN-APE-DC30',
-        images: ['/Drain_clips.webp'],
-        weightGrams: 25,
-        dimensionsCm: { length: 5, width: 5, height: 5 },
-        hsnCode: '73269099',
-        gstRatePercent: 18,
-        unitOfMeasure: 'PCS'
-      },
-      {
-        sku: 'APE-SC-33.00MM',
-        title: 'Apollo SS304 Solar Drain Clip - 33mm Frame Size',
-        attributes: { size: '33mm', material: 'AISI SS304', packSize: 'Pack of 50' },
-        mrp: 35,
-        b2cPrice: 22,
-        b2bTierPricing: DEFAULT_DRAIN_CLIP_B2B_TIERS,
-        inventory: 2000,
-        lowStockThreshold: 100,
-        barcode: 'B0GSS295GM',
-        flipkartFsn: 'FSN-APE-DC33',
-        images: ['/Drain_clips.webp'],
-        weightGrams: 25,
-        dimensionsCm: { length: 5, width: 5, height: 5 },
-        hsnCode: '73269099',
-        gstRatePercent: 18,
-        unitOfMeasure: 'PCS'
-      },
-      {
-        sku: 'APE-SC-35.00MM',
-        title: 'Apollo SS304 Solar Drain Clip - 35mm Frame Size (Most Popular)',
-        attributes: { size: '35mm', material: 'AISI SS304', packSize: 'Pack of 50' },
-        mrp: 35,
-        b2cPrice: 22,
-        b2bTierPricing: DEFAULT_DRAIN_CLIP_B2B_TIERS,
-        inventory: 4500,
-        lowStockThreshold: 100,
-        barcode: 'B0H3ZJ1J5L',
-        flipkartFsn: 'FSN-APE-DC35',
-        images: ['/Drain_clips.webp'],
-        weightGrams: 25,
-        dimensionsCm: { length: 5, width: 5, height: 5 },
-        hsnCode: '73269099',
-        gstRatePercent: 18,
-        unitOfMeasure: 'PCS'
-      },
-      {
-        sku: 'APE-SC-40.00MM',
-        title: 'Apollo SS304 Solar Drain Clip - 40mm Frame Size',
-        attributes: { size: '40mm', material: 'AISI SS304', packSize: 'Pack of 50' },
-        mrp: 35,
-        b2cPrice: 22,
-        b2bTierPricing: DEFAULT_DRAIN_CLIP_B2B_TIERS,
-        inventory: 2800,
-        lowStockThreshold: 100,
-        barcode: 'B0GSRSG56R',
-        flipkartFsn: 'FSN-APE-DC40',
-        images: ['/Drain_clips.webp'],
-        weightGrams: 25,
-        dimensionsCm: { length: 5, width: 5, height: 5 },
-        hsnCode: '73269099',
-        gstRatePercent: 18,
-        unitOfMeasure: 'PCS'
-      }
-    ];
-
-    setVariantsList(drainClips5Sizes);
-    setSelectedVariationThemes({
-      size: true,
-      numberOfItems: false,
-      color: false,
-      material: true,
-      itemShape: false,
-      orientation: false
-    });
-    showToast('Loaded Apollo SS304 Drain Clips 5-Frame Matrix (28, 30, 33, 35, 40mm) with APE Catalog ASINs & SKUs!', 'success');
-  };
-
-  const handleParseListingImport = (rawText: string) => {
-    if (!rawText.trim()) {
-      showToast('Please paste listing text to import into APE Store.', 'error');
+  const handleAddBundleComponent = () => {
+    if (!newComponentTitle.trim()) {
+      showToast('Please provide a component title or select from catalog', 'warning');
       return;
     }
+    const newComp: ComboComponentItem = {
+      asin: newComponentAsin || `COMP-${Date.now().toString(36).toUpperCase()}`,
+      sku: newComponentSku.trim() || `SKU-${Date.now().toString(36).toUpperCase()}`,
+      productTitle: newComponentTitle.trim(),
+      quantity: Math.max(1, newComponentQty),
+      unitPrice: Math.max(0, newComponentPrice),
+      unitOfMeasure: 'PCS',
+      technicalDetails: newComponentSpecs ? { specs: { Description: newComponentSpecs } } : undefined
+    };
+    setComboComponents(prev => [...prev, newComp]);
+    setNewComponentAsin('');
+    setNewComponentTitle('');
+    setNewComponentSku('');
+    setNewComponentQty(1);
+    setNewComponentPrice(0);
+    setNewComponentSpecs('');
+    showToast(`Added component "${newComp.productTitle}" to bundle`, 'success');
+  };
 
-    // 1. Item Name
-    const itemNameMatch = rawText.match(/Item Name\s*\n+([^\n]+)/i);
-    if (itemNameMatch && itemNameMatch[1]) {
-      setTitle(itemNameMatch[1].trim());
-    }
-
-    // 2. Brand Name
-    const brandMatch = rawText.match(/Brand Name\s*\n+([^\n]+)/i);
-    if (brandMatch && brandMatch[1]) {
-      setBrand(brandMatch[1].trim());
-    }
-
-    // 3. Model Number
-    const modelMatch = rawText.match(/Model Number\s*\n+([^\n]+)/i);
-    if (modelMatch && modelMatch[1]) {
-      setModelNumber(modelMatch[1].trim());
-    }
-
-    // 4. Product Description
-    const descMatch = rawText.match(/Product Description\s*\n+([^\n]+(?:\n[^\n]+)*?)(?=\nBullet Point|\nMaterial|\nSpecial Features|\nNumber of Items|\nChoose Variation|$)/i);
-    if (descMatch && descMatch[1]) {
-      setDescription(descMatch[1].trim());
-    }
-
-    // 5. Bullet Points / Highlights
-    const bulletMatches = rawText.match(/Bullet Point\s*\n+([^\n]+)/gi);
-    if (bulletMatches && bulletMatches.length > 0) {
-      const extractedBullets = bulletMatches.map(b => b.replace(/Bullet Point\s*\n+/i, '').trim()).filter(Boolean);
-      setHighlights(prev => Array.from(new Set([...extractedBullets, ...prev])));
-    }
-
-    // 6. Child Variations (ASINs & SKUs)
-    const asinSkuRegex = /asin=([A-Z0-9]+)&sku=([^&\s]+)/gi;
-    let match;
-    const parsedVariants: { asin: string; sku: string }[] = [];
-    while ((match = asinSkuRegex.exec(rawText)) !== null) {
-      if (match[1] && match[2]) {
-        parsedVariants.push({ asin: match[1], sku: decodeURIComponent(match[2]) });
-      }
-    }
-
-    const sizes = ['28mm', '30mm', '33mm', '35mm', '40mm'];
-    if (parsedVariants.length > 0) {
-      const newVariants: ProductVariant[] = parsedVariants.map((item, idx) => {
-        const sizeStr = sizes[idx] || `${28 + idx * 3}mm`;
-        return {
-          sku: item.sku,
-          title: `${itemNameMatch ? itemNameMatch[1].trim() : 'Apollo SS304 Solar Drain Clip'} - ${sizeStr}`,
-          attributes: { size: sizeStr, material: 'AISI SS304', packSize: 'Pack of 50' },
-          mrp: 35,
-          b2cPrice: 22,
-          b2bTierPricing: DEFAULT_DRAIN_CLIP_B2B_TIERS,
-          inventory: 3000,
-          lowStockThreshold: 100,
-          barcode: item.asin,
-          flipkartFsn: `FSN-APE-DC${sizeStr.replace(/\D/g, '')}`,
-          images: [image1 || '/Drain_clips.webp'],
-          weightGrams: 25,
-          dimensionsCm: { length: 5, width: 5, height: 5 },
-          hsnCode: '73269099',
-          gstRatePercent: 18,
-          unitOfMeasure: 'PCS'
-        };
-      });
-
-      setVariantsList(newVariants);
-      setSelectedVariationThemes({
-        size: true,
-        numberOfItems: false,
-        color: false,
-        material: true,
-        itemShape: false,
-        orientation: false
-      });
-    }
-
-    showToast('Parsed listing and populated APE Store variation matrix successfully!', 'success');
-    setIsListingImportModalOpen(false);
+  const handleRemoveBundleComponent = (index: number) => {
+    setComboComponents(prev => prev.filter((_, i) => i !== index));
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1245,15 +1004,18 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
     const mediaImages = [image1, image2, image3, image4, image5, image6].filter(img => img && img.trim() !== '');
     const fallbackImage = mediaImages.length > 0 ? mediaImages : ['/logo.webp'];
 
-    const finalizedVariants: ProductVariant[] = variantsList.map(v => ({
+    const finalizedVariants: ProductVariant[] = variantsList.map((v, i) => ({
       ...v,
+      sku: v.sku.trim() || `${asin}-${(i + 1).toString().padStart(2, '0')}`,
       b2bMoq: v.b2bMoq || defaultB2bMinQty || 50,
       images: v.images && v.images.length > 0 ? v.images : fallbackImage,
       videoUrl: v.videoUrl || videoUrl,
       dimensionsCm: { length: itemLength, width: itemWidth, height: itemHeight },
       packageDimensionsCm: { length: packageLength, width: packageWidth, height: packageHeight },
       gstRatePercent: v.gstRatePercent !== undefined ? v.gstRatePercent : (gstRate || 18),
-      unitOfMeasure: (v.unitOfMeasure || unitOfMeasure || 'PCS') as any
+      unitOfMeasure: (v.unitOfMeasure || unitOfMeasure || 'PCS') as any,
+      isComboVariant: isComboBundle,
+      comboComponents: isComboBundle && comboComponents.length > 0 ? comboComponents : undefined
     }));
 
     // Auto-generate robust seller listings for all variants
@@ -1268,12 +1030,12 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
             sellerId: 'seller_apollo_mfg',
             sellerName: 'Apollo Engineering Direct Hub (382430)',
             rating: 5.0,
-            ratingCount: 18,
+            ratingCount: 1,
             fulfillmentType: 'FBF',
-            price: v.b2cPrice || 20,
+            price: v.b2cPrice || 0,
             shippingFee: 0,
             deliveryDays: 1,
-            stock: v.inventory || 500,
+            stock: v.inventory || 0,
             isWinningBuyBox: true,
             buyBoxScore: 100
           }
@@ -1283,23 +1045,11 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
 
     const aPlusModules: APlusModule[] = initialProduct?.aPlusContent && initialProduct.aPlusContent.length > 0
       ? initialProduct.aPlusContent
-      : [
-          {
-            id: 'APLUS-COMP-01',
-            type: 'COMPARISON_TABLE',
-            title: 'Apollo AISI SS304 vs Standard Plastic & Generic Clamps',
-            subtitle: 'Why utility solar installations and solar EPCs mandate Apollo Engineering hardware',
-            data: {
-              features: [
-                { feature: 'Raw Material Grade', apollo: '100% Guaranteed AISI SS304 Stainless Steel', generic: 'Recycled Polycarbonate / Plastic' },
-                { feature: 'UV & Sun Exposure', apollo: '10-Year Rust-Proof Warranty (covers rust/corrosion only)', generic: 'Becomes brittle and cracks in 12-18 months' },
-                { feature: 'Sludge & Dust Removal', apollo: '99.4% Siphon Capillary Clearance', generic: 'Incomplete drainage with dust borders' },
-                { feature: 'Operating Temperature', apollo: '-40°C to +300°C Industrial Resistance', generic: 'Deforms at 65°C under hot solar modules' },
-                { feature: 'Manufacturing SLA', apollo: 'Direct Kathwada GIDC Hub Dispatch (382430)', generic: 'Unbranded Import without test certificates' }
-              ]
-            }
-          }
-        ];
+      : [];
+
+    const computedIncludedComponents = isComboBundle && comboComponents.length > 0
+      ? comboComponents.map(c => `${c.quantity}x ${c.productTitle}`).join(', ')
+      : includedComponents;
 
     const completeProduct: Product = {
       asin,
@@ -1307,28 +1057,30 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
       title,
       brand: brand || 'Apollo Engineering',
       modelNumber: modelNumber || `APE-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
-      partNumber: partNumber || '73269099-SS',
+      partNumber: partNumber || '',
       category: category || 'SS304 GRADE',
       subCategory: subCategory || 'Solar Cleaning Hardware',
-      description: description || `${title} engineered by Apollo Engineering at Kathwada Factory Hub.`,
+      description: description || `${title} manufactured by Apollo Engineering at Kathwada Factory Hub.`,
       highlights,
       targetAudience,
       countryOfOrigin: countryOfOrigin || 'India',
-      includedComponents,
+      includedComponents: computedIncludedComponents,
+      isComboBundle: isComboBundle,
+      comboComponents: isComboBundle && comboComponents.length > 0 ? comboComponents : undefined,
       handlingTimeDays,
       isCodAllowed,
       maxOrderQuantity,
       returnPolicy,
       keywords,
       unitOfMeasure: unitOfMeasure || 'PCS',
-      rating: initialProduct?.rating || 5.0,
-      reviewCount: initialProduct?.reviewCount || 18,
+      rating: initialProduct?.rating || 0,
+      reviewCount: initialProduct?.reviewCount || 0,
       variants: finalizedVariants,
       selectedVariantSku: finalizedVariants[0]?.sku || 'SKU-01',
       videoUrl: videoUrl,
       sellerListings: generatedSellerListings,
       aPlusContent: includeAPlusComparison ? aPlusModules : (initialProduct?.aPlusContent || []),
-      badges: ['PRIME', 'BEST_SELLER', 'ENTERPRISE_ASSURED'],
+      badges: ['PRIME', 'ENTERPRISE_ASSURED'],
       isLive: true,
       createdAt: initialProduct?.createdAt || new Date().toISOString(),
       lastUpdated: new Date().toISOString()
@@ -1369,68 +1121,45 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="font-black text-slate-900 text-base md:text-lg font-display tracking-tight">
-                  {isNewProduct ? 'Add New ASIN (Product & Matrix Wizard)' : 'Edit Product & Variation Matrix'}
+                <h2 className="font-bold text-slate-900 text-base md:text-lg">
+                  {isNewProduct ? 'Add New Product Listing' : `Edit Product: ${title || initialProduct?.title}`}
                 </h2>
-                <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-mono font-bold flex items-center gap-1">
-                  <BadgeCheck className="w-3 h-3 text-amber-600" /> APE Store Catalog Sync
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-blue-50 text-[#0054A6] border border-blue-200 text-[10px] font-mono font-bold">
-                  Custom GST & Units (kg/pcs/ltr)
-                </span>
+                {isComboBundle && (
+                  <span className="px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-mono font-bold flex items-center gap-1">
+                    <Layers className="w-3 h-3 text-indigo-600" /> Combo Kit / Bundle
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 font-mono">
-                Kathwada Origin Hub ({ORIGIN_HUB_PINCODE}) • Unified Product Details & Variation Management
+                Kathwada Origin Hub ({ORIGIN_HUB_PINCODE}) • Direct Factory Catalog & Variation Master
               </p>
             </div>
           </div>
 
-          {/* Listing Quality Score Meter Widget */}
-          <div className="flex items-center gap-4">
-            <div className="bg-slate-50 px-3.5 py-1.5 rounded-2xl border border-slate-200 flex items-center gap-3 shadow-inner">
-              <div className="text-right">
-                <div className="flex items-center justify-end gap-1.5">
-                  <span className="text-[10px] text-slate-500 font-mono uppercase font-bold">Listing Quality</span>
-                  <span className={`text-xs font-mono font-black ${
-                    listingQualityScore >= 85 ? 'text-emerald-700' : listingQualityScore >= 60 ? 'text-blue-700' : 'text-amber-700'
-                  }`}>
-                    {listingQualityScore}%
-                  </span>
-                </div>
-                <div className="w-28 h-2 bg-slate-200 rounded-full overflow-hidden mt-1">
-                  <div 
-                    className={`h-full transition-all duration-500 rounded-full ${
-                      listingQualityScore >= 85 ? 'bg-emerald-500' : listingQualityScore >= 60 ? 'bg-[#0054A6]' : 'bg-amber-500'
-                    }`}
-                    style={{ width: `${listingQualityScore}%` }}
-                  />
-                </div>
-              </div>
-
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
-                listingQualityScore >= 85 
-                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
-                  : 'bg-blue-100 text-blue-800 border border-blue-200'
-              }`}>
-                {listingQualityScore >= 85 ? 'Gold Star' : 'In Progress'}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleSaveListing}
-                className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all"
-              >
-                <Save className="w-4 h-4" /> Save
-              </button>
-              <button 
-                onClick={onClose} 
-                className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors"
-                title="Close Wizard"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveListing}
+              className="px-5 py-2 bg-[#0054A6] hover:bg-[#003d7a] text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Save className="w-4 h-4" />
+              <span>Save Product Listing</span>
+            </button>
+            <button 
+              type="button"
+              onClick={onClose} 
+              className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors ml-1 cursor-pointer"
+              title="Close Wizard"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
@@ -1481,7 +1210,243 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
           {/* ═══════════════════════════════════════════════════════════════════ */}
           {activeListingTab === 'DETAILS' && (
             <div className="space-y-6 max-w-4xl mx-auto">
-              
+
+              {/* Product Type / Architecture Selection */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Package className="w-4 h-4 text-[#0054A6]" />
+                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono">
+                      Product Architecture & Type
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-mono">
+                    {isComboBundle ? 'Combo Kit / Multi-Component Bundle' : 'Standard Manufacturing Part / Line'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsComboBundle(false)}
+                    className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      !isComboBundle
+                        ? 'border-[#0054A6] bg-blue-50/70 shadow-xs'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <strong className="text-xs font-bold text-slate-900">Standard Industrial Product</strong>
+                      {!isComboBundle && <CheckCircle2 className="w-4 h-4 text-[#0054A6]" />}
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Single manufactured component or size variant matrix (e.g. Drain Clip size variations).
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsComboBundle(true)}
+                    className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      isComboBundle
+                        ? 'border-indigo-600 bg-indigo-50/70 shadow-xs'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-1.5">
+                        <strong className="text-xs font-bold text-slate-900">Combo Kit / Bundle</strong>
+                        <span className="px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 text-[10px] font-bold">Multi-Item</span>
+                      </div>
+                      {isComboBundle && <CheckCircle2 className="w-4 h-4 text-indigo-600" />}
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Pre-assembled combo package containing multiple products with a defined bill of materials.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* BUNDLE INCLUSIONS & COMPONENTS MANAGER (When Combo Kit is selected) */}
+              {isComboBundle && (
+                <div className="bg-indigo-50/40 border border-indigo-200 rounded-2xl p-5 space-y-4 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-indigo-200/70">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Layers className="w-5 h-5 text-indigo-700" />
+                        <h4 className="text-sm font-bold text-indigo-950 font-mono uppercase tracking-wide">
+                          Bundle Components & Inclusions
+                        </h4>
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-900 text-[10px] font-bold font-mono">
+                          {comboComponents.length} {comboComponents.length === 1 ? 'Component' : 'Components'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-indigo-900/70 mt-0.5">
+                        Add the individual components included in this combo package.
+                      </p>
+                    </div>
+
+                    {comboComponents.length > 0 && (
+                      <div className="flex items-center gap-2 text-xs bg-white px-3 py-1.5 rounded-xl border border-indigo-200 shadow-2xs">
+                        <span className="text-slate-500 font-mono">Combined Value:</span>
+                        <span className="font-bold font-mono text-indigo-950 text-sm">
+                          ₹{comboComponents.reduce((acc, c) => acc + (c.quantity * (c.unitPrice || 0)), 0).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Components List Table */}
+                  {comboComponents.length > 0 ? (
+                    <div className="overflow-x-auto rounded-xl border border-indigo-200 bg-white">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-indigo-100/60 text-indigo-950 font-mono text-[10px] uppercase border-b border-indigo-200">
+                          <tr>
+                            <th className="p-2.5 w-10 text-center">#</th>
+                            <th className="p-2.5">Component Item</th>
+                            <th className="p-2.5 w-32">SKU</th>
+                            <th className="p-2.5 w-24 text-center">Qty</th>
+                            <th className="p-2.5 w-24 text-right">Unit Rate</th>
+                            <th className="p-2.5 w-24 text-right">Total</th>
+                            <th className="p-2.5 w-12 text-center">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-indigo-100">
+                          {comboComponents.map((comp, cIdx) => (
+                            <tr key={cIdx} className="hover:bg-indigo-50/30">
+                              <td className="p-2.5 text-center font-mono text-slate-400 font-bold">{cIdx + 1}</td>
+                              <td className="p-2.5 font-semibold text-slate-900">
+                                {comp.productTitle}
+                                {comp.technicalDetails?.specs?.Description && (
+                                  <span className="block text-[10px] text-slate-500 font-normal">
+                                    {comp.technicalDetails.specs.Description}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-2.5 font-mono text-slate-600 text-[11px]">{comp.sku || '—'}</td>
+                              <td className="p-2.5 text-center font-mono font-bold text-slate-900">
+                                {comp.quantity} {comp.unitOfMeasure || 'PCS'}
+                              </td>
+                              <td className="p-2.5 text-right font-mono text-slate-700">
+                                ₹{(comp.unitPrice || 0).toLocaleString('en-IN')}
+                              </td>
+                              <td className="p-2.5 text-right font-mono font-bold text-indigo-950">
+                                ₹{(comp.quantity * (comp.unitPrice || 0)).toLocaleString('en-IN')}
+                              </td>
+                              <td className="p-2.5 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveBundleComponent(cIdx)}
+                                  className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                  title="Remove component"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl bg-white border border-dashed border-indigo-200 text-center text-xs text-indigo-900/60">
+                      No components added yet. Select a product from your catalog below or enter a custom item.
+                    </div>
+                  )}
+
+                  {/* Add Component to Bundle Form */}
+                  <div className="bg-white p-4 rounded-xl border border-indigo-200 space-y-3">
+                    <span className="text-[11px] font-bold text-indigo-950 uppercase font-mono block">
+                      + Add Component to this Bundle
+                    </span>
+
+                    {/* Quick Pick from Catalog */}
+                    <div className="space-y-1">
+                      <label className="block text-[11px] text-slate-600 font-semibold">
+                        Select from Existing Catalog Product (Optional):
+                      </label>
+                      <select
+                        value={newComponentAsin}
+                        onChange={(e) => handleSelectCatalogProductForBundle(e.target.value)}
+                        className="w-full h-9 px-3 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#0054A6]"
+                      >
+                        <option value="">-- Choose from Catalog or Type Below --</option>
+                        {products.map(p => (
+                          <option key={p.asin} value={p.asin}>
+                            {p.title} ({p.asin}) — ₹{p.variants[0]?.b2cPrice || 0}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                      <div className="sm:col-span-5 space-y-1">
+                        <label className="block text-[11px] text-slate-600 font-semibold">Component Title *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. AISI SS304 Solar Drain Clips (35mm)"
+                          value={newComponentTitle}
+                          onChange={(e) => setNewComponentTitle(e.target.value)}
+                          className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-[#0054A6]"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-3 space-y-1">
+                        <label className="block text-[11px] text-slate-600 font-semibold">SKU / Code</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. APE-SC-35MM"
+                          value={newComponentSku}
+                          onChange={(e) => setNewComponentSku(e.target.value)}
+                          className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900 focus:outline-none focus:border-[#0054A6]"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2 space-y-1">
+                        <label className="block text-[11px] text-slate-600 font-semibold">Quantity</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={newComponentQty}
+                          onChange={(e) => setNewComponentQty(Number(e.target.value))}
+                          className="w-full h-9 px-2.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#0054A6]"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2 space-y-1">
+                        <label className="block text-[11px] text-slate-600 font-semibold">Unit Value (₹)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={newComponentPrice}
+                          onChange={(e) => setNewComponentPrice(Number(e.target.value))}
+                          className="w-full h-9 px-2.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#0054A6]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <input
+                        type="text"
+                        placeholder="Optional spec / notes (e.g. 50 Pcs Pack, SS304 Grade)"
+                        value={newComponentSpecs}
+                        onChange={(e) => setNewComponentSpecs(e.target.value)}
+                        className="flex-1 max-w-md h-8 px-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-700 focus:outline-none focus:border-[#0054A6]"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={handleAddBundleComponent}
+                        className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer ml-3 shrink-0"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Component</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-[#0054A6] uppercase tracking-wider font-mono flex items-center gap-2">
@@ -1490,25 +1455,6 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                   <span className="text-[11px] text-slate-500 font-mono">
                     Character Count: <strong className={title.length > 200 ? 'text-rose-600' : 'text-slate-800'}>{title.length}/200</strong>
                   </span>
-                </div>
-
-                {/* Industrial Standard Title Formula Helper Banner */}
-                <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 flex flex-wrap items-center justify-between gap-2 text-xs">
-                  <div className="space-y-0.5">
-                    <span className="font-bold text-[#0054A6] flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Industrial Standard Title Formula:
-                    </span>
-                    <span className="text-[11px] text-slate-600 font-mono">
-                      [Brand] + [Material/Specification] + [Product Type] + [Model/Size] + [Pack Size]
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleGenerateIndustrialTitle}
-                    className="px-3 py-1.5 rounded-lg bg-[#0054A6] hover:bg-[#003d7a] text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-300" /> ⚡ Auto-Generate Industrial Title
-                  </button>
                 </div>
 
                 {/* Product Title with live counter */}
@@ -1761,20 +1707,11 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h3 className="text-sm font-bold text-[#0054A6] uppercase tracking-wider font-mono flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-amber-500" /> Key Product Highlights (5-Point Standard)
+                      <Sparkles className="w-4 h-4 text-amber-500" /> Key Product Highlights
                     </h3>
                     <p className="text-[11px] text-slate-500 mt-0.5 font-mono">
-                      Format: [FEATURE BENEFIT IN CAPS] - Detailed technical description
+                      Key technical features, certifications, and product warranty specifications.
                     </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleFormatBulletsToIndustrialStandard}
-                      className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" /> ⚡ Format to [HEADLINE]
-                    </button>
                   </div>
                 </div>
 
@@ -1868,24 +1805,17 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
           {activeListingTab === 'MEDIA' && (
             <div className="space-y-6 max-w-6xl mx-auto">
               {/* Media Standards Compliance Guide */}
-              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
                 <div className="flex items-center gap-3">
-                  <Camera className="w-5 h-5 text-amber-600 shrink-0" />
+                  <Camera className="w-5 h-5 text-[#0054A6] shrink-0" />
                   <div>
-                    <strong className="block text-amber-950 font-bold">High-Resolution Media Quality Checklist</strong>
-                    <span>White background (RGB 255,255,255), minimum 1000×1000px resolution for high-res zoom, 6 dedicated angles, no promotional watermarks.</span>
+                    <strong className="block text-slate-900 font-bold">High-Resolution Media Specification</strong>
+                    <span className="text-slate-500">White background (RGB 255,255,255), minimum 1000×1000px resolution, clean industrial angles.</span>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono shrink-0">
-                  <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">✓ 6 Image Slots</span>
-                  <span className="px-2.5 py-1 rounded-lg bg-purple-100 text-purple-800 font-bold border border-purple-300">✓ 1 HD Video</span>
-                  <button
-                    type="button"
-                    onClick={handleLoadSampleIndustrialImages}
-                    className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-sm transition-all flex items-center gap-1"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" /> ⚡ 1-Click: Load 6 SS304 Images
-                  </button>
+                  <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-bold border border-emerald-200">✓ 6 Dedicated Slots</span>
+                  <span className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-800 font-bold border border-purple-200">✓ 1 HD Video</span>
                 </div>
               </div>
 
@@ -2185,30 +2115,6 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                     </button>
                   </div>
 
-                  {/* 1-Click Multi-Item Presets */}
-                  <div className="pt-2 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-[11px] text-slate-500 font-mono font-bold">Quick Bundles:</span>
-                    <button
-                      type="button"
-                      onClick={() => handleAddVariant('28mm, 30mm, 33mm, 35mm, 40mm')}
-                      className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#0054A6] text-[11px] font-mono font-bold transition-all shadow-2xs"
-                    >
-                      + ⚡ 5 SS304 Drain Clip Sizes (28, 30, 33, 35, 40mm)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAddVariant('Pack of 10, Pack of 25, Pack of 50, Pack of 100, Pack of 500')}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 text-[11px] font-mono font-bold transition-all shadow-2xs"
-                    >
-                      + 5 Pack Sizes (10, 25, 50, 100, 500)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAddVariant('0.5 LTR, 1 LTR, 2 LTR, 5 LTR, 20 LTR')}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 text-[11px] font-mono font-bold transition-all shadow-2xs"
-                    >
-                      + 5 Volume Options (0.5L, 1L, 2L, 5L, 20L)
-                    </button>
                   </div>
                 </div>
 
@@ -2245,7 +2151,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                             type="button"
                             onClick={() => handleDeleteVariantRow(idx)}
                             title={`Remove ${variant.attributes.size || variant.sku}`}
-                            className="w-4 h-4 rounded-full flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors ml-0.5"
+                            className="w-4 h-4 rounded-full flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors ml-0.5 cursor-pointer"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -2272,30 +2178,16 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                     <button
                       type="button"
                       onClick={handleAddBlankManualRow}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5"
+                      className="px-3.5 py-1.5 rounded-xl bg-[#0054A6] hover:bg-[#003d7a] text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Add Custom Row
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleLoadApolloDrainClipsPreset}
-                      className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-sm transition-all flex items-center gap-1.5"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" /> ⚡ 1-Click Load Apollo SS304 Drain Clips (5 Sizes)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsListingImportModalOpen(true)}
-                      className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#0054A6] text-xs font-bold border border-blue-200 shadow-sm transition-colors flex items-center gap-1.5"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-[#0054A6]" /> 📋 Paste Listing (APE Store Auto-Fill)
+                      <Plus className="w-3.5 h-3.5" /> Add Variant Row
                     </button>
                     <button
                       type="button"
                       onClick={handleApplyDefaultPriceToAll}
-                      className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-amber-800 text-xs font-bold border border-slate-300 shadow-sm transition-colors flex items-center gap-1.5"
+                      className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-300 shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
-                      <Zap className="w-3.5 h-3.5 text-amber-600" /> Sync Standard Pricing to All
+                      <Zap className="w-3.5 h-3.5 text-amber-600" /> Sync Pricing to All Variants
                     </button>
                   </div>
                 </div>
@@ -3225,88 +3117,6 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
         {/* ───────────────────────────────────────────────────────────────── */}
         {/* 📋 APE STORE LISTING SMART AUTO-FILL MODAL                        */}
         {/* ───────────────────────────────────────────────────────────────── */}
-        {isListingImportModalOpen && (
-          <div className="fixed inset-0 z-[250] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-              {/* Header */}
-              <div className="px-6 py-4 bg-gradient-to-r from-slate-900 to-[#0054A6] text-white flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm">Paste Listing Text (APE Store Smart Auto-Fill)</h3>
-                    <p className="text-xs text-blue-200">
-                      Copy directly from product listing — we extract Item Name, Model, ASINs, SKUs & Sizes automatically!
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsListingImportModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Body */}
-              <div className="p-6 space-y-4 overflow-y-auto">
-                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-xs text-slate-700 space-y-1.5">
-                  <span className="font-bold text-[#0054A6] block">💡 How It Works:</span>
-                  <p>
-                    Paste the entire text from listing sheet (like your <strong>Apollo SS304 Solar Panel Drain Clip</strong> listing with 5 variations). Our system extracts all 5 sizes (28mm, 30mm, 33mm, 35mm, 40mm), ASINs, SKUs, and bullets into our clean APE Store structure.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-800 block">
-                    Paste Raw Listing Text:
-                  </label>
-                  <textarea
-                    rows={12}
-                    value={listingImportText}
-                    onChange={(e) => setListingImportText(e.target.value)}
-                    placeholder="Paste text containing 'Item Name', 'Model Number', 'Product Description', 'asin=...&sku=...' etc."
-                    className="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-mono text-slate-800 focus:bg-white focus:border-[#0054A6] focus:ring-2 focus:ring-[#0054A6]/20 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Pre-fill sample Apollo Drain Clip text if empty
-                    handleLoadApolloDrainClipsPreset();
-                    setIsListingImportModalOpen(false);
-                  }}
-                  className="text-xs font-bold text-amber-700 hover:text-amber-800 hover:underline flex items-center gap-1"
-                >
-                  ⚡ Or Load Apollo SS304 Default (5 Sizes)
-                </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsListingImportModalOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-xs font-bold text-slate-700 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleParseListingImport(listingImportText)}
-                    className="px-5 py-2 rounded-xl bg-[#0054A6] hover:bg-[#003d7a] text-white text-xs font-bold shadow-md transition-all flex items-center gap-1.5"
-                  >
-                    <Check className="w-4 h-4" /> Extract & Populate Wizard
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ───────────────────────────────────────────────────────────────── */}
         {/* 🔗 VARIATION MERGER: SELECT CATALOG PRODUCTS MODAL               */}

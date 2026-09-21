@@ -61,12 +61,12 @@ export const GstInvoice: React.FC<GstInvoiceProps> = ({ order, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn overflow-y-auto print:p-0 print:bg-white print:fixed-none">
-      <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[96vh] print:max-h-none print:border-none print:shadow-none print:bg-white">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 bg-slate-900/25 backdrop-blur-xs animate-fadeIn overflow-y-auto print:p-0 print:bg-white print:fixed-none">
+      <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[96vh] print:max-h-none print:border-none print:shadow-none print:bg-white">
         {/* Top Control Bar (Hidden when printing) */}
-        <div className="bg-slate-950 px-6 py-3.5 border-b border-slate-800 flex items-center justify-between no-print text-white">
+        <div className="bg-slate-50 px-6 py-3.5 border-b border-slate-200 flex items-center justify-between no-print text-slate-900">
           <div className="flex items-center gap-2.5 text-xs font-bold">
-            <FileText className="w-4 h-4 text-amber-500" />
+            <FileText className="w-4 h-4 text-amber-600" />
             <span>Official Statutory GST Tax Invoice (Section 31 of CGST Act 2017)</span>
           </div>
           <div className="flex items-center gap-2.5">
@@ -79,7 +79,7 @@ export const GstInvoice: React.FC<GstInvoiceProps> = ({ order, onClose }) => {
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
               title="Close invoice modal"
             >
               <X className="w-5 h-5" />
@@ -88,7 +88,7 @@ export const GstInvoice: React.FC<GstInvoiceProps> = ({ order, onClose }) => {
         </div>
 
         {/* Invoice Canvas Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto bg-slate-800/40 flex justify-center print:p-0 print:bg-white print:overflow-visible">
+        <div className="p-4 sm:p-6 overflow-y-auto bg-slate-100/70 flex justify-center print:p-0 print:bg-white print:overflow-visible">
           <div 
             id="gst-tax-invoice-printable"
             className="w-full max-w-3xl bg-white text-slate-900 font-sans p-6 sm:p-8 rounded-2xl shadow-xl space-y-5 print:shadow-none print:border-none print:p-4 text-xs"
@@ -379,16 +379,16 @@ export const GstInvoice: React.FC<GstInvoiceProps> = ({ order, onClose }) => {
         </div>
 
         {/* Bottom Actions Bar (no-print) */}
-        <div className="bg-slate-950 px-6 py-3 border-t border-slate-800 flex justify-end gap-3 no-print">
+        <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-end gap-3 no-print">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
           >
             Close
           </button>
           <button
             onClick={handlePrint}
-            className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#0054A6] to-blue-700 hover:from-[#004285] hover:to-blue-800 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-blue-900/30 transition-all cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#0054A6] to-blue-700 hover:from-[#004285] hover:to-blue-800 text-white font-black text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer"
           >
             <Printer className="w-4 h-4" /> Print Tax Invoice
           </button>

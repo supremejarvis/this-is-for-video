@@ -249,6 +249,25 @@ async def confirm_order(
             actor_id=current_user.id,
         )
         await db.commit()
+
+        # Real-time WebSocket event broadcast
+        from app.core.websocket import ws_manager
+        try:
+            await ws_manager.broadcast("orders", {
+                "type": "ORDER_CONFIRMED",
+                "order_id": str(order.id),
+                "order_number": order.order_number,
+                "order_status": order.order_status.value if hasattr(order.order_status, "value") else str(order.order_status),
+                "payment_status": order.payment_status.value if hasattr(order.payment_status, "value") else str(order.payment_status),
+            })
+            await ws_manager.broadcast(f"tracking:{order.id}", {
+                "type": "STATUS_UPDATED",
+                "order_id": str(order.id),
+                "status": "CONFIRMED",
+            })
+        except Exception:
+            pass
+
         return _build_order_detail_response(order, saga)
     except Exception as e:
         await db.rollback()
@@ -285,6 +304,25 @@ async def cancel_order(
             actor_id=current_user.id,
         )
         await db.commit()
+
+        # Real-time WebSocket event broadcast
+        from app.core.websocket import ws_manager
+        try:
+            await ws_manager.broadcast("orders", {
+                "type": "ORDER_CANCELLED",
+                "order_id": str(order.id),
+                "order_number": order.order_number,
+                "order_status": order.order_status.value if hasattr(order.order_status, "value") else str(order.order_status),
+                "reason": payload.reason,
+            })
+            await ws_manager.broadcast(f"tracking:{order.id}", {
+                "type": "STATUS_UPDATED",
+                "order_id": str(order.id),
+                "status": "CANCELLED",
+            })
+        except Exception:
+            pass
+
         return _build_order_detail_response(order, saga)
     except Exception as e:
         await db.rollback()

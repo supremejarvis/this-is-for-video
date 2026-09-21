@@ -22,10 +22,12 @@ from app.api.v1.endpoints import (
     quotes,
     system,
     users,
+    ws,
 )
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["Health"])
+api_router.include_router(ws.router, tags=["WebSocket"])
 api_router.include_router(system.router)
 api_router.include_router(auth.router, prefix="/auth", tags=["Auth"])
 api_router.include_router(otp.router, prefix="/auth/otp", tags=["OTP"])

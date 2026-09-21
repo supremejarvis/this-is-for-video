@@ -665,7 +665,7 @@ export const AuthModal: React.FC = () => {
 
   return (
     <div 
-      className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4 bg-[#0A0F1C]/70 backdrop-blur-md animate-fadeIn select-none"
+      className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4 bg-slate-900/25 backdrop-blur-xs animate-fadeIn select-none"
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-modal-title"
@@ -731,7 +731,11 @@ export const AuthModal: React.FC = () => {
                 type="button"
                 onClick={(e) => {
                   setErrorMessage(null);
-                  handleSendOtp(e);
+                  if (otpStep) {
+                    handleRetryOtp(otpChannel);
+                  } else {
+                    handleSendSignInOtp(e as any);
+                  }
                 }}
                 disabled={isSendingOtp || isReconnecting}
                 className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-[11px] shrink-0 flex items-center gap-1 transition-all"
@@ -1289,7 +1293,7 @@ export const AuthModal: React.FC = () => {
       {/* ───────────────────────────────────────────────────────────── */}
       {activePolicyModal && (
         <div 
-          className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-slate-900/25 backdrop-blur-xs"
           onClick={() => setActivePolicyModal(null)}
         >
           <div 

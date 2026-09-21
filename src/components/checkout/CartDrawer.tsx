@@ -149,7 +149,7 @@ export const CartDrawer: React.FC = () => {
       {/* Backdrop */}
       <div 
         onClick={() => setIsCartDrawerOpen(false)}
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-slate-900/20 backdrop-blur-xs transition-opacity"
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">

@@ -856,7 +856,6 @@ export const SolarBOMCalculator: React.FC = () => {
                 key={item.size}
                 type="button"
                 onClick={() => setSelectedFrameSize(item.size)}
-                aria-label={`Select ${item.size} frame thickness (${item.desc})`}
                 aria-pressed={isSelected}
                 className={`p-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-between gap-1 shadow-xs hover:scale-[1.02] ${
                   isSelected
@@ -869,7 +868,7 @@ export const SolarBOMCalculator: React.FC = () => {
                   {isSelected && <Check className="w-4 h-4 text-white" />}
                 </div>
                 <span className={`text-[10px] truncate w-full text-center px-1 rounded ${
-                  isSelected ? 'text-blue-100 bg-white/10' : 'text-slate-500 bg-slate-100'
+                  isSelected ? 'text-blue-100 bg-white/10' : 'text-slate-700 bg-slate-100 font-medium'
                 }`}>
                   {item.desc}
                 </span>
@@ -905,7 +904,6 @@ export const SolarBOMCalculator: React.FC = () => {
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') scrollToCatalogProduct(prod.anchorId); }}
-                aria-label={`View ${prod.title} in Catalog`}
                 className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs hover:border-[#0054A6] hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
               >
                 <div className="space-y-3">
@@ -979,6 +977,8 @@ export const SolarBOMCalculator: React.FC = () => {
                   className="w-full h-full object-contain"
                   loading="lazy"
                   decoding="async"
+                  width={96}
+                  height={96}
                 />
                 <div className="absolute inset-0 bg-blue-900/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <Eye className="w-5 h-5 text-[#0054A6]" />
@@ -1109,9 +1109,6 @@ export const SolarBOMCalculator: React.FC = () => {
           <button
             type="button"
             onClick={handleAddEntireBOMToCart}
-            aria-label={isB2B 
-              ? `Add Entire ${plantCapacityKw >= 1000 ? `${(plantCapacityKw / 1000).toFixed(1)} MW` : `${plantCapacityKw} kW`} Hardware BOM` 
-              : `Add Hardware BOM Items Only`}
             className="h-11 px-5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold text-xs uppercase tracking-wider rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
           >
             <ShoppingCart className="w-4 h-4 text-slate-600" />
@@ -1123,7 +1120,6 @@ export const SolarBOMCalculator: React.FC = () => {
             <button
               type="button"
               onClick={handleAddComboKitToCart}
-              aria-label={`Add Complete ${plantCapacityKw} kW Combo Kit to Cart`}
               className={`h-11 px-6 font-bold text-xs uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
                 isB2B 
                   ? 'bg-[#0054A6] hover:bg-[#003d7a] text-white focus-visible:ring-brand-blue'

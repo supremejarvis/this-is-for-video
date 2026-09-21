@@ -38,13 +38,23 @@ class OutboxPublisherWorker:
             try:
                 events = await OutboxService.fetch_unpublished_events(session, limit=25)
                 for event in events:
-                    # Dispatch to relevant processors
+                    # Dispatch to relevant processors & WebSocket consumers
                     logger.info(
                         "[OutboxWorker] Dispatching event: %s | Aggregate: %s (%s)",
                         event.event_type,
                         event.aggregate_type,
                         event.aggregate_id,
                     )
+                    try:
+                        from app.events.consumers import event_consumer
+                        await event_consumer.handle_event(
+                            event_type=event.event_type,
+                            aggregate_id=event.aggregate_id,
+                            payload=event.payload or {},
+                        )
+                    except Exception as consumer_exc:
+                        logger.warning("[OutboxWorker] Consumer failed for event %s: %s", event.event_type, consumer_exc)
+
                     # Mark published
                     await OutboxService.mark_published(session, event.cursor_id)
                     count += 1

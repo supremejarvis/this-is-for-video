@@ -541,7 +541,6 @@ export const BuyerCatalog: React.FC = () => {
                             <button
                               key={variant.sku}
                               type="button"
-                              aria-label={`Select ${mm > 0 ? `${mm} mm` : variant.display_label} frame thickness for ${product.name}`}
                               aria-pressed={isSelected}
                               onClick={() => handleSelectVariant(product.id, variant.sku)}
                               className={`p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center justify-between gap-1 cursor-pointer ${
@@ -707,7 +706,6 @@ export const BuyerCatalog: React.FC = () => {
 
                   <button
                     type="button"
-                    aria-label={hasMultipleVariants && !isSizeSelected ? `Select size and add ${product.name} to cart` : `Add to cart: ${product.name}`}
                     onClick={() => {
                       if (hasMultipleVariants && !isSizeSelected) {
                         setSizeModalProduct(product);
@@ -740,7 +738,7 @@ export const BuyerCatalog: React.FC = () => {
       {/* 📏 MANDATORY SIZE SELECTION MODAL (COMPULSORY ON ADD TO CART)      */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       {sizeModalProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/25 backdrop-blur-xs animate-fadeIn" role="dialog" aria-modal="true">
           <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden animate-scaleIn">
             
             {/* Modal Header */}
@@ -864,7 +862,7 @@ export const BuyerCatalog: React.FC = () => {
                       <button
                         key={v.sku}
                         type="button"
-                        aria-label={`Select ${v.display_label || `${mm} mm`} and add ${modalQuantity} units to cart at ₹${displayPrice}`}
+                        aria-label={`${v.display_label || `${mm} mm`} ${popularLabel} - ₹${displayPrice}`}
                         onClick={() => {
                           handleSelectVariant(sizeModalProduct.id, v.sku);
                           handleAddToCart(sizeModalProduct, v, modalQuantity);

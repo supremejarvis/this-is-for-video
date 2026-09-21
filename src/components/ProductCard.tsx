@@ -501,7 +501,7 @@ export function ProductCard({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsModalOpen(false)}
-              className="absolute inset-0 bg-black/90 backdrop-blur-md"
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
               aria-hidden="true"
             />
             
@@ -513,7 +513,7 @@ export function ProductCard({
             >
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="absolute top-2 right-2 z-50 p-2.5 rounded-full bg-black/60 border border-white/20 text-white hover:bg-amber-500 hover:text-slate-950 transition-all"
+                className="absolute top-2 right-2 z-50 p-2.5 rounded-full bg-white/90 border border-slate-300 text-slate-800 hover:bg-amber-500 hover:text-slate-950 transition-all shadow-md cursor-pointer"
                 aria-label="Close"
               >
                 <X className="w-6 h-6" />

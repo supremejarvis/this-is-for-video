@@ -840,7 +840,7 @@ export const CheckoutModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/25 backdrop-blur-xs animate-fadeIn">
       <div className="bg-white border border-slate-200 text-slate-900 rounded-3xl w-full max-w-6xl lg:max-w-[1550px] overflow-hidden shadow-2xl flex flex-col h-[94vh] max-h-[94vh]">
         {/* Header */}
         <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
@@ -2017,7 +2017,7 @@ export const CheckoutModal: React.FC = () => {
         {/* 🔒 COD ORDER OTP VERIFICATION MODAL */}
         {/* ───────────────────────────────────────────────────────────── */}
         {isCodOtpOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-fadeIn">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/25 backdrop-blur-xs animate-fadeIn">
             <div className="bg-white border-2 border-amber-500 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-6 text-center text-xs">
               <div className="w-16 h-16 rounded-full bg-amber-50 border-2 border-amber-400 flex items-center justify-center text-amber-600 mx-auto">
                 <KeyRound className="w-8 h-8" />

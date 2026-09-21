@@ -135,25 +135,25 @@ export const AddressModal: React.FC = () => {
   if (!isAddressModalOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/25 backdrop-blur-xs animate-fadeIn">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] text-slate-900">
         
         {/* Modal Header */}
-        <div className="bg-slate-950 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600">
               <MapPin className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-base">Select or Add Delivery Location</h3>
-              <p className="text-xs text-slate-400">
+              <h3 className="font-bold text-slate-900 text-base">Select or Add Delivery Location</h3>
+              <p className="text-xs text-slate-500">
                 Enter your delivery address for fast doorstep delivery
               </p>
             </div>
           </div>
           <button 
             onClick={() => setIsAddressModalOpen(false)}
-            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+            className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -164,7 +164,7 @@ export const AddressModal: React.FC = () => {
           {!isCreatingNew ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Saved Addresses ({addresses.length})
                 </span>
                 <button
@@ -178,16 +178,16 @@ export const AddressModal: React.FC = () => {
                     setState('');
                     setIsCreatingNew(true);
                   }}
-                  className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-colors flex items-center gap-1"
+                  className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-colors flex items-center gap-1 shadow-sm"
                 >
                   + Add New Address
                 </button>
               </div>
 
               {addresses.length === 0 ? (
-                <div className="p-8 text-center bg-slate-950/60 rounded-xl border border-slate-800 space-y-2">
-                  <MapPin className="w-8 h-8 text-slate-500 mx-auto" />
-                  <div className="text-sm font-bold text-slate-300">No saved addresses yet</div>
+                <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                  <MapPin className="w-8 h-8 text-slate-400 mx-auto" />
+                  <div className="text-sm font-bold text-slate-700">No saved addresses yet</div>
                   <p className="text-xs text-slate-500">
                     Click &quot;+ Add New Address&quot; to add your delivery location.
                   </p>
@@ -201,8 +201,8 @@ export const AddressModal: React.FC = () => {
                         key={addr.id}
                         className={`p-4 rounded-xl border transition-all relative flex flex-col justify-between ${
                           isSelected
-                            ? 'bg-amber-500/10 border-amber-500 text-white shadow-lg ring-1 ring-amber-500/50'
-                            : 'bg-slate-800/60 border-slate-700 hover:border-slate-600 text-slate-300'
+                            ? 'bg-amber-500/10 border-amber-500 text-slate-900 shadow-sm ring-1 ring-amber-500/50'
+                            : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700 shadow-xs'
                         }`}
                       >
                         <div 
@@ -216,50 +216,50 @@ export const AddressModal: React.FC = () => {
                             <div className="flex items-center gap-1.5">
                               <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
                                 addr.addressType === 'WAREHOUSE'
-                                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                                  ? 'bg-purple-50 text-purple-700 border border-purple-200'
                                   : addr.addressType === 'OFFICE'
-                                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               }`}>
                                 {addr.addressType}
                               </span>
-                              <strong className="text-white text-xs font-bold">{addr.fullName}</strong>
-                              <span className="text-slate-400 font-mono text-[11px]">({addr.phone})</span>
+                              <strong className="text-slate-900 text-xs font-bold">{addr.fullName}</strong>
+                              <span className="text-slate-500 font-mono text-[11px]">({addr.phone})</span>
                             </div>
                             {isSelected && (
-                              <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center">
+                              <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shadow-xs">
                                 <Check className="w-3 h-3 stroke-[3]" />
                               </span>
                             )}
                           </div>
 
-                          <p className="text-xs text-slate-300">
+                          <p className="text-xs text-slate-600">
                             {addr.flatBuilding}, {addr.streetArea}
                           </p>
 
-                          <div className="mt-2 pt-2 border-t border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400">
+                          <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                             <span>📍 {addr.city}, {addr.state}</span>
-                            <span className="bg-slate-900 px-2 py-0.5 rounded text-white font-mono font-bold">
+                            <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-800 font-mono font-bold border border-slate-200">
                               PIN: {addr.pincode}
                             </span>
                           </div>
 
                           {addr.gstin && (
-                            <div className="mt-1 text-[10px] text-blue-400 font-mono">
+                            <div className="mt-1 text-[10px] text-blue-600 font-mono">
                               GSTIN: {addr.gstin}
                             </div>
                           )}
                         </div>
 
                         {addresses.length > 1 && (
-                          <div className="mt-2 pt-2 border-t border-slate-800 flex items-center justify-between text-[11px]">
+                          <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setActiveAddress(addr.id);
                                 setIsAddressModalOpen(false);
                               }}
-                              className="text-amber-400 hover:underline font-bold"
+                              className="text-amber-600 hover:underline font-bold"
                             >
                               {isSelected ? '✓ Selected' : 'Select Location'}
                             </button>
@@ -281,7 +281,7 @@ export const AddressModal: React.FC = () => {
                                     e.stopPropagation();
                                     setConfirmDeleteId(null);
                                   }}
-                                  className="px-2 py-0.5 rounded bg-slate-700 text-slate-300 text-[10px]"
+                                  className="px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px]"
                                 >
                                   Cancel
                                 </button>
@@ -292,7 +292,7 @@ export const AddressModal: React.FC = () => {
                                   e.stopPropagation();
                                   setConfirmDeleteId(addr.id);
                                 }}
-                                className="text-slate-500 hover:text-rose-400 p-1 transition-colors"
+                                className="text-slate-400 hover:text-rose-600 p-1 transition-colors"
                                 title="Remove Address"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -309,13 +309,13 @@ export const AddressModal: React.FC = () => {
           ) : (
             /* Clean, Simple Delivery Address Form */
             <form onSubmit={handleSaveAddress} className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <span className="text-xs font-bold text-white uppercase tracking-wide">Enter Delivery Address</span>
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">Enter Delivery Address</span>
                 {addresses.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setIsCreatingNew(false)}
-                    className="text-xs text-slate-400 hover:text-white"
+                    className="text-xs text-slate-500 hover:text-slate-900 font-semibold"
                   >
                     ← Back to Saved Addresses
                   </button>
@@ -325,7 +325,7 @@ export const AddressModal: React.FC = () => {
               {/* Name & Phone */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="addr-fullname" className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label htmlFor="addr-fullname" className="block text-xs font-semibold text-slate-700 mb-1">
                     Full Name / Business Entity *
                   </label>
                   <input
@@ -336,12 +336,12 @@ export const AddressModal: React.FC = () => {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Full name or Company name"
-                    className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="addr-phone" className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label htmlFor="addr-phone" className="block text-xs font-semibold text-slate-700 mb-1">
                     Contact Phone Number *
                   </label>
                   <input
@@ -352,14 +352,14 @@ export const AddressModal: React.FC = () => {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="10-digit mobile number"
-                    className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400"
                   />
                 </div>
               </div>
 
               {/* Address Classification */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Address Classification</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Address Classification</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { id: 'HOME', label: 'Residential (Home)', icon: Home },
@@ -372,8 +372,8 @@ export const AddressModal: React.FC = () => {
                       onClick={() => setAddressType(id as any)}
                       className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
                         addressType === id
-                          ? 'bg-amber-500/20 border-amber-500 text-amber-400'
-                          : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                          ? 'bg-amber-500/20 border-amber-500 text-amber-800'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                       }`}
                     >
                       <Icon className="w-3.5 h-3.5" />
@@ -385,7 +385,7 @@ export const AddressModal: React.FC = () => {
 
               {/* Flat / Building */}
               <div>
-                <label htmlFor="addr-flatbuilding" className="block text-xs font-semibold text-slate-300 mb-1">
+                <label htmlFor="addr-flatbuilding" className="block text-xs font-semibold text-slate-700 mb-1">
                   Flat, House No., Building, Company Complex *
                 </label>
                 <input
@@ -396,13 +396,13 @@ export const AddressModal: React.FC = () => {
                   value={flatBuilding}
                   onChange={(e) => setFlatBuilding(e.target.value)}
                   placeholder="Unit / Flat No., Building name"
-                  className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                  className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400"
                 />
               </div>
 
               {/* Street / Area / Landmark */}
               <div>
-                <label htmlFor="addr-streetarea" className="block text-xs font-semibold text-slate-300 mb-1">
+                <label htmlFor="addr-streetarea" className="block text-xs font-semibold text-slate-700 mb-1">
                   Street, Road, Area, Landmark *
                 </label>
                 <input
@@ -413,16 +413,16 @@ export const AddressModal: React.FC = () => {
                   value={streetArea}
                   onChange={(e) => setStreetArea(e.target.value)}
                   placeholder="Road, Area, Nearest landmark"
-                  className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                  className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400"
                 />
               </div>
 
-              {/* Clean Pincode, City & State Row (Replaces complex Hub Binding) */}
+              {/* Clean Pincode, City & State Row */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label htmlFor="addr-pincode" className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                  <label htmlFor="addr-pincode" className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
                     <span>6-Digit Pincode *</span>
-                    {isLoadingPincode && <Loader2 className="w-3 h-3 text-amber-400 animate-spin" />}
+                    {isLoadingPincode && <Loader2 className="w-3 h-3 text-amber-500 animate-spin" />}
                   </label>
                   <input
                     type="text"
@@ -433,12 +433,12 @@ export const AddressModal: React.FC = () => {
                     value={pincode}
                     onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
                     placeholder="e.g. 380001"
-                    className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono font-bold text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono font-bold text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="addr-city" className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label htmlFor="addr-city" className="block text-xs font-semibold text-slate-700 mb-1">
                     City / District *
                   </label>
                   <input
@@ -449,12 +449,12 @@ export const AddressModal: React.FC = () => {
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="e.g. Ahmedabad"
-                    className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="addr-state" className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label htmlFor="addr-state" className="block text-xs font-semibold text-slate-700 mb-1">
                     State *
                   </label>
                   <input
@@ -465,7 +465,7 @@ export const AddressModal: React.FC = () => {
                     value={state}
                     onChange={(e) => setState(e.target.value)}
                     placeholder="e.g. Gujarat"
-                    className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400"
                   />
                 </div>
               </div>
@@ -474,42 +474,42 @@ export const AddressModal: React.FC = () => {
               {(addressType === 'WAREHOUSE' || addressType === 'OFFICE') && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <div>
-                    <label className="block text-xs font-semibold text-blue-400 mb-1">Company GSTIN (For B2B Tax Invoice)</label>
+                    <label className="block text-xs font-semibold text-blue-700 mb-1">Company GSTIN (For B2B Tax Invoice)</label>
                     <input
                       type="text"
                       value={gstin}
                       onChange={(e) => setGstin(e.target.value.toUpperCase())}
                       placeholder="e.g. 24AAACP1234F1Z8"
-                      className="w-full h-9 px-3 bg-slate-800 border border-blue-500/40 rounded-lg text-white font-mono text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                      className="w-full h-9 px-3 bg-white border border-blue-300 rounded-lg text-slate-900 font-mono text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none placeholder:text-slate-400"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Delivery Gate / Loading Note</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Delivery Gate / Loading Note</label>
                     <input
                       type="text"
                       value={dockInstructions}
                       onChange={(e) => setDockInstructions(e.target.value)}
                       placeholder="e.g. Gate 2, Delivery between 10am-5pm"
-                      className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                      className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-slate-900 text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400"
                     />
                   </div>
                 </div>
               )}
 
               {/* Form Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                 {addresses.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setIsCreatingNew(false)}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition-colors"
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors"
                   >
                     Cancel
                   </button>
                 )}
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-colors"
+                  className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-colors"
                 >
                   Save Delivery Address
                 </button>

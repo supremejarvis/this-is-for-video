@@ -12,6 +12,8 @@ import { Order } from '../../types';
 import { ORIGIN_HUB_PINCODE, ORIGIN_HUB_NAME } from '../../services/logisticsService';
 import { apiService, ConnectionManager } from '../../services/apiService';
 
+import { useWebSocket } from '../../hooks/useWebSocket';
+
 export const LiveOrderTracker: React.FC = () => {
   const { 
     orders, selectedOrderForDetail, setSelectedOrderForDetail, 
@@ -23,6 +25,9 @@ export const LiveOrderTracker: React.FC = () => {
   const [isOnline, setIsOnline] = useState(ConnectionManager.getStatus());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('Just Now');
+
+  // Real-time WebSocket hook
+  const { isConnected: isWsConnected, trackOrder, subscribe: subscribeWs } = useWebSocket();
 
   // Listen to network status
   useEffect(() => {
@@ -71,6 +76,51 @@ export const LiveOrderTracker: React.FC = () => {
       window.removeEventListener('focus', onFocus);
     };
   }, [syncLiveCarrierFeed]);
+
+  // Real-time WebSocket Live Tracking Subscription
+  useEffect(() => {
+    if (!activeOrder) return;
+    const orderId = activeOrder.id;
+    const awb = activeOrder.shipments[0]?.shippingDetail?.articleNumber;
+
+    // Listen to live tracking updates on this order
+    const unsubOrder = trackOrder(orderId, () => {
+      syncLiveCarrierFeed();
+      showToast(`⚡ Real-time update received for Order #${activeOrder.orderNumber}`, 'info');
+    });
+
+    // Also listen to general tracking channel
+    const unsubChannel = subscribeWs('tracking', (msg) => {
+      if (
+        msg.shipment_id === orderId || 
+        msg.order_id === orderId || 
+        (awb && msg.article_number === awb)
+      ) {
+        syncLiveCarrierFeed();
+      }
+    });
+
+    return () => {
+      unsubOrder();
+      unsubChannel();
+    };
+  }, [activeOrder, trackOrder, subscribeWs, syncLiveCarrierFeed, showToast]);
+
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-16 text-center text-slate-500 space-y-4">
+        <Package className="w-16 h-16 mx-auto text-slate-400 animate-pulse" />
+        <h3 className="text-lg font-bold text-slate-800">Loading Tracking Ledger...</h3>
+        <p className="text-xs text-slate-400 font-mono">Connecting to Speed Post Carrier API...</p>
+      </div>
+    );
+  }
 
   if (!activeOrder) {
     return (
@@ -127,9 +177,17 @@ export const LiveOrderTracker: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Live Connection & Sync Pill */}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-mono">
-            {isOnline ? (
-              <span className="flex items-center gap-1 text-emerald-600 font-bold">
-                <Wifi className="w-3.5 h-3.5 animate-pulse" /> Live Online
+            {isWsConnected ? (
+              <span className="flex items-center gap-1.5 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                Live WebSocket
+              </span>
+            ) : isOnline ? (
+              <span className="flex items-center gap-1 text-sky-600 font-bold">
+                <Wifi className="w-3.5 h-3.5" /> HTTP Polling
               </span>
             ) : (
               <span className="flex items-center gap-1 text-rose-600 font-bold">

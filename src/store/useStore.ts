@@ -17,6 +17,7 @@ import { SupportedLanguage } from '../utils/i18n';
 import { runStorageMigration } from '../utils/storageMigration';
 import { apiService } from '../services/apiService';
 import { authApi, catalogApi, quoteApi, orderApi, paymentApi, inventoryApi, CustomerProfile } from '../services/api';
+import { websocketService } from '../services/websocketService';
 
 // Run storage migration immediately
 runStorageMigration();
@@ -996,6 +997,9 @@ export const useStore = create<AppStore>((set, get) => ({
   customerProfile: null as CustomerProfile | null,
   setCustomerProfile: (profile) => set({ customerProfile: profile }),
   checkAuthSession: async () => {
+    if (get().authStatus === 'AUTH_CHECKING') {
+      return;
+    }
     set({ authStatus: 'AUTH_CHECKING' });
     try {
       const sessionResult = await authApi.getSession().catch(() => null);
@@ -2092,6 +2096,9 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
   apiCatalogLoading: false,
   apiCatalogError: null,
   fetchApiCatalog: async () => {
+    if (get().apiCatalogLoading) {
+      return;
+    }
     set({ apiCatalogLoading: true, apiCatalogError: null });
     try {
       const prods = await catalogApi.getCatalog();
@@ -2936,4 +2943,42 @@ export function rehydrateStoreFromStorage(): void {
     console.warn('Store rehydration skipped', e);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ⚡ REAL-TIME WEBSOCKET SYNCHRONIZATION FOR STORE
+// ─────────────────────────────────────────────────────────────────────────────
+if (typeof window !== 'undefined') {
+  try {
+    // 1. Order Status Updates Channel
+    websocketService.subscribe('orders', (msg: Record<string, unknown>) => {
+      const msgType = String(msg.type || '').toUpperCase();
+      const orderId = String(msg.order_id || '');
+      if (['ORDER_CONFIRMED', 'ORDER_CANCELLED', 'ORDER_UPDATED', 'STATUS_UPDATED'].includes(msgType) && orderId) {
+        const state = useStore.getState();
+        const existingOrder = state.orders.find((o) => o.id === orderId);
+        if (existingOrder) {
+          const newStatus = (msg.order_status || msg.status || 'CONFIRMED') as OrderStatus;
+          const pkgId = existingOrder.shipments[0]?.packageId || 'pkg_default';
+          const location = String(msg.location || 'Kathwada GIDC Hub, Ahmedabad');
+          state.updateOrderStatus(
+            orderId,
+            pkgId,
+            newStatus,
+            `Real-time sync: ${msgType}`,
+            location
+          );
+        }
+      }
+    });
+
+    // 2. Admin Real-Time Alert Channel
+    websocketService.subscribe('admin_alerts', (msg: Record<string, unknown>) => {
+      const orderNumber = (msg.payload as Record<string, unknown>)?.order_number || msg.order_id || 'New Order';
+      useStore.getState().showToast(`🔔 Real-Time Order Event: #${orderNumber}`, 'info');
+    });
+  } catch (err) {
+    console.warn('[WebSocket] Real-time store binding skipped:', err);
+  }
+}
+
 

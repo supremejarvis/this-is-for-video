@@ -181,14 +181,14 @@ function RegisterForm() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div className="flex justify-center mb-1">
           <div className="w-12 h-12 rounded-2xl bg-[#0054A6] flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-[#0054A6]/20">
             A
           </div>
         </div>
-        <h2 className="mt-2 text-center text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+        <h2 className="mt-2 text-center text-2xl font-black text-slate-900 tracking-tight">
           Apollo Engineering
         </h2>
         <p className="mt-0.5 text-center text-xs text-slate-500 uppercase tracking-widest font-semibold font-mono">
@@ -197,9 +197,9 @@ function RegisterForm() {
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-lg px-4 sm:px-0 mt-6">
-        <div className="bg-white dark:bg-slate-900 py-8 px-6 shadow-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl sm:px-10">
+        <div className="bg-white py-8 px-6 shadow-xl border border-slate-200/80 rounded-3xl sm:px-10 text-slate-900">
           {error && (
-            <div className="mb-5 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs text-red-600 dark:text-red-400 font-medium">
+            <div className="mb-5 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600 font-medium">
               {error}
             </div>
           )}

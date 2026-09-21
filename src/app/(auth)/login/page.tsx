@@ -139,14 +139,14 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div className="flex justify-center mb-1">
           <div className="w-12 h-12 rounded-2xl bg-[#0054A6] flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-[#0054A6]/20">
             A
           </div>
         </div>
-        <h2 className="mt-2 text-center text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+        <h2 className="mt-2 text-center text-2xl font-black text-slate-900 tracking-tight">
           Apollo Engineering
         </h2>
         <p className="mt-0.5 text-center text-xs text-slate-500 uppercase tracking-widest font-semibold font-mono">
@@ -155,8 +155,8 @@ function LoginForm() {
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0 mt-6">
-        <div className="bg-white dark:bg-slate-900 py-8 px-6 shadow-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl sm:px-10">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
+        <div className="bg-white py-8 px-6 shadow-xl border border-slate-200/80 rounded-3xl sm:px-10 text-slate-900">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
             <button
               type="button"
               onClick={() => {

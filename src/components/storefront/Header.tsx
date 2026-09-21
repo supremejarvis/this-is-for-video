@@ -85,7 +85,6 @@ export const Header: React.FC = () => {
               <button
                 type="button"
                 id="header-category-dropdown"
-                aria-label={`Category: ${selectedCategory} - Filter products by category`}
                 aria-haspopup="listbox"
                 aria-expanded={isCategoryOpen}
                 onClick={() => setIsCategoryOpen(!isCategoryOpen)}
@@ -204,7 +203,6 @@ export const Header: React.FC = () => {
           {/* Cart Button with Counter */}
           <button
             onClick={() => setIsCartDrawerOpen(true)}
-            aria-label={`Cart (${displayCartCount} items)`}
             className="h-10 relative flex items-center gap-1.5 px-3 sm:px-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs shadow-sm hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 shrink-0"
           >
             <div className="relative shrink-0">

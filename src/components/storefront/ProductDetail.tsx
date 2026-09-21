@@ -296,6 +296,8 @@ export const ProductDetail: React.FC = () => {
               <img
                 src={currentVariant.images[activeImageIndex] || currentVariant.images[0]}
                 alt={selectedProduct.title}
+                width={500}
+                height={500}
                 className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
@@ -314,6 +316,8 @@ export const ProductDetail: React.FC = () => {
                   <img
                     src={currentVariant.images[0]}
                     alt="360 View"
+                    width={208}
+                    height={208}
                     className="max-h-52 object-contain"
                   />
                 </div>
@@ -357,7 +361,7 @@ export const ProductDetail: React.FC = () => {
                     : 'border-slate-200 opacity-70 hover:opacity-100 hover:border-slate-300 shadow-sm'
                 }`}
               >
-                <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-contain" />
+                <img src={img} alt={`Thumbnail ${idx + 1}`} width={80} height={80} className="w-full h-full object-contain" />
               </button>
             ))}
           </div>
@@ -1221,7 +1225,7 @@ export const ProductDetail: React.FC = () => {
       {/* 📦 SOLAR KIT BREAKDOWN POPUP MODAL (3 kW / 5 kW / 10 kW POPUP)     */}
       {/* ───────────────────────────────────────────────────────────────── */}
       {isKitBreakdownModalOpen && (
-        <div className="fixed inset-0 z-[200] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fadeIn">
+        <div className="fixed inset-0 z-[200] bg-slate-900/25 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fadeIn">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden text-slate-900">
             
             {/* Modal Header */}
@@ -1577,7 +1581,7 @@ export const ProductDetail: React.FC = () => {
       {/* 📐 SOLAR FRAME THICKNESS MEASURING GUIDE MODAL                    */}
       {/* ───────────────────────────────────────────────────────────────── */}
       {isFrameGuideModalOpen && (
-        <div className="fixed inset-0 z-[200] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fadeIn">
+        <div className="fixed inset-0 z-[200] bg-slate-900/25 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fadeIn">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col text-slate-900 max-h-[92vh]">
             {/* Header */}
             <div className="px-6 py-4 bg-gradient-to-r from-slate-900 to-[#0054A6] text-white flex items-center justify-between">
@@ -1689,7 +1693,7 @@ export const ProductDetail: React.FC = () => {
       {/* ⚠️ MANDATORY SOLAR DRAIN CLIP FRAME THICKNESS CONFIRMATION MODAL */}
       {/* ───────────────────────────────────────────────────────────────── */}
       {isFrameConfirmModalOpen && (
-        <div className="fixed inset-0 z-[220] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fadeIn">
+        <div className="fixed inset-0 z-[220] bg-slate-900/25 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fadeIn">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col text-slate-900 max-h-[92vh]">
             {/* Header */}
             <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-[#071226] to-[#0054A6] text-white flex items-center justify-between">

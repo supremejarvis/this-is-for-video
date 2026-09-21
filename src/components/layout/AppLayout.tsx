@@ -95,8 +95,8 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         </div>
       )}
 
-      {/* Header (Hidden during Add to Cart & Checkout process or when on Admin Portal) */}
-      {!isCheckoutOpen && !isCartDrawerOpen && !isAdminRoute && (
+      {/* Header (Customer Storefront Navbar) */}
+      {!isAdminRoute && (
         <Header />
       )}
 

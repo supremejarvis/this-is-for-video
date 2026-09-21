@@ -109,15 +109,17 @@ describe('CheckoutModal B2C & B2B Form Requirements', () => {
 
     vi.spyOn(apiService, 'verifyGstin').mockResolvedValueOnce({
       success: true,
+      timestamp: new Date().toISOString(),
       data: {
+        gstin: '24AAACR5055K1Z8',
+        isValid: true,
         legalName: 'RELIANCE INDUSTRIES LIMITED',
         tradeName: 'RIL SOLAR DIVISION',
         stateName: 'Gujarat',
         stateCode: '24',
-        status: 'Active',
-        taxpayerType: 'Regular',
-        principalAddress: '3rd Floor, Maker Chambers IV, 222 Nariman Point, Mumbai',
-        registrationDate: '01/07/2017'
+        status: 'ACTIVE',
+        taxpayerType: 'REGULAR',
+        verificationSource: 'GOV_GST_PORTAL'
       }
     });
 

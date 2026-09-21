@@ -186,6 +186,26 @@ async def record_tracking_event(
             description=req.description,
             occurred_at=req.provider_occurred_at,
         )
+
+        from app.core.websocket import ws_manager
+        try:
+            await ws_manager.broadcast("tracking", {
+                "type": "TRACKING_EVENT",
+                "shipment_id": str(id),
+                "status": req.status,
+                "location": req.location,
+                "description": req.description,
+            })
+            await ws_manager.broadcast(f"tracking:{id}", {
+                "type": "TRACKING_EVENT",
+                "shipment_id": str(id),
+                "status": req.status,
+                "location": req.location,
+                "description": req.description,
+            })
+        except Exception:
+            pass
+
         return TrackingEventOut.model_validate(ev)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

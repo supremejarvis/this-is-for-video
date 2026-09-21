@@ -200,53 +200,53 @@ export function AboutPage() {
         {/* 2 Videos Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Video 1: WITHOUT Drain Clips */}
-          <div className="bg-slate-950 rounded-3xl overflow-hidden border-2 border-rose-500/40 shadow-2xl flex flex-col justify-between">
-            <div className="p-4 bg-rose-950/80 border-b border-rose-900 flex items-center justify-between text-white">
-              <div className="flex items-center gap-2 font-bold text-xs text-rose-300">
+          <div className="bg-white rounded-3xl overflow-hidden border-2 border-rose-300 shadow-xl flex flex-col justify-between">
+            <div className="p-4 bg-rose-50 border-b border-rose-200 flex items-center justify-between text-rose-900">
+              <div className="flex items-center gap-2 font-bold text-xs text-rose-700">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
                 VIDEO 1: WITHOUT DRAIN CLIPS
               </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-rose-900/60 text-rose-300 text-[10px] font-mono font-bold border border-rose-700">
+              <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-mono font-bold border border-rose-300">
                 Severe Sludge & Hot Spots
               </span>
             </div>
 
-            <div className="relative aspect-video bg-slate-900 flex items-center justify-center overflow-hidden">
+            <div className="relative aspect-video bg-slate-100 flex items-center justify-center overflow-hidden">
               <video
                 autoPlay
                 loop
                 muted
                 playsInline
                 poster="/Drain_clips.webp"
-                className="w-full h-full object-cover opacity-80"
+                className="w-full h-full object-cover opacity-90"
               >
                 <source src="/hero.webm" type="video/webm" />
               </video>
 
-              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-amber-950/90 via-amber-900/40 to-transparent p-4 flex flex-col justify-end">
+              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-slate-900/80 via-slate-900/30 to-transparent p-4 flex flex-col justify-end">
                 <div className="flex items-center gap-2 text-amber-300 text-xs font-bold font-mono">
                   <AlertTriangle className="w-4 h-4 text-amber-400" />
                   <span>Bottom Frame Stagnation Zone: Mud Settling</span>
                 </div>
               </div>
 
-              <div className="absolute top-4 right-4 bg-rose-600/90 text-white font-mono text-[10px] font-black px-2.5 py-1 rounded-lg backdrop-blur-sm shadow-md">
+              <div className="absolute top-4 right-4 bg-rose-600 text-white font-mono text-[10px] font-black px-2.5 py-1 rounded-lg shadow-md">
                 -25% ENERGY LOSS
               </div>
             </div>
 
-            <div className="p-6 bg-slate-900/90 space-y-3 text-slate-300 text-xs border-t border-slate-800">
-              <h4 className="font-bold text-white text-sm flex items-center gap-2">
-                <X className="w-4 h-4 text-rose-400" />
+            <div className="p-6 bg-white space-y-3 text-slate-700 text-xs border-t border-slate-200">
+              <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <X className="w-4 h-4 text-rose-500" />
                 Consequences of Solar Panels Without Clips:
               </h4>
-              <ul className="space-y-2 text-slate-400">
+              <ul className="space-y-2 text-slate-600">
                 <li className="flex items-start gap-2">
-                  <span className="text-rose-400 font-bold">•</span>
+                  <span className="text-rose-500 font-bold">•</span>
                   <span><strong>Mud Belt Accumulation:</strong> Rainwater & dew cannot cross the aluminum frame border, creating mud crust.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-rose-400 font-bold">•</span>
+                  <span className="text-rose-500 font-bold">•</span>
                   <span><strong>Thermal Hotspots:</strong> Shaded bottom solar cells overheat, degrading PV silicone modules permanently.</span>
                 </li>
               </ul>
@@ -254,18 +254,18 @@ export function AboutPage() {
           </div>
 
           {/* Video 2: WITH Apollo SS304 Clips */}
-          <div className="bg-slate-950 rounded-3xl overflow-hidden border-2 border-emerald-500/40 shadow-2xl flex flex-col justify-between">
-            <div className="p-4 bg-emerald-950/80 border-b border-emerald-900 flex items-center justify-between text-white">
-              <div className="flex items-center gap-2 font-bold text-xs text-emerald-300">
+          <div className="bg-white rounded-3xl overflow-hidden border-2 border-emerald-300 shadow-xl flex flex-col justify-between">
+            <div className="p-4 bg-emerald-50 border-b border-emerald-200 flex items-center justify-between text-emerald-900">
+              <div className="flex items-center gap-2 font-bold text-xs text-emerald-700">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                 VIDEO 2: WITH APOLLO SS304 CLIPS
               </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-900/60 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-700">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold border border-emerald-300">
                 Automatic Siphon Active
               </span>
             </div>
 
-            <div className="relative aspect-video bg-slate-900 flex items-center justify-center overflow-hidden">
+            <div className="relative aspect-video bg-slate-100 flex items-center justify-center overflow-hidden">
               <video
                 autoPlay
                 loop
@@ -277,30 +277,30 @@ export function AboutPage() {
                 <source src="/hero.webm" type="video/webm" />
               </video>
 
-              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-emerald-950/90 via-emerald-900/40 to-transparent p-4 flex flex-col justify-end">
+              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-slate-900/80 via-slate-900/30 to-transparent p-4 flex flex-col justify-end">
                 <div className="flex items-center gap-2 text-emerald-300 text-xs font-bold font-mono">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   <span>Capillary Siphon Active: 100% Water & Dirt Discharged</span>
                 </div>
               </div>
 
-              <div className="absolute top-4 right-4 bg-emerald-600/90 text-white font-mono text-[10px] font-black px-2.5 py-1 rounded-lg backdrop-blur-sm shadow-md">
+              <div className="absolute top-4 right-4 bg-emerald-600 text-white font-mono text-[10px] font-black px-2.5 py-1 rounded-lg shadow-md">
                 +15%–20% YIELD BOOST
               </div>
             </div>
 
-            <div className="p-6 bg-slate-900/90 space-y-3 text-slate-300 text-xs border-t border-slate-800">
-              <h4 className="font-bold text-white text-sm flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-400" />
+            <div className="p-6 bg-white space-y-3 text-slate-700 text-xs border-t border-slate-200">
+              <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-600" />
                 Proven Benefits of Apollo SS304 Drain Clips:
               </h4>
-              <ul className="space-y-2 text-slate-300">
+              <ul className="space-y-2 text-slate-600">
                 <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">•</span>
+                  <span className="text-emerald-600 font-bold">•</span>
                   <span><strong>Continuous Capillary Siphoning:</strong> Automatically drains water over the frame without electricity.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">•</span>
+                  <span className="text-emerald-600 font-bold">•</span>
                   <span><strong>100% Medical Grade SS304:</strong> 10-Year Rust-Proof Warranty on eligible SS304 Drain Clips and Sprinklers. Warranty covers rust/corrosion only.</span>
                 </li>
               </ul>

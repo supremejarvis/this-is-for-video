@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, MapPin, Building2, Check, AlertCircle, Sparkles, Navigation, ShieldCheck, Trash2 } from 'lucide-react';
+import { X, MapPin, Check, Trash2, Loader2, Home, Building2, Warehouse } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { lookupPincode, ORIGIN_HUB_PINCODE, ORIGIN_HUB_NAME } from '../../services/logisticsService';
+import { lookupPincode } from '../../services/logisticsService';
 import { PostOfficeInfo } from '../../types';
 
 export const AddressModal: React.FC = () => {
@@ -14,25 +14,27 @@ export const AddressModal: React.FC = () => {
 
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('+91 98250 12345');
+  const [phone, setPhone] = useState('');
   const [addressType, setAddressType] = useState<'HOME' | 'OFFICE' | 'WAREHOUSE'>('HOME');
   const [flatBuilding, setFlatBuilding] = useState('');
   const [streetArea, setStreetArea] = useState('');
-  const [pincode, setPincode] = useState('380001');
-  const [availablePostOffices, setAvailablePostOffices] = useState<PostOfficeInfo[]>([]);
-  const [selectedPostOffice, setSelectedPostOffice] = useState<PostOfficeInfo | null>(null);
-  const [district, setDistrict] = useState('Ahmedabad');
-  const [state, setState] = useState('Gujarat');
+  const [pincode, setPincode] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
   const [stateCode, setStateCode] = useState('24');
   const [gstin, setGstin] = useState('');
   const [dockInstructions, setDockInstructions] = useState('');
   const [isLoadingPincode, setIsLoadingPincode] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [resolvedPostOffice, setResolvedPostOffice] = useState<PostOfficeInfo | null>(null);
 
+  // Pre-fill only authentic user data when modal opens with no saved addresses
   useEffect(() => {
-    if (isAddressModalOpen && addresses.length === 0) {
-      setIsCreatingNew(true);
-      if (currentUser?.name && !currentUser.name.startsWith('Customer ')) {
+    if (isAddressModalOpen) {
+      if (addresses.length === 0) {
+        setIsCreatingNew(true);
+      }
+      if (currentUser?.name && !currentUser.name.startsWith('Customer ') && currentUser.name !== 'Valued Customer') {
         setFullName(currentUser.name);
       }
       if (currentUser?.phone) {
@@ -41,6 +43,7 @@ export const AddressModal: React.FC = () => {
     }
   }, [isAddressModalOpen, addresses.length, currentUser]);
 
+  // Automatic City/State lookup when a 6-digit Pincode is entered
   useEffect(() => {
     if (isAddressModalOpen && pincode.length === 6) {
       handlePincodeLookup(pincode);
@@ -48,47 +51,67 @@ export const AddressModal: React.FC = () => {
   }, [pincode, isAddressModalOpen]);
 
   const handlePincodeLookup = async (pin: string) => {
+    if (pin.length !== 6) return;
     setIsLoadingPincode(true);
-    const res = await lookupPincode(pin);
-    setIsLoadingPincode(false);
-
-    if (res && res.postOffices.length > 0) {
-      setAvailablePostOffices(res.postOffices);
-      setSelectedPostOffice(res.postOffices[0]);
-      setDistrict(res.district);
-      setState(res.state);
-      setStateCode(res.stateCode);
-    } else {
-      setAvailablePostOffices([]);
-      setSelectedPostOffice(null);
+    try {
+      const res = await lookupPincode(pin);
+      if (res) {
+        if (res.district && !city) setCity(res.district);
+        if (res.state && !state) setState(res.state);
+        if (res.stateCode) setStateCode(res.stateCode);
+        if (res.postOffices && res.postOffices.length > 0) {
+          setResolvedPostOffice(res.postOffices[0]);
+        }
+      }
+    } catch {
+      // Allow manual entry
+    } finally {
+      setIsLoadingPincode(false);
     }
   };
 
   const handleSaveAddress = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPostOffice) return;
 
     const trimmedName = fullName.trim();
     const trimmedPhone = phone.trim();
+    const trimmedPin = pincode.trim();
+    const trimmedCity = city.trim() || 'Ahmedabad';
+    const trimmedState = state.trim() || 'Gujarat';
+
+    if (!trimmedName || !trimmedPhone || !trimmedPin || !flatBuilding.trim() || !streetArea.trim()) {
+      useStore.getState().showToast('Please fill all required address fields', 'warning');
+      return;
+    }
+
+    const effectivePostOffice: PostOfficeInfo = resolvedPostOffice || {
+      name: `${trimmedCity} S.O`,
+      branchType: 'Sub Post Office',
+      deliveryStatus: 'Delivery',
+      circle: trimmedState,
+      district: trimmedCity,
+      state: trimmedState,
+      facilityId: `PO-${trimmedPin}`,
+    };
 
     addAddress({
       userId: currentUser?.id || 'u_active',
       fullName: trimmedName,
       phone: trimmedPhone,
       addressType,
-      flatBuilding,
-      streetArea,
-      pincode,
-      postOffice: selectedPostOffice,
-      city: district,
-      state,
-      stateCode,
+      flatBuilding: flatBuilding.trim(),
+      streetArea: streetArea.trim(),
+      pincode: trimmedPin,
+      postOffice: effectivePostOffice,
+      city: trimmedCity,
+      state: trimmedState,
+      stateCode: stateCode || '24',
       isDefault: true,
-      gstin: addressType === 'WAREHOUSE' || addressType === 'OFFICE' || gstin ? gstin || currentOrg.gstin : undefined,
-      dockInstructions: addressType === 'WAREHOUSE' ? dockInstructions : undefined
+      gstin: (addressType === 'WAREHOUSE' || addressType === 'OFFICE' || gstin) ? (gstin.trim() || currentOrg.gstin) : undefined,
+      dockInstructions: addressType === 'WAREHOUSE' ? dockInstructions.trim() : undefined
     });
 
-    // Auto-update customer profile name & phone if currently generic!
+    // Auto-update customer profile name & phone if currently generic
     if (trimmedName && (!currentUser?.name || currentUser.name.startsWith('Customer ') || currentUser.name === 'Valued Customer')) {
       useStore.getState().updateUserProfile({
         name: trimmedName,
@@ -96,7 +119,7 @@ export const AddressModal: React.FC = () => {
       });
     }
 
-    // If B2B GSTIN or Organization is supplied, automatically upgrade to B2B
+    // If B2B GSTIN or Organization is supplied, automatically sync
     if (gstin && gstin.trim()) {
       useStore.getState().updateOrgDetails({
         gstin: gstin.trim().toUpperCase(),
@@ -113,8 +136,9 @@ export const AddressModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-        {/* Header */}
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        
+        {/* Modal Header */}
         <div className="bg-slate-950 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
@@ -123,7 +147,7 @@ export const AddressModal: React.FC = () => {
             <div>
               <h3 className="font-bold text-white text-base">Select or Add Delivery Location</h3>
               <p className="text-xs text-slate-400">
-                APE Priority Dispatch Integration (Origin: <strong className="text-amber-400 font-mono">{ORIGIN_HUB_PINCODE}</strong>)
+                Enter your delivery address for fast doorstep delivery
               </p>
             </div>
           </div>
@@ -136,7 +160,7 @@ export const AddressModal: React.FC = () => {
         </div>
 
         {/* Content Area */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm">
+        <div className="p-6 overflow-y-auto space-y-5 flex-1 text-sm">
           {!isCreatingNew ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -145,156 +169,165 @@ export const AddressModal: React.FC = () => {
                 </span>
                 <button
                   onClick={() => {
-                    setFullName(appMode === 'B2B' ? currentOrg.companyName : 'Pravin Patel');
+                    setFullName(appMode === 'B2B' ? currentOrg.companyName : (currentUser?.name && !currentUser.name.startsWith('Customer ') ? currentUser.name : ''));
+                    setPhone(currentUser?.phone || '');
+                    setFlatBuilding('');
+                    setStreetArea('');
+                    setPincode('');
+                    setCity('');
+                    setState('');
                     setIsCreatingNew(true);
                   }}
-                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-colors flex items-center gap-1"
+                  className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition-colors flex items-center gap-1"
                 >
-                  + Add New Address & Delivery Hub
+                  + Add New Address
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {addresses.map((addr) => {
-                  const isSelected = activeAddress?.id === addr.id;
-                  return (
-                    <div
-                      key={addr.id}
-                      className={`p-4 rounded-xl border transition-all relative flex flex-col justify-between ${
-                        isSelected
-                          ? 'bg-amber-500/10 border-amber-500 text-white shadow-lg ring-1 ring-amber-500/50'
-                          : 'bg-slate-800/60 border-slate-700 hover:border-slate-600 text-slate-300'
-                      }`}
-                    >
-                      <div 
-                        onClick={() => {
-                          setActiveAddress(addr.id);
-                          setIsAddressModalOpen(false);
-                        }}
-                        className="cursor-pointer space-y-1.5 flex-1"
+              {addresses.length === 0 ? (
+                <div className="p-8 text-center bg-slate-950/60 rounded-xl border border-slate-800 space-y-2">
+                  <MapPin className="w-8 h-8 text-slate-500 mx-auto" />
+                  <div className="text-sm font-bold text-slate-300">No saved addresses yet</div>
+                  <p className="text-xs text-slate-500">
+                    Click &quot;+ Add New Address&quot; to add your delivery location.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3">
+                  {addresses.map((addr) => {
+                    const isSelected = activeAddress?.id === addr.id;
+                    return (
+                      <div
+                        key={addr.id}
+                        className={`p-4 rounded-xl border transition-all relative flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-amber-500/10 border-amber-500 text-white shadow-lg ring-1 ring-amber-500/50'
+                            : 'bg-slate-800/60 border-slate-700 hover:border-slate-600 text-slate-300'
+                        }`}
                       >
-                        <div className="flex items-start justify-between gap-2 mb-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
-                              addr.addressType === 'WAREHOUSE'
-                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                                : addr.addressType === 'OFFICE'
-                                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                            }`}>
-                              {addr.addressType}
-                            </span>
-                            <strong className="text-white text-xs font-bold">{addr.fullName}</strong>
+                        <div 
+                          onClick={() => {
+                            setActiveAddress(addr.id);
+                            setIsAddressModalOpen(false);
+                          }}
+                          className="cursor-pointer space-y-1.5 flex-1"
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                                addr.addressType === 'WAREHOUSE'
+                                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                                  : addr.addressType === 'OFFICE'
+                                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                              }`}>
+                                {addr.addressType}
+                              </span>
+                              <strong className="text-white text-xs font-bold">{addr.fullName}</strong>
+                              <span className="text-slate-400 font-mono text-[11px]">({addr.phone})</span>
+                            </div>
+                            {isSelected && (
+                              <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center">
+                                <Check className="w-3 h-3 stroke-[3]" />
+                              </span>
+                            )}
                           </div>
-                          {isSelected && (
-                            <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center">
-                              <Check className="w-3 h-3 stroke-[3]" />
+
+                          <p className="text-xs text-slate-300">
+                            {addr.flatBuilding}, {addr.streetArea}
+                          </p>
+
+                          <div className="mt-2 pt-2 border-t border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400">
+                            <span>📍 {addr.city}, {addr.state}</span>
+                            <span className="bg-slate-900 px-2 py-0.5 rounded text-white font-mono font-bold">
+                              PIN: {addr.pincode}
                             </span>
+                          </div>
+
+                          {addr.gstin && (
+                            <div className="mt-1 text-[10px] text-blue-400 font-mono">
+                              GSTIN: {addr.gstin}
+                            </div>
                           )}
                         </div>
 
-                        <p className="text-xs text-slate-300">{addr.flatBuilding}, {addr.streetArea}</p>
-
-                        {/* Locked Delivery Hub Tag */}
-                        <div className="mt-2.5 pt-2 border-t border-slate-700/60 flex items-center justify-between text-[11px]">
-                          <span className="text-amber-400 font-mono font-medium flex items-center gap-1">
-                            📮 {addr.postOffice.name}
-                          </span>
-                          <span className="bg-slate-900 px-2 py-0.5 rounded text-slate-300 font-mono font-bold">
-                            PIN: {addr.pincode}
-                          </span>
-                        </div>
-
-                        {addr.gstin && (
-                          <div className="mt-1 text-[10px] text-blue-400 font-mono">
-                            GSTIN: {addr.gstin}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Remove Address Option if more than 1 address exists */}
-                      {addresses.length > 1 && (
-                        <div className="mt-2 pt-2 border-t border-slate-800 flex items-center justify-between text-[11px]">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveAddress(addr.id);
-                              setIsAddressModalOpen(false);
-                            }}
-                            className="text-amber-400 hover:underline font-bold"
-                          >
-                            {isSelected ? '✓ Currently Selected' : 'Select Location'}
-                          </button>
-
-                          {confirmDeleteId === addr.id ? (
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteAddress(addr.id);
-                                  setConfirmDeleteId(null);
-                                }}
-                                className="px-1.5 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px]"
-                              >
-                                Delete
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setConfirmDeleteId(null);
-                                }}
-                                className="px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 text-[10px]"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
+                        {addresses.length > 1 && (
+                          <div className="mt-2 pt-2 border-t border-slate-800 flex items-center justify-between text-[11px]">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setConfirmDeleteId(addr.id);
+                                setActiveAddress(addr.id);
+                                setIsAddressModalOpen(false);
                               }}
-                              className="text-slate-500 hover:text-rose-400 p-1 transition-colors"
-                              title="Remove Address"
+                              className="text-amber-400 hover:underline font-bold"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              {isSelected ? '✓ Selected' : 'Select Location'}
                             </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
 
-              {/* APE Booking Logic Notice */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-1.5">
-                <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
-                  <ShieldCheck className="w-4 h-4" />
-                  APE Automated Logistics & Dispatch Engine
+                            {confirmDeleteId === addr.id ? (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteAddress(addr.id);
+                                    setConfirmDeleteId(null);
+                                  }}
+                                  className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px]"
+                                >
+                                  Confirm Delete
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setConfirmDeleteId(null);
+                                  }}
+                                  className="px-2 py-0.5 rounded bg-slate-700 text-slate-300 text-[10px]"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfirmDeleteId(addr.id);
+                                }}
+                                className="text-slate-500 hover:text-rose-400 p-1 transition-colors"
+                                title="Remove Address"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                <p>
-                  All shipments automatically originate from Central Logistics Center <strong className="text-white font-mono">Pincode: 382430</strong> (Kathwada GIDC, Ahmedabad, GJ). APE AWB and tariff calculation is determined directly by your bound destination postal hub.
-                </p>
-              </div>
+              )}
             </div>
           ) : (
-            /* New Address Form with India Post Sub Post Office Resolver */
+            /* Clean, Simple Delivery Address Form */
             <form onSubmit={handleSaveAddress} className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <span className="text-xs font-bold text-white uppercase tracking-wide">Enter Address & Bind Delivery Hub</span>
-                <button
-                  type="button"
-                  onClick={() => setIsCreatingNew(false)}
-                  className="text-xs text-slate-400 hover:text-white"
-                >
-                  ← Back to Saved Addresses
-                </button>
+                <span className="text-xs font-bold text-white uppercase tracking-wide">Enter Delivery Address</span>
+                {addresses.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatingNew(false)}
+                    className="text-xs text-slate-400 hover:text-white"
+                  >
+                    ← Back to Saved Addresses
+                  </button>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Name & Phone */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="addr-fullname" className="block text-xs font-semibold text-slate-300 mb-1">Full Name / Business Entity *</label>
+                  <label htmlFor="addr-fullname" className="block text-xs font-semibold text-slate-300 mb-1">
+                    Full Name / Business Entity *
+                  </label>
                   <input
                     type="text"
                     id="addr-fullname"
@@ -302,51 +335,59 @@ export const AddressModal: React.FC = () => {
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="e.g. Pravin Patel or Company Name"
+                    placeholder="Full name or Company name"
                     className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="addr-phone" className="block text-xs font-semibold text-slate-300 mb-1">Contact Phone (APE Dispatch SMS) *</label>
+                  <label htmlFor="addr-phone" className="block text-xs font-semibold text-slate-300 mb-1">
+                    Contact Phone Number *
+                  </label>
                   <input
-                    type="text"
+                    type="tel"
                     id="addr-phone"
                     name="phone"
                     required
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+91 98250 12345"
+                    placeholder="10-digit mobile number"
                     className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
                   />
                 </div>
               </div>
 
-              {/* Address Type Selection */}
+              {/* Address Classification */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">Address Classification</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {(['HOME', 'OFFICE', 'WAREHOUSE'] as const).map((type) => (
+                  {[
+                    { id: 'HOME', label: 'Residential (Home)', icon: Home },
+                    { id: 'OFFICE', label: 'Commercial (Office)', icon: Building2 },
+                    { id: 'WAREHOUSE', label: 'Factory / Warehouse', icon: Warehouse }
+                  ].map(({ id, label, icon: Icon }) => (
                     <button
-                      key={type}
+                      key={id}
                       type="button"
-                      onClick={() => setAddressType(type)}
-                      className={`py-1.5 px-3 rounded-lg text-xs font-bold border transition-all ${
-                        addressType === type
+                      onClick={() => setAddressType(id as any)}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                        addressType === id
                           ? 'bg-amber-500/20 border-amber-500 text-amber-400'
                           : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
                       }`}
                     >
-                      {type === 'HOME' && '🏡 Residential (Home)'}
-                      {type === 'OFFICE' && '🏢 Commercial (Office)'}
-                      {type === 'WAREHOUSE' && '🏭 Factory / Warehouse'}
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
+              {/* Flat / Building */}
               <div>
-                <label htmlFor="addr-flatbuilding" className="block text-xs font-semibold text-slate-300 mb-1">Flat, House No., Building, Company Complex *</label>
+                <label htmlFor="addr-flatbuilding" className="block text-xs font-semibold text-slate-300 mb-1">
+                  Flat, House No., Building, Company Complex *
+                </label>
                 <input
                   type="text"
                   id="addr-flatbuilding"
@@ -354,13 +395,16 @@ export const AddressModal: React.FC = () => {
                   required
                   value={flatBuilding}
                   onChange={(e) => setFlatBuilding(e.target.value)}
-                  placeholder="e.g. Unit 402, Shivalik Highstreet"
+                  placeholder="Unit / Flat No., Building name"
                   className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
                 />
               </div>
 
+              {/* Street / Area / Landmark */}
               <div>
-                <label htmlFor="addr-streetarea" className="block text-xs font-semibold text-slate-300 mb-1">Street, Road, Area, Landmark *</label>
+                <label htmlFor="addr-streetarea" className="block text-xs font-semibold text-slate-300 mb-1">
+                  Street, Road, Area, Landmark *
+                </label>
                 <input
                   type="text"
                   id="addr-streetarea"
@@ -368,72 +412,62 @@ export const AddressModal: React.FC = () => {
                   required
                   value={streetArea}
                   onChange={(e) => setStreetArea(e.target.value)}
-                  placeholder="e.g. Near SG Highway, Judges Bungalow Cross Road"
+                  placeholder="Road, Area, Nearest landmark"
                   className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
                 />
               </div>
 
-              {/* CRITICAL LOGIC: India Post Pincode & Multiple Post Office Selector */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-amber-500/40 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-amber-400 font-bold text-xs">
-                    <Sparkles className="w-4 h-4" />
-                    APE Delivery Hub Binding (Mandatory)
-                  </div>
-                  <span className="text-[11px] text-slate-400 font-mono">
-                    Origin: <strong className="text-white">{ORIGIN_HUB_PINCODE}</strong>
-                  </span>
+              {/* Clean Pincode, City & State Row (Replaces complex Hub Binding) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label htmlFor="addr-pincode" className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                    <span>6-Digit Pincode *</span>
+                    {isLoadingPincode && <Loader2 className="w-3 h-3 text-amber-400 animate-spin" />}
+                  </label>
+                  <input
+                    type="text"
+                    id="addr-pincode"
+                    name="pincode"
+                    maxLength={6}
+                    required
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="e.g. 380001"
+                    className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono font-bold text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="addr-pincode" className="block text-xs font-semibold text-slate-300 mb-1">6-Digit Destination Pincode *</label>
-                    <input
-                      type="text"
-                      id="addr-pincode"
-                      name="pincode"
-                      maxLength={6}
-                      required
-                      value={pincode}
-                      onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
-                      placeholder="e.g. 380001 or 110001"
-                      className="w-full h-9 px-3 bg-slate-900 border border-slate-600 rounded-lg text-white font-mono font-bold text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="addr-postoffice" className="block text-xs font-semibold text-slate-300 mb-1">
-                      Select Delivery Hub ({availablePostOffices.length} Found) *
-                    </label>
-                    <select
-                      id="addr-postoffice"
-                      name="facilityId"
-                      value={selectedPostOffice?.facilityId || ''}
-                      onChange={(e) => {
-                        const found = availablePostOffices.find((po) => po.facilityId === e.target.value);
-                        if (found) setSelectedPostOffice(found);
-                      }}
-                      className="w-full h-9 px-3 bg-slate-900 border border-amber-500 rounded-lg text-amber-400 font-bold text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                    >
-                      {availablePostOffices.map((po) => (
-                        <option key={po.facilityId} value={po.facilityId}>
-                          {po.name} ({po.branchType})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div>
+                  <label htmlFor="addr-city" className="block text-xs font-semibold text-slate-300 mb-1">
+                    City / District *
+                  </label>
+                  <input
+                    type="text"
+                    id="addr-city"
+                    name="city"
+                    required
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="e.g. Ahmedabad"
+                    className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                  />
                 </div>
 
-                {selectedPostOffice && (
-                  <div className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 text-[11px] flex items-center justify-between text-slate-300">
-                    <span>
-                      District: <strong className="text-white">{district}</strong> | State: <strong className="text-white">{state}</strong>
-                    </span>
-                    <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono font-bold">
-                      Facility ID: {selectedPostOffice.facilityId}
-                    </span>
-                  </div>
-                )}
+                <div>
+                  <label htmlFor="addr-state" className="block text-xs font-semibold text-slate-300 mb-1">
+                    State *
+                  </label>
+                  <input
+                    type="text"
+                    id="addr-state"
+                    name="state"
+                    required
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                    placeholder="e.g. Gujarat"
+                    className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
+                  />
+                </div>
               </div>
 
               {/* B2B / Warehouse Specific Fields */}
@@ -450,32 +484,34 @@ export const AddressModal: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Loading Dock / Delivery Gate Note</label>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Delivery Gate / Loading Note</label>
                     <input
                       type="text"
                       value={dockInstructions}
                       onChange={(e) => setDockInstructions(e.target.value)}
-                      placeholder="e.g. Gate 3, Forklift available"
+                      placeholder="e.g. Gate 2, Delivery between 10am-5pm"
                       className="w-full h-9 px-3 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none"
                     />
                   </div>
                 </div>
               )}
 
+              {/* Form Action Buttons */}
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsCreatingNew(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl"
-                >
-                  Cancel
-                </button>
+                {addresses.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatingNew(false)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
                 <button
                   type="submit"
-                  disabled={!selectedPostOffice}
-                  className="px-5 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20"
+                  className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-colors"
                 >
-                  Save & Bind Delivery Hub
+                  Save Delivery Address
                 </button>
               </div>
             </form>

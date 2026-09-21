@@ -4,15 +4,18 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, Check, ShieldCheck, Truck, Building2, CreditCard, 
   QrCode, Landmark, Banknote, AlertCircle, AlertTriangle, ArrowRight, Lock, Sparkles, Receipt,
-  KeyRound, RefreshCw, Volume2, Clock, CheckCircle2, MapPin, Edit3, Plus
+  KeyRound, RefreshCw, Volume2, Clock, CheckCircle2, MapPin, Edit3, Plus,
+  FileText, Home, Briefcase, Factory, ExternalLink, ChevronDown, User, Phone, Trash2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useStore } from '../../store/useStore';
-import { ORIGIN_HUB_PINCODE, ORIGIN_HUB_NAME } from '../../services/logisticsService';
+import { ORIGIN_HUB_PINCODE, ORIGIN_HUB_NAME, lookupPincode, getGstStateCode } from '../../services/logisticsService';
 import { msg91OtpService } from '../../services/msg91OtpService';
 import { razorpayService } from '../../services/razorpayService';
-import { orderApi, paymentApi, quoteApi } from '../../services/api';
-import { Order, DeliveryAddress } from '../../types';
+import { apiService } from '../../services/apiService';
+import { orderApi, paymentApi, quoteApi, authApi } from '../../services/api';
+import { Order, DeliveryAddress, PostOfficeInfo } from '../../types';
+import { useNavigate } from '../../lib/navigation';
 
 const maskPhone = (phone?: string): string => {
   if (!phone) return '';
@@ -21,11 +24,16 @@ const maskPhone = (phone?: string): string => {
   return '******' + trimmed.slice(-4);
 };
 
+const isUuid = (val?: string): boolean =>
+  Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val));
+
 export const CheckoutModal: React.FC = () => {
+  const navigate = useNavigate();
   const { 
     isCheckoutOpen, setIsCheckoutOpen, cart, activeAddress, billingAddress, shippingAddress,
     addresses, isShippingSameAsBilling, setIsShippingSameAsBilling,
-    setActiveAddress, setIsAddressModalOpen, getSplitShipments, decrementInventory,
+    setActiveAddress, setBillingAddress, setShippingAddress, addAddress, updateAddress, deleteAddress,
+    getSplitShipments, decrementInventory,
     appMode, currentOrg, setActiveTab, setSelectedOrderForDetail, showToast, currentUser,
     clearCart, apiCatalogError, authStatus, setIsAuthModalOpen, setAuthDestination,
     currentQuote, quoteStatus, setIsCartDrawerOpen,
@@ -41,6 +49,28 @@ export const CheckoutModal: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<Order['paymentDetail']['method']>('RAZORPAY');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isAddressListExpanded, setIsAddressListExpanded] = useState<boolean>(false);
+
+  // Dual Address Management State (Connected with Customer Profile & Tax Addresses)
+  const [isEditingAddress, setIsEditingAddress] = useState<boolean>(false);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [addressTarget, setAddressTarget] = useState<'SHIPPING' | 'BILLING'>('SHIPPING');
+
+  const [formFullName, setFormFullName] = useState<string>('');
+  const [formPhone, setFormPhone] = useState<string>('');
+  const [formClassification, setFormClassification] = useState<'HOME' | 'OFFICE' | 'WAREHOUSE'>(appMode === 'B2B' ? 'OFFICE' : 'HOME');
+  const [formFlat, setFormFlat] = useState<string>('');
+  const [formStreet, setFormStreet] = useState<string>('');
+  const [formPincode, setFormPincode] = useState<string>('');
+  const [formCity, setFormCity] = useState<string>('Ahmedabad');
+  const [formState, setFormState] = useState<string>('Gujarat');
+  const [formStateCode, setFormStateCode] = useState<string>('24');
+  const [formPostOffices, setFormPostOffices] = useState<PostOfficeInfo[]>([]);
+  const [formSelectedPO, setFormSelectedPO] = useState<PostOfficeInfo | null>(null);
+  const [formGstin, setFormGstin] = useState<string>('');
+  const [formApplyToBoth, setFormApplyToBoth] = useState<boolean>(true);
+  const [isLoadingPin, setIsLoadingPin] = useState<boolean>(false);
+  const [pinLookupError, setPinLookupError] = useState<string | null>(null);
+  const [isGstinLocked, setIsGstinLocked] = useState<boolean>(false);
 
   // MSG91 COD Anti-Fraud OTP State
   const [isCodOtpOpen, setIsCodOtpOpen] = useState<boolean>(false);
@@ -60,6 +90,74 @@ export const CheckoutModal: React.FC = () => {
     }
   }, [isCheckoutOpen, isUserLoggedIn, setIsCheckoutOpen, setAuthDestination, setIsAuthModalOpen, showToast]);
 
+  // Synchronize Phone & Ensure Empty Name/Address for First-Time Logged-In User
+  useEffect(() => {
+    if (isCheckoutOpen) {
+      const userPhone = (currentUser?.phone || '').replace(/\D/g, '').slice(-10);
+      if (userPhone && !formPhone) {
+        setFormPhone(userPhone);
+      }
+
+      const hasRealAddress = Boolean(
+        activeAddress &&
+        activeAddress.fullName?.trim() &&
+        !activeAddress.fullName.startsWith('Customer ') &&
+        activeAddress.fullName !== 'Valued Customer' &&
+        activeAddress.flatBuilding?.trim() &&
+        activeAddress.pincode?.trim()
+      );
+
+      if (!hasRealAddress) {
+        setIsEditingAddress(true);
+        setEditingAddressId(null);
+        const cleanName = currentUser?.name && !currentUser.name.startsWith('Customer ') && currentUser.name !== 'Valued Customer'
+          ? currentUser.name
+          : (appMode === 'B2B' && currentOrg.companyName ? currentOrg.companyName : '');
+        setFormFullName(cleanName);
+        setFormClassification(appMode === 'B2B' ? 'OFFICE' : 'HOME');
+        setFormFlat('');
+        setFormStreet('');
+        setFormPincode('');
+        setFormCity('');
+        setFormState('');
+        setFormStateCode('');
+        setFormPostOffices([]);
+        setFormSelectedPO(null);
+        setIsGstinLocked(false);
+      }
+    }
+  }, [isCheckoutOpen, currentUser?.phone, currentUser?.name, activeAddress, appMode, currentOrg.companyName]);
+
+  // Handle B2B GSTIN Auto-Fill & Field Lock
+  const handleFormGstinChange = async (val: string) => {
+    const clean = val.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 15);
+    setFormGstin(clean);
+    if (clean.length === 15) {
+      try {
+        const res = await apiService.verifyGstin(clean);
+        if (res.success && res.data) {
+          const legalName = res.data.legalName || res.data.tradeName || `ENTERPRISE (${clean.substring(2, 12)})`;
+          setFormFullName(legalName);
+          // Only override State and StateCode if this is a BILLING address form or if no pincode has been entered yet!
+          // If the user already entered a shipping destination pincode (e.g. 440001 Nagpur, Maharashtra),
+          // the shipping delivery destination state MUST remain governed by the delivery pincode!
+          if (addressTarget === 'BILLING' || !formPincode.trim()) {
+            setFormState(res.data.stateName || 'Gujarat');
+            setFormStateCode(res.data.stateCode || '24');
+          }
+          setIsGstinLocked(true);
+          showToast(`GSTIN Verified: ${legalName}. Name & Registered State auto-filled and locked.`, 'info');
+        }
+      } catch {
+        // Fallback silently if verification network drops
+      }
+    } else {
+      if (isGstinLocked) {
+        setIsGstinLocked(false);
+      }
+    }
+  };
+
   // Cart empty gate: If cart is empty, redirect to cart drawer
   useEffect(() => {
     if (isCheckoutOpen && isUserLoggedIn && cart.length === 0) {
@@ -78,12 +176,14 @@ export const CheckoutModal: React.FC = () => {
     const isPinMismatch = destinationPincode !== targetPin || currentQuote?.destination_pincode !== targetPin;
     const isMethodMismatch = quotePaymentMethod !== targetQuoteMethod;
 
-    if (isPinMismatch || isMethodMismatch || !currentQuote) {
-      setDestinationPincode(targetPin);
-      setQuotePaymentMethod(targetQuoteMethod);
+    if (isPinMismatch || !currentQuote || quoteStatus === 'QUOTE_EXPIRED') {
+      if (destinationPincode !== targetPin) setDestinationPincode(targetPin);
+      if (quotePaymentMethod !== targetQuoteMethod) setQuotePaymentMethod(targetQuoteMethod);
       fetchAuthoritativeQuote();
+    } else if (isMethodMismatch) {
+      setQuotePaymentMethod(targetQuoteMethod);
     }
-  }, [isCheckoutOpen, activeAddress?.pincode, paymentMethod, destinationPincode, quotePaymentMethod, currentQuote, setDestinationPincode, setQuotePaymentMethod, fetchAuthoritativeQuote]);
+  }, [isCheckoutOpen, activeAddress?.pincode, paymentMethod, destinationPincode, quotePaymentMethod, currentQuote, quoteStatus, setDestinationPincode, setQuotePaymentMethod, fetchAuthoritativeQuote]);
 
   if (!isCheckoutOpen || !isUserLoggedIn || cart.length === 0) {
     return null;
@@ -108,18 +208,45 @@ export const CheckoutModal: React.FC = () => {
     }
   });
 
-  // Authoritative figures from current validated quote
-  const itemsGross = Number(currentQuote?.total_product_gross || 0);
-  const taxableValue = Number(currentQuote?.subtotal_taxable || 0);
-  const taxAmount = Number(currentQuote?.total_product_gst || 0);
-  const totalShipping = Number(currentQuote?.shipping_total || 0);
-  const codFee = paymentMethod === 'COD' ? Number(currentQuote?.cod_charge_raw || currentQuote?.cod_surcharge || 0) : 0;
-  const codAdjustment = paymentMethod === 'COD' ? Number(currentQuote?.cod_rounding_adjustment || 0) : 0;
-  const grandTotal = paymentMethod === 'COD' 
-    ? Number(currentQuote?.cod_payable_total || currentQuote?.cod_total || 0) 
-    : Number(currentQuote?.prepaid_total || 0);
+  const effectiveShipping: DeliveryAddress | null = shippingAddress || activeAddress || availableAddresses[0] || null;
+  const effectiveBilling: DeliveryAddress | null = billingAddress || activeAddress || availableAddresses[0] || null;
 
-  const estimatedPrepaid = Number(currentQuote?.prepaid_total || itemsGross);
+  // Real-time cart calculations to guarantee non-zero fallback while authoritative quote is loading
+  const cartItemsGross = cart.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+  const cartTaxable = Math.round((cartItemsGross / 1.18) * 100) / 100;
+  const cartGst = Math.round((cartItemsGross - cartTaxable) * 100) / 100;
+  const cartShipping = 29.50; // India Post Speed Post Base ₹25 + 18% GST (₹4.50)
+  const cartPrepaidTotal = cartItemsGross + cartShipping;
+  const cartCodFee = Math.round((cartPrepaidTotal * 0.025) * 100) / 100;
+  const cartCodTotal = Math.ceil((cartPrepaidTotal + cartCodFee) / 5) * 5;
+
+  // Authoritative figures from current validated quote with immediate cart fallback
+  const itemsGross = currentQuote ? Number(currentQuote.total_product_gross) : cartItemsGross;
+  const taxableValue = currentQuote ? Number(currentQuote.subtotal_taxable) : cartTaxable;
+  const taxAmount = currentQuote ? Number(currentQuote.total_product_gst) : cartGst;
+  const totalShipping = currentQuote ? Number(currentQuote.shipping_total) : cartShipping;
+  const codFee = paymentMethod === 'COD' 
+    ? (currentQuote ? Number(currentQuote.cod_charge_raw || currentQuote.cod_surcharge || 0) : cartCodFee) 
+    : 0;
+
+  // Round Off calculations for BOTH Online Payment and Cash on Delivery (COD)
+  const rawPrepaidTotal = currentQuote ? Number(currentQuote.prepaid_total) : (itemsGross + totalShipping);
+  const roundedPrepaidTotal = Math.round(rawPrepaidTotal);
+  const onlineRoundOff = Number((roundedPrepaidTotal - rawPrepaidTotal).toFixed(2));
+
+  const rawCodTotal = rawPrepaidTotal + codFee;
+  const roundedCodTotal = currentQuote?.cod_payable_total 
+    ? Number(currentQuote.cod_payable_total) 
+    : Math.ceil(rawCodTotal / 5) * 5;
+  const codAdjustment = paymentMethod === 'COD' 
+    ? (currentQuote?.cod_rounding_adjustment !== undefined 
+        ? Number(currentQuote.cod_rounding_adjustment) 
+        : Number((roundedCodTotal - rawCodTotal).toFixed(2))) 
+    : 0;
+
+  const grandTotal = paymentMethod === 'COD' ? roundedCodTotal : roundedPrepaidTotal;
+
+  const estimatedPrepaid = Number(currentQuote?.prepaid_total || cartPrepaidTotal);
   const isCodLimitExceeded = appMode === 'B2C' && estimatedPrepaid > b2cCodLimit;
 
   // Auto-switch COD to PREPAID if B2B mode or if B2C order exceeds COD limit
@@ -133,16 +260,226 @@ export const CheckoutModal: React.FC = () => {
     }
   }, [appMode, paymentMethod, isCodLimitExceeded, setQuotePaymentMethod]);
 
-  const handleSelectAddress = (addr: DeliveryAddress) => {
-    useStore.setState({
-      activeAddress: addr,
-      shippingAddress: addr,
-      destinationPincode: addr.pincode,
-    });
-    setActiveAddress(addr.id);
+  // Auto-lookup PIN code for inline address form
+  useEffect(() => {
+    const cleanPin = formPincode.trim();
+    if (cleanPin.length === 6 && /^[1-9][0-9]{5}$/.test(cleanPin)) {
+      setIsLoadingPin(true);
+      setPinLookupError(null);
+      lookupPincode(cleanPin)
+        .then((res) => {
+          setIsLoadingPin(false);
+          if (res && res.postOffices && res.postOffices.length > 0) {
+            setFormPostOffices(res.postOffices);
+            setFormSelectedPO((prev: PostOfficeInfo | null) => {
+              const matched = res.postOffices.find((p) => p.name === prev?.name || p.facilityId === prev?.facilityId);
+              return matched || res.postOffices[0];
+            });
+            setFormCity(res.district || 'Ahmedabad');
+            setFormState(res.state || 'Gujarat');
+            setFormStateCode(res.stateCode || '24');
+          } else {
+            setPinLookupError('No postal sub-hub facility found for this PIN code');
+          }
+        })
+        .catch(() => {
+          setIsLoadingPin(false);
+        });
+    }
+  }, [formPincode]);
+
+  const handleOpenAddAddress = (target: 'SHIPPING' | 'BILLING' = 'SHIPPING') => {
+    setEditingAddressId(null);
+    setAddressTarget(target);
+    const cleanName = currentUser.name && !currentUser.name.startsWith('Customer ') && currentUser.name !== 'Valued Customer'
+      ? currentUser.name
+      : (appMode === 'B2B' && currentOrg.companyName ? currentOrg.companyName : '');
+    setFormFullName(cleanName);
+    setFormPhone(currentUser.phone ? currentUser.phone.replace(/\D/g, '').slice(-10) : '');
+    setFormClassification(appMode === 'B2B' ? 'OFFICE' : 'HOME');
+    setFormFlat('');
+    setFormStreet('');
+    setFormPincode('');
+    setFormCity('');
+    setFormState('');
+    setFormStateCode('');
+    setFormPostOffices([]);
+    setFormSelectedPO(null);
+    setFormGstin(target === 'BILLING' ? (billingAddress?.gstin || currentOrg.gstin || '') : (appMode === 'B2B' ? currentOrg.gstin || '' : ''));
+    setFormApplyToBoth(isShippingSameAsBilling);
+    setIsEditingAddress(true);
     setIsAddressListExpanded(false);
-    setActiveStep(2);
-    showToast(`✓ Delivery address set to ${addr.postOffice?.name || addr.city} (${addr.pincode})`, 'success');
+    setIsGstinLocked(false);
+  };
+
+  const handleOpenEditAddress = (target: 'SHIPPING' | 'BILLING', specificAddr?: DeliveryAddress) => {
+    setAddressTarget(target);
+    const targetAddr = specificAddr || (target === 'BILLING' ? (billingAddress || activeAddress) : (shippingAddress || activeAddress));
+    if (targetAddr) {
+      setEditingAddressId(targetAddr.id);
+      setFormFullName(targetAddr.fullName);
+      setFormPhone(targetAddr.phone);
+      setFormClassification((targetAddr.addressType as any) || (appMode === 'B2B' ? 'OFFICE' : 'HOME'));
+      setFormFlat(targetAddr.flatBuilding);
+      setFormStreet(targetAddr.streetArea);
+      setFormPincode(targetAddr.pincode);
+      setFormCity(targetAddr.city);
+      setFormState(targetAddr.state);
+      setFormStateCode(targetAddr.stateCode);
+      setFormPostOffices(targetAddr.postOffice ? [targetAddr.postOffice] : []);
+      setFormSelectedPO(targetAddr.postOffice || null);
+      setFormGstin(targetAddr.gstin || (target === 'BILLING' ? currentOrg.gstin : ''));
+      setFormApplyToBoth(isShippingSameAsBilling);
+      setIsGstinLocked(Boolean(targetAddr.gstin));
+    } else {
+      handleOpenAddAddress(target);
+      return;
+    }
+    setIsEditingAddress(true);
+    setIsAddressListExpanded(false);
+  };
+
+  const handleDeleteAddress = (addrId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    deleteAddress(addrId);
+    showToast('Address removed successfully', 'info');
+    const remaining = useStore.getState().addresses;
+    if (remaining.length === 0) {
+      handleOpenAddAddress('SHIPPING');
+    } else {
+      fetchAuthoritativeQuote();
+    }
+  };
+
+  const handleToggleSameAsBilling = (same: boolean) => {
+    setIsShippingSameAsBilling(same);
+    if (same) {
+      const source = billingAddress || activeAddress;
+      if (source) {
+        setShippingAddress(source);
+        useStore.setState({ activeAddress: source, destinationPincode: source.pincode });
+        showToast('✓ Delivery address synchronized with Billing Tax Address', 'success');
+        fetchAuthoritativeQuote();
+      }
+    }
+  };
+
+  const handleSaveAddressForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formFullName.trim()) {
+      showToast('Please enter full name or business entity name', 'warning');
+      return;
+    }
+    const cleanPhone = formPhone.replace(/\D/g, '').slice(-10);
+    if (cleanPhone.length !== 10) {
+      showToast('Please enter a valid 10-digit mobile number', 'warning');
+      return;
+    }
+    if (!formFlat.trim() || !formStreet.trim()) {
+      showToast('Please enter complete flat/building and street address', 'warning');
+      return;
+    }
+    const cleanPin = formPincode.trim();
+    if (cleanPin.length !== 6 || !/^[1-9][0-9]{5}$/.test(cleanPin)) {
+      showToast('Please enter a valid 6-digit PIN code', 'warning');
+      return;
+    }
+
+    const defaultFacility: PostOfficeInfo = {
+      name: formCity ? `${formCity} Facility Hub` : 'Delivery Hub',
+      branchType: 'Sub Hub Facility',
+      deliveryStatus: 'Delivery',
+      circle: `${formState || 'Gujarat'} Circle`,
+      district: formCity || 'Ahmedabad',
+      state: formState || 'Gujarat',
+      facilityId: `${(formCity || 'AHM').slice(0, 3).toUpperCase()}-${cleanPin}`,
+    };
+
+    const effectivePO: PostOfficeInfo = formSelectedPO || defaultFacility;
+    const existingTargetId = editingAddressId || (addressTarget === 'BILLING' 
+      ? billingAddress?.id 
+      : (shippingAddress?.id || activeAddress?.id)) || `addr_${Date.now()}`;
+
+    const newAddr: DeliveryAddress = {
+      id: existingTargetId,
+      userId: currentUser.id || 'usr_direct',
+      fullName: formFullName.trim(),
+      phone: cleanPhone,
+      addressType: formClassification,
+      flatBuilding: formFlat.trim(),
+      streetArea: formStreet.trim(),
+      pincode: cleanPin,
+      postOffice: effectivePO,
+      city: formCity || 'Ahmedabad',
+      state: formState || 'Gujarat',
+      stateCode: formStateCode || '24',
+      isDefault: true,
+      gstin: formGstin.trim() ? formGstin.trim().toUpperCase() : undefined,
+    };
+
+    if (editingAddressId) {
+      updateAddress(editingAddressId, newAddr);
+    } else {
+      addAddress(newAddr);
+    }
+
+    if (formApplyToBoth || isShippingSameAsBilling) {
+      setIsShippingSameAsBilling(true);
+      setBillingAddress(newAddr);
+      setShippingAddress(newAddr);
+      useStore.setState({ activeAddress: newAddr, destinationPincode: newAddr.pincode });
+    } else if (addressTarget === 'BILLING') {
+      setBillingAddress(newAddr);
+    } else {
+      setShippingAddress(newAddr);
+      useStore.setState({ activeAddress: newAddr, destinationPincode: newAddr.pincode });
+    }
+
+    if (!currentUser.phone || currentUser.phone.length < 10) {
+      useStore.getState().updateUserProfile({ phone: cleanPhone, name: formFullName.trim() });
+    }
+
+    if (currentUser.id && currentUser.id !== 'usr_guest') {
+      authApi.addCustomerAddress({
+        address_type: formClassification === 'OFFICE' ? 'OFFICE' : (formClassification === 'WAREHOUSE' ? 'WAREHOUSE' : (addressTarget === 'BILLING' ? 'BILLING' : 'SHIPPING')),
+        full_name: formFullName.trim(),
+        phone: cleanPhone,
+        flat_building: formFlat.trim(),
+        street_area: formStreet.trim(),
+        city: formCity || 'Ahmedabad',
+        state: formState || 'Gujarat',
+        state_code: formStateCode || '24',
+        pincode: cleanPin,
+        is_default: true,
+        is_verified: true,
+        gstin: formGstin.trim() || undefined
+      }).catch(err => console.warn('Could not sync address to backend:', err));
+    }
+
+    setIsEditingAddress(false);
+    setEditingAddressId(null);
+    showToast(`✓ Address saved for ${effectivePO.name} (${newAddr.pincode})`, 'success');
+    fetchAuthoritativeQuote();
+  };
+
+  const handleSelectAddress = (addr: DeliveryAddress, asTarget?: 'SHIPPING' | 'BILLING') => {
+    if (asTarget === 'BILLING') {
+      setBillingAddress(addr);
+      showToast(`✓ Billing address set to ${addr.fullName} (${addr.pincode})`, 'success');
+    } else {
+      useStore.setState({
+        activeAddress: addr,
+        shippingAddress: addr,
+        destinationPincode: addr.pincode,
+      });
+      setActiveAddress(addr.id);
+      if (isShippingSameAsBilling) {
+        setBillingAddress(addr);
+      }
+      setIsAddressListExpanded(false);
+      setActiveStep(2);
+      showToast(`✓ Delivery address set to ${addr.postOffice?.name || addr.city} (${addr.pincode})`, 'success');
+    }
   };
 
   const handleSelectPaymentMethod = (method: Order['paymentDetail']['method']) => {
@@ -176,7 +513,7 @@ export const CheckoutModal: React.FC = () => {
     if (!targetQuote || targetQuote.destination_pincode !== shippingPin) {
       try {
         const items = cart.map((i) => ({
-          ...(i.variantId ? { variant_id: i.variantId } : {}),
+          ...(isUuid(i.variantId) ? { variant_id: i.variantId } : {}),
           ...(i.sku ? { sku: i.sku } : {}),
           quantity: i.quantity,
         }));
@@ -196,12 +533,18 @@ export const CheckoutModal: React.FC = () => {
       }
     }
 
-    const rawLine1 = `${activeAddress.flatBuilding || ''} ${activeAddress.streetArea || ''}`.trim() || activeAddress.postOffice?.name || 'Factory Premises';
-    const safeLine1 = rawLine1.length >= 3 ? rawLine1 : `${rawLine1} Hub`;
+    const rawLine1 = `${activeAddress.flatBuilding || ''} ${activeAddress.streetArea || ''}`.trim() || activeAddress.postOffice?.name || activeAddress.city;
+    if (!rawLine1 || rawLine1.length < 3) {
+      throw new Error('Please enter complete street/building delivery address details.');
+    }
+    const safeLine1 = rawLine1;
 
-    const rawPhone = activeAddress.phone || currentUser?.phone || '9825012345';
+    const rawPhone = activeAddress.phone || currentUser?.phone || '';
     const cleanPhone = rawPhone.replace(/\D/g, '').slice(-10);
-    const validPhone = cleanPhone.length === 10 ? cleanPhone : '9825012345';
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      throw new Error('Please enter a valid 10-digit mobile number for order delivery.');
+    }
+    const validPhone = cleanPhone;
 
     const safeName = (activeAddress.fullName || currentUser?.name || 'Customer').trim();
     const validName = safeName.length >= 2 ? safeName : 'Customer';
@@ -242,12 +585,12 @@ export const CheckoutModal: React.FC = () => {
         city: activeAddress.city || 'Ahmedabad',
         state: activeAddress.state || 'Gujarat',
         pincode: shippingPin,
-        state_code: '24',
+        state_code: activeAddress.stateCode || '24',
       },
       items: cart.map((i) => ({
         sku: i.sku,
         quantity: i.quantity,
-        variant_id: i.variantId || undefined,
+        ...(isUuid(i.variantId) ? { variant_id: i.variantId } : {}),
       })),
       claim_gst: claimGst,
       gstin: claimGst ? (enteredGstin || activeAddress.gstin || currentOrg.gstin) : undefined,
@@ -258,8 +601,22 @@ export const CheckoutModal: React.FC = () => {
   };
 
   const handleInitiateOrder = async () => {
-    if (!activeAddress) {
-      showToast('Please select or add a delivery address to continue.', 'warning');
+    if (
+      !activeAddress ||
+      !activeAddress.fullName?.trim() ||
+      activeAddress.fullName.startsWith('Customer ') ||
+      activeAddress.fullName === 'Valued Customer' ||
+      !activeAddress.flatBuilding?.trim() ||
+      !activeAddress.pincode?.trim()
+    ) {
+      showToast('Customer name and complete delivery address are compulsory. Please enter and save your details to place the order.', 'warning');
+      setIsEditingAddress(true);
+      return;
+    }
+
+    const recipientPhone = (activeAddress.phone || currentUser?.phone || '').replace(/\D/g, '').slice(-10);
+    if (!recipientPhone || recipientPhone.length !== 10) {
+      showToast('Please enter a valid 10-digit mobile number for order delivery.', 'warning');
       return;
     }
 
@@ -286,8 +643,14 @@ export const CheckoutModal: React.FC = () => {
         const backendOrder = await submitBackendOrder('PREPAID', idempotencyKey);
         const rzpOrderData = await paymentApi.createRazorpayOrder(backendOrder.id);
 
+        const orderPayable = Number(backendOrder.total_payable || grandTotal);
+        if (orderPayable < 1) {
+          throw new Error('Order amount must be at least ₹1 to initiate payment.');
+        }
+
         await razorpayService.openCheckout({
-          amount: Number(backendOrder.total_payable || grandTotal),
+          keyId: rzpOrderData.key_id,
+          amount: orderPayable,
           orderNumber: backendOrder.order_number,
           razorpayOrderId: rzpOrderData.razorpay_order_id,
           customerName: activeAddress.fullName || currentUser?.name || 'Customer',
@@ -519,7 +882,7 @@ export const CheckoutModal: React.FC = () => {
           <div className="lg:col-span-8 space-y-5">
             
             {/* ───────────────────────────────────────────────────────────── */}
-            {/* Step 1: Delivery Address */}
+            {/* Step 1: Personal & Dual Address Management */}
             {/* ───────────────────────────────────────────────────────────── */}
             <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm transition-all">
               <div 
@@ -530,141 +893,712 @@ export const CheckoutModal: React.FC = () => {
                   <span className="w-6 h-6 rounded-full bg-[#0054A6] text-white font-black text-xs flex items-center justify-center shadow-sm">
                     1
                   </span>
-                  <span className="font-bold text-slate-900 text-sm">Delivery Address & Delivery Hub</span>
+                  <div>
+                    <span className="font-bold text-slate-900 text-sm block">
+                      Personal & Dual Address Management
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      {appMode === 'B2B' ? 'B2B Enterprise & Tax Billing Profile' : 'Customer Profile & Tax Addresses'}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-[#0054A6] font-bold">
-                    {activeAddress ? '✓ Selected' : 'Select Address'}
+                    {effectiveShipping ? '✓ Addresses Configured' : 'Select / Add Address'}
                   </span>
                 </div>
               </div>
 
-              <div className="p-5 space-y-4 bg-white">
-                {!activeAddress && availableAddresses.length === 0 ? (
-                  <div className="p-6 rounded-2xl bg-amber-50/70 border border-amber-200 text-center space-y-3">
-                    <div className="text-amber-800 font-bold text-sm">No Delivery Address Found</div>
-                    <p className="text-xs text-slate-600 max-w-md mx-auto">
-                      Please add your delivery address to calculate verified Priority Express delivery to your doorstep.
+              <div className="p-5 space-y-5 bg-white">
+                {/* Header with Title and In-Modal Direct Address Action Buttons */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                  <div>
+                    <span className="text-xs font-mono font-bold text-[#0054A6] uppercase tracking-wider block">
+                      Personal & Dual Address Management
+                    </span>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                      {appMode === 'B2B' ? '🏢 B2B Enterprise & Tax Billing Profile' : '👤 Customer Profile & Delivery Addresses'}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-mono">
+                      Speed Post Consignee Delivery (Origin Hub: Kathwada 382430) • Verified GST Tax Invoice
                     </p>
-                    <button
-                      type="button"
-                      aria-label="Add Delivery Address"
-                      onClick={() => setIsAddressModalOpen(true)}
-                      className="px-4 py-2.5 bg-[#0054A6] text-white rounded-xl text-xs font-bold shadow hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> Add Delivery Address
-                    </button>
                   </div>
-                ) : !isAddressListExpanded && activeAddress ? (
-                  <div className="p-4 rounded-2xl bg-blue-50/70 border border-[#0054A6]/30 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="space-y-1.5 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-300 flex items-center gap-1">
-                          <Check className="w-3 h-3" /> Active Delivery Address
-                        </span>
-                        <strong className="text-slate-900 text-sm font-black">{activeAddress.fullName}</strong>
-                        <span className="text-slate-500 font-mono">({maskPhone(activeAddress.phone)})</span>
-                      </div>
-                      <p className="text-slate-700 leading-relaxed font-medium">
-                        {activeAddress.flatBuilding}, {activeAddress.streetArea}, {activeAddress.city}, {activeAddress.state}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
-                        <span className="bg-white border border-slate-200 text-[#0054A6] px-2.5 py-1 rounded-lg font-bold">
-                          📍 Delivery Hub: {activeAddress.postOffice?.name || 'KATHWADA GIDC S.O.'}
-                        </span>
-                        <span className="bg-white border border-slate-200 text-slate-900 px-2.5 py-1 rounded-lg font-bold">
-                          PIN: {activeAddress.pincode}
-                        </span>
-                      </div>
-                    </div>
 
-                    <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    {availableAddresses.length > 0 && (
                       <button
                         type="button"
-                        aria-label="Change delivery address"
-                        onClick={() => setIsAddressListExpanded(true)}
-                        className="px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-slate-700 hover:text-[#0054A6] hover:border-[#0054A6] text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5"
+                        onClick={() => {
+                          setIsAddressListExpanded(!isAddressListExpanded);
+                          if (isEditingAddress) setIsEditingAddress(false);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shadow-sm ${
+                          isAddressListExpanded
+                            ? 'bg-[#0054A6] text-white border-[#0054A6]'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                        }`}
+                        title="Manage Saved Addresses directly in checkout"
                       >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        Change Address
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>Saved Addresses ({availableAddresses.length})</span>
+                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isAddressListExpanded ? 'rotate-180' : ''}`} />
                       </button>
-                    </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddAddress(appMode === 'B2B' && !effectiveBilling ? 'BILLING' : 'SHIPPING')}
+                      className="px-3 py-1.5 rounded-xl bg-[#0054A6] hover:bg-[#003d7a] text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{appMode === 'B2B' ? '+ Add Business Address' : '+ Add New Address'}</span>
+                    </button>
                   </div>
-                ) : (
-                  /* Expanded List: Choose from available addresses */
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between pb-1">
-                      <span className="text-xs font-black text-slate-900 uppercase tracking-wider block font-mono">
-                        Select Destination Address:
-                      </span>
-                      {activeAddress && (
+                </div>
+
+                {/* Case A: Inline Address Form (Adding or Editing) */}
+                {isEditingAddress || (!effectiveShipping && !effectiveBilling && availableAddresses.length === 0) ? (
+                  <form onSubmit={handleSaveAddressForm} className="p-5 rounded-2xl bg-blue-50/50 border-2 border-[#0054A6]/30 space-y-4 text-xs animate-fadeIn">
+                    <div className="flex items-center justify-between pb-2 border-b border-blue-200/60">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-[#0054A6] text-white flex items-center justify-center font-bold">
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <h4 className="font-black text-slate-900 text-sm">
+                            {addressTarget === 'BILLING' 
+                              ? 'Edit Billing Tax Address' 
+                              : (effectiveShipping ? 'Edit Delivery Consignee Address' : 'Add New Delivery & Tax Address')}
+                          </h4>
+                          <span className="text-[11px] text-slate-500 font-mono">
+                            Verified against India Post PIN directory & saved to your Customer Profile
+                          </span>
+                        </div>
+                      </div>
+
+                      {availableAddresses.length > 0 && (
                         <button
                           type="button"
-                          aria-label="Cancel address selection"
-                          onClick={() => setIsAddressListExpanded(false)}
-                          className="text-xs text-slate-500 hover:text-slate-800 font-bold"
+                          onClick={() => setIsEditingAddress(false)}
+                          className="px-2.5 py-1 rounded-lg bg-white border border-slate-300 text-slate-600 hover:text-slate-900 font-bold text-xs"
                         >
                           Cancel
                         </button>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                      {availableAddresses.map((addr, idx) => {
-                        const isThisActive = activeAddress?.id === addr.id;
-                        return (
-                          <div
-                            key={addr.id || idx}
-                            onClick={() => handleSelectAddress(addr)}
-                            className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-2.5 flex flex-col justify-between ${
-                              isThisActive
-                                ? 'bg-blue-50 border-[#0054A6] ring-2 ring-[#0054A6]/20 shadow-md'
-                                : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
-                            }`}
-                          >
-                            <div className="space-y-1.5 text-xs">
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                                  <MapPin className="w-3.5 h-3.5 text-[#0054A6]" />
-                                  {addr.fullName}
-                                </span>
-                                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                                  {addr.addressType || 'ADDRESS'}
-                                </span>
-                              </div>
-                              <div className="text-slate-500 font-mono text-[11px]">{maskPhone(addr.phone)}</div>
-                              <p className="text-slate-600 leading-tight line-clamp-2">
-                                {addr.flatBuilding}, {addr.streetArea}, {addr.city}
-                              </p>
-                              <div className="text-[11px] text-[#0054A6] font-mono font-bold bg-blue-50 px-2 py-0.5 rounded inline-block">
-                                📍 {addr.postOffice?.name || 'KATHWADA GIDC S.O.'} ({addr.pincode})
-                              </div>
-                            </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1 flex items-center justify-between">
+                          <span>Full Name / Business Entity *</span>
+                          {isGstinLocked && (
+                            <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 font-mono">
+                              <Lock className="w-3 h-3 text-emerald-600" /> Locked to GSTIN
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          readOnly={isGstinLocked}
+                          value={formFullName}
+                          onChange={(e) => setFormFullName(e.target.value)}
+                          placeholder="Enter your real full name"
+                          className={`w-full h-9 px-3 border rounded-xl font-medium focus:outline-none transition-all ${
+                            isGstinLocked
+                              ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950 font-bold cursor-not-allowed'
+                              : 'bg-white border-slate-300 text-slate-900 focus:ring-2 focus:ring-[#0054A6]'
+                          }`}
+                        />
+                      </div>
 
-                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                              <span className={`text-[11px] font-bold ${isThisActive ? 'text-[#0054A6]' : 'text-slate-500'}`}>
-                                {isThisActive ? '✓ Currently Selected' : '👉 Click to Select'}
-                              </span>
-                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                                isThisActive ? 'border-[#0054A6] bg-[#0054A6]' : 'border-slate-300'
-                              }`}>
-                                {isThisActive && <Check className="w-2.5 h-2.5 text-white" />}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1 flex items-center justify-between">
+                          <span>Contact Phone Number *</span>
+                          <span className="text-[10px] text-[#0054A6] font-mono font-bold">Auto-filled</span>
+                        </label>
+                        <input
+                          type="tel"
+                          required
+                          maxLength={10}
+                          value={formPhone}
+                          onChange={(e) => setFormPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          placeholder="10-digit mobile number"
+                          className="w-full h-9 px-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-medium focus:ring-2 focus:ring-[#0054A6] focus:outline-none"
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2">
+                    {/* Address Classification */}
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1.5">
+                        Address Classification
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setFormClassification('HOME')}
+                          className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                            formClassification === 'HOME'
+                              ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-sm'
+                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Home className="w-3.5 h-3.5" />
+                          <span>Residential (Home)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setFormClassification('OFFICE')}
+                          className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                            formClassification === 'OFFICE'
+                              ? 'bg-[#0054A6] text-white border-[#0054A6] shadow-sm'
+                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Briefcase className="w-3.5 h-3.5" />
+                          <span>Commercial (Office)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setFormClassification('WAREHOUSE')}
+                          className={`py-2 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                            formClassification === 'WAREHOUSE'
+                              ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
+                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Factory className="w-3.5 h-3.5" />
+                          <span>Factory / Warehouse</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Flat, Building, Street */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">
+                          Flat, House No., Building, Complex *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formFlat}
+                          onChange={(e) => setFormFlat(e.target.value)}
+                          placeholder="Plot 42, APE Industrial Complex"
+                          className="w-full h-9 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-[#0054A6] focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">
+                          Street, Road, Area, Landmark *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formStreet}
+                          onChange={(e) => setFormStreet(e.target.value)}
+                          placeholder="Kathwada GIDC Phase 2, Near Ring Road"
+                          className="w-full h-9 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-[#0054A6] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* PIN code & Postal Delivery Hub */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-slate-700 font-bold">
+                            6-Digit Pincode *
+                          </label>
+                          {isLoadingPin && (
+                            <span className="text-[10px] text-[#0054A6] font-mono flex items-center gap-1">
+                              <RefreshCw className="w-3 h-3 animate-spin" /> Verifying PIN...
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          maxLength={6}
+                          required
+                          value={formPincode}
+                          onChange={(e) => setFormPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          placeholder="e.g. 382430"
+                          className="w-full h-9 px-3 bg-white border-2 border-[#0054A6] rounded-xl text-[#0054A6] font-mono font-black focus:outline-none"
+                        />
+                        {pinLookupError && (
+                          <p className="text-[11px] text-amber-600 mt-1">{pinLookupError}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">
+                          Select Delivery Sub-Hub *
+                        </label>
+                        <select
+                          value={formSelectedPO?.facilityId || formSelectedPO?.name || ''}
+                          onChange={(e) => {
+                            const found = formPostOffices.find((po) => po.facilityId === e.target.value || po.name === e.target.value);
+                            if (found) {
+                              setFormSelectedPO(found);
+                              if (found.state) {
+                                setFormState(found.state);
+                                setFormStateCode(getGstStateCode(found.state, formPincode));
+                              }
+                              if (found.district) {
+                                setFormCity(found.district);
+                              }
+                            }
+                          }}
+                          className="w-full h-9 px-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-bold focus:outline-none"
+                        >
+                          {formPostOffices.length > 0 ? (
+                            formPostOffices.map((po) => (
+                              <option key={po.facilityId || po.name} value={po.facilityId || po.name}>
+                                {po.name} ({po.branchType})
+                              </option>
+                            ))
+                          ) : (
+                            <option value="">
+                              {formCity ? `${formCity} Delivery Hub` : 'Delivery Facility Hub'}
+                            </option>
+                          )}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-white border border-blue-200/80 text-[11px] text-slate-600 font-mono flex items-center justify-between">
+                      <span>City: <strong className="text-slate-900">{formCity}</strong></span>
+                      <span>State: <strong className="text-slate-900">{formState}</strong> (Code: {formStateCode})</span>
+                      <span className="text-emerald-700 font-bold flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Origin Hub: Kathwada 382430
+                      </span>
+                    </div>
+
+                    {/* Optional GSTIN for B2B or tax invoice */}
+                    {(appMode === 'B2B' || claimGst) && (
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">
+                          Company GSTIN (18% ITC Input Tax Credit)
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={15}
+                          value={formGstin}
+                          onChange={(e) => handleFormGstinChange(e.target.value)}
+                          placeholder="e.g. 24ABCDE1234F1Z5"
+                          className="w-full h-9 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-bold uppercase focus:ring-2 focus:ring-[#0054A6] focus:outline-none"
+                        />
+                        {isGstinLocked && (
+                          <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-[11px] font-medium flex items-center gap-1.5">
+                            <Lock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>Legal Entity Name & Registered State auto-filled and locked to statutory GSTIN.</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Sync Checkbox */}
+                    <div className="pt-2 border-t border-blue-200/50">
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={formApplyToBoth}
+                          onChange={(e) => setFormApplyToBoth(e.target.checked)}
+                          className="w-4 h-4 rounded text-[#0054A6] focus:ring-[#0054A6] cursor-pointer"
+                        />
+                        <span className="text-xs font-bold text-slate-800">
+                          Use this address for both Shipping Delivery & Billing Tax Address
+                        </span>
+                      </label>
+                    </div>
+
+                    {/* Form Action Buttons */}
+                    <div className="flex items-center justify-end gap-2.5 pt-2">
+                      {availableAddresses.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingAddress(false)}
+                          className="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-bold text-xs transition-all"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                      <button
+                        type="submit"
+                        className="px-5 py-2 rounded-xl bg-[#0054A6] hover:bg-[#003d7a] text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
+                      >
+                        <Check className="w-3.5 h-3.5" /> Save Address & Apply to Order
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  /* Case B: Dual Address Management Console (Display Mode) */
+                  <div className="space-y-4">
+                    {/* 🔄 Global Same as Billing Address Checkbox Box */}
+                    <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 via-sky-50/70 to-emerald-50/90 border-2 border-blue-200/80 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+                      <label className="flex items-center gap-3 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          id="checkout-shipping-same-as-billing"
+                          name="checkoutShippingSameAsBilling"
+                          checked={isShippingSameAsBilling}
+                          onChange={(e) => handleToggleSameAsBilling(e.target.checked)}
+                          className="w-4.5 h-4.5 rounded text-[#0054A6] focus:ring-[#0054A6] cursor-pointer"
+                        />
+                        <div>
+                          <span className="text-xs md:text-sm font-bold text-slate-900 flex items-center gap-2">
+                            <span>Shipping Delivery Address is same as Billing Tax Address</span>
+                            {isShippingSameAsBilling ? (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold font-mono border border-emerald-300">
+                                ✓ Synchronized
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold font-mono border border-amber-300">
+                                ⚡ Separate Destination
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-[11px] text-slate-600 font-mono block">
+                            {isShippingSameAsBilling
+                              ? 'APE parcels will be dispatched to the Billing Tax Address. Both are automatically synchronized.'
+                              : 'Separate delivery destination consignee is active below.'}
+                          </span>
+                        </div>
+                      </label>
+
+                      {!isShippingSameAsBilling && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditAddress('SHIPPING')}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" /> Edit Shipping Destination
+                        </button>
+                      )}
+                    </div>
+
+                    {/* 2-Column Grid: 1) Billing Tax Address + 2) Shipping Delivery Address */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* 🧾 1. BILLING TAX INVOICE ADDRESS */}
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 flex flex-col justify-between shadow-sm">
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-blue-100 text-[#0054A6] flex items-center justify-center font-bold">
+                                <FileText className="w-3.5 h-3.5" />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-slate-900 text-xs">1) Billing Tax Address</h4>
+                                <span className="text-[10px] text-slate-500 font-mono">For GST Tax Invoice & ITC</span>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditAddress('BILLING')}
+                              className="px-2.5 py-1 rounded-lg bg-white hover:bg-blue-50 text-[#0054A6] border border-blue-200 text-[11px] font-bold transition-all flex items-center gap-1 shadow-sm"
+                            >
+                              <Edit3 className="w-3 h-3" /> Edit
+                            </button>
+                          </div>
+
+                          {effectiveBilling ? (
+                            <div className="space-y-1.5 text-xs">
+                              <div className="font-bold text-slate-900 flex items-center justify-between">
+                                <span>{effectiveBilling.fullName}</span>
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-[#0054A6] font-bold border border-blue-100">
+                                  {effectiveBilling.addressType || 'TAX BILLING'}
+                                </span>
+                              </div>
+                              <div className="text-slate-600 font-mono text-[11px] flex items-center gap-1.5">
+                                <Phone className="w-3 h-3 text-slate-400" /> {maskPhone(effectiveBilling.phone)}
+                              </div>
+                              <p className="text-slate-700 leading-snug">
+                                {effectiveBilling.flatBuilding}, {effectiveBilling.streetArea}
+                              </p>
+                              <div className="text-[#0054A6] font-mono font-bold text-[11px] bg-blue-50/70 p-1.5 rounded-lg border border-blue-100 flex items-center gap-1.5">
+                                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                                <span>{effectiveBilling.postOffice?.name || effectiveBilling.city} ({effectiveBilling.pincode})</span>
+                              </div>
+                              <div className="text-slate-500 text-[11px]">
+                                {effectiveBilling.city}, {effectiveBilling.state} (State Code: {effectiveBilling.stateCode || '24'})
+                              </div>
+                              {(effectiveBilling.gstin || currentOrg.gstin) && (
+                                <div className="text-emerald-700 font-mono font-bold text-[11px] pt-1 flex items-center gap-1 border-t border-slate-200">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  <span>GSTIN: {effectiveBilling.gstin || currentOrg.gstin}</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="p-4 rounded-xl bg-white border border-slate-200 text-center space-y-2 text-xs">
+                              <p className="text-slate-500">No billing tax address saved.</p>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenAddAddress('BILLING')}
+                                className="px-3 py-1 bg-[#0054A6] text-white font-bold rounded-lg text-xs"
+                              >
+                                + Add Billing Address
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 🚚 2. SHIPPING DELIVERY ADDRESS */}
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 flex flex-col justify-between shadow-sm">
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                                <Truck className="w-3.5 h-3.5" />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-slate-900 text-xs">2) Shipping Delivery Address</h4>
+                                <span className="text-[10px] text-slate-500 font-mono">For APE Priority Speed Post Dispatch</span>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditAddress('SHIPPING')}
+                              className="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 text-[11px] font-bold transition-all flex items-center gap-1 shadow-sm"
+                            >
+                              <Edit3 className="w-3 h-3" /> {isShippingSameAsBilling ? 'Edit / Separate' : 'Edit'}
+                            </button>
+                          </div>
+
+                          {effectiveShipping ? (
+                            <div className="space-y-1.5 text-xs">
+                              <div className="font-bold text-slate-900 flex items-center justify-between">
+                                <span>{effectiveShipping.fullName}</span>
+                                <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${
+                                  isShippingSameAsBilling 
+                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                                    : 'bg-amber-100 text-amber-800 border-amber-300'
+                                }`}>
+                                  {isShippingSameAsBilling ? '✓ Synced with Billing' : '⚡ Separate Delivery'}
+                                </span>
+                              </div>
+                              <div className="text-slate-600 font-mono text-[11px] flex items-center gap-1.5">
+                                <Phone className="w-3 h-3 text-emerald-600" /> {maskPhone(effectiveShipping.phone)}
+                              </div>
+                              <p className="text-slate-700 leading-snug">
+                                {effectiveShipping.flatBuilding}, {effectiveShipping.streetArea}
+                              </p>
+                              <div className="text-emerald-800 font-mono font-bold text-[11px] bg-emerald-50/70 p-1.5 rounded-lg border border-emerald-200 flex items-center gap-1.5">
+                                <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span>{effectiveShipping.postOffice?.name || effectiveShipping.city} ({effectiveShipping.pincode})</span>
+                              </div>
+                              <div className="text-slate-500 text-[11px]">
+                                {effectiveShipping.city}, {effectiveShipping.state} (State Code: {effectiveShipping.stateCode || '24'})
+                              </div>
+                              <div className="pt-1 border-t border-slate-200 flex items-center justify-between text-[11px]">
+                                <span className="text-slate-500 font-mono">Speed Post (Origin 382430)</span>
+                                {isShippingSameAsBilling ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setIsShippingSameAsBilling(false);
+                                      handleOpenAddAddress('SHIPPING');
+                                    }}
+                                    className="text-[#0054A6] hover:underline font-bold"
+                                  >
+                                    + Add Separate Address
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleSameAsBilling(true)}
+                                    className="text-emerald-700 hover:underline font-bold"
+                                  >
+                                    ✓ Reset to Same as Billing
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-4 rounded-xl bg-white border border-slate-200 text-center space-y-2 text-xs">
+                              <p className="text-slate-500">No shipping delivery address saved.</p>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenAddAddress('SHIPPING')}
+                                className="px-3 py-1 bg-[#0054A6] text-white font-bold rounded-lg text-xs"
+                              >
+                                + Add Shipping Address
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Saved Addresses Selector & Complete In-Modal Management */}
+                    {availableAddresses.length > 0 && (
+                      <div className="pt-2 border-t border-slate-100 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => setIsAddressListExpanded(!isAddressListExpanded)}
+                            className="text-xs text-[#0054A6] hover:text-[#003d7a] font-bold flex items-center gap-1.5"
+                          >
+                            <MapPin className="w-3.5 h-3.5" />
+                            <span>
+                              {isAddressListExpanded ? 'Hide Saved Addresses' : `Manage Saved Addresses (${availableAddresses.length})`}
+                            </span>
+                            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isAddressListExpanded ? 'rotate-180' : ''}`} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenAddAddress(appMode === 'B2B' && !effectiveBilling ? 'BILLING' : 'SHIPPING')}
+                            className="text-xs text-[#0054A6] hover:underline font-bold inline-flex items-center gap-1"
+                          >
+                            <Plus className="w-3.5 h-3.5" /> {appMode === 'B2B' ? 'Add Business Address' : 'Add New Address'}
+                          </button>
+                        </div>
+
+                        {isAddressListExpanded && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                            {availableAddresses.map((addr, idx) => {
+                              const isDeliveryActive = (activeAddress?.id === addr.id) || (shippingAddress?.id === addr.id);
+                              const isBillingActive = billingAddress?.id === addr.id;
+
+                              return (
+                                <div
+                                  key={addr.id || idx}
+                                  className={`p-3.5 rounded-2xl border transition-all space-y-2.5 flex flex-col justify-between ${
+                                    isDeliveryActive
+                                      ? 'bg-blue-50/90 border-[#0054A6] ring-2 ring-[#0054A6]/20 shadow-md'
+                                      : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                                  }`}
+                                >
+                                  <div className="space-y-1.5 text-xs">
+                                    <div className="flex items-center justify-between gap-1">
+                                      <span className="font-bold text-slate-900 flex items-center gap-1.5 truncate">
+                                        <MapPin className="w-3.5 h-3.5 text-[#0054A6] shrink-0" />
+                                        <span className="truncate">{addr.fullName}</span>
+                                      </span>
+                                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${
+                                        addr.addressType === 'OFFICE' ? 'bg-blue-100 text-[#0054A6]' :
+                                        addr.addressType === 'WAREHOUSE' ? 'bg-emerald-100 text-emerald-800' :
+                                        'bg-amber-100 text-amber-800'
+                                      }`}>
+                                        {addr.addressType || 'ADDRESS'}
+                                      </span>
+                                    </div>
+
+                                    <div className="text-slate-500 font-mono text-[11px] flex items-center gap-1.5">
+                                      <Phone className="w-3 h-3 text-slate-400" /> {maskPhone(addr.phone)}
+                                    </div>
+
+                                    <p className="text-slate-600 line-clamp-2 leading-tight text-[11px]">
+                                      {addr.flatBuilding}, {addr.streetArea}
+                                    </p>
+
+                                    <div className="text-[11px] text-[#0054A6] font-mono font-bold bg-blue-50/60 p-1.5 rounded-lg border border-blue-100">
+                                      📍 {addr.postOffice?.name || addr.city} ({addr.pincode}), {addr.state}
+                                    </div>
+
+                                    {addr.gstin && (
+                                      <div className="text-[10px] text-emerald-700 font-mono font-bold flex items-center gap-1">
+                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> GSTIN: {addr.gstin}
+                                      </div>
+                                    )}
+
+                                    {/* Active Badges */}
+                                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                      {isDeliveryActive && (
+                                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold font-mono border border-emerald-300 flex items-center gap-1">
+                                          <Check className="w-3 h-3 text-emerald-700" /> Delivery Destination
+                                        </span>
+                                      )}
+                                      {isBillingActive && (
+                                        <span className="px-2 py-0.5 rounded-full bg-blue-100 text-[#0054A6] text-[10px] font-bold font-mono border border-blue-300 flex items-center gap-1">
+                                          <FileText className="w-3 h-3 text-[#0054A6]" /> Tax Billing
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Direct Card Action Buttons */}
+                                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5 text-xs">
+                                    <div className="flex items-center gap-1.5">
+                                      {!isDeliveryActive ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleSelectAddress(addr, 'SHIPPING')}
+                                          className="px-2.5 py-1 rounded-lg bg-[#0054A6] hover:bg-[#003d7a] text-white font-bold text-[11px] shadow-sm transition-all"
+                                        >
+                                          Deliver Here
+                                        </button>
+                                      ) : (
+                                        <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                                          <Check className="w-3 h-3" /> Selected
+                                        </span>
+                                      )}
+
+                                      {!isBillingActive && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleSelectAddress(addr, 'BILLING')}
+                                          className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-bold text-[11px] transition-all"
+                                        >
+                                          Bill Here
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenEditAddress('SHIPPING', addr)}
+                                        className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200"
+                                        title="Edit address"
+                                      >
+                                        <Edit3 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => handleDeleteAddress(addr.id, e)}
+                                        className="p-1.5 rounded-lg text-rose-600 hover:text-rose-800 hover:bg-rose-50 border border-rose-200"
+                                        title="Delete address"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Step 1 Footer Actions */}
+                    <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
                       <button
                         type="button"
-                        aria-label="Add New Address"
-                        onClick={() => setIsAddressModalOpen(true)}
+                        onClick={() => handleOpenAddAddress(appMode === 'B2B' && !effectiveBilling ? 'BILLING' : 'SHIPPING')}
                         className="text-xs text-[#0054A6] hover:underline font-bold inline-flex items-center gap-1"
                       >
-                        <Plus className="w-3.5 h-3.5" /> Add New Address
+                        <Plus className="w-3.5 h-3.5" /> {appMode === 'B2B' ? '+ Add Business Address' : '+ Add New Address'}
                       </button>
+
+                      {effectiveShipping && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveStep(2)}
+                          className="px-5 py-2.5 rounded-xl bg-[#0054A6] hover:bg-[#003d7a] text-white text-xs font-bold shadow-md transition-all flex items-center gap-1.5"
+                        >
+                          <span>Continue to Payment</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -884,6 +1818,28 @@ export const CheckoutModal: React.FC = () => {
                       <span className="text-[11px] text-slate-500 block">
                         Verified Business Entity: <strong className="text-slate-900">{currentOrg.companyName}</strong> (State Code: 24)
                       </span>
+
+                      {enteredGstin.length >= 2 && (
+                        <div className={`p-2.5 rounded-xl border text-[11px] space-y-1 ${
+                          enteredGstin.startsWith('24')
+                            ? 'bg-blue-50/90 border-blue-200 text-blue-900'
+                            : 'bg-purple-50/90 border-purple-200 text-purple-900'
+                        }`}>
+                          <div className="font-bold flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full ${enteredGstin.startsWith('24') ? 'bg-[#0054A6]' : 'bg-purple-600'} animate-pulse`} />
+                            {enteredGstin.startsWith('24') ? (
+                              <span>Gujarat Intra-State Supply (Code 24)</span>
+                            ) : (
+                              <span>Inter-State Supply (State Code {enteredGstin.substring(0, 2)})</span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-600">
+                            {enteredGstin.startsWith('24')
+                              ? 'Statutory Split: 9% CGST + 9% SGST. Input Tax Credit (ITC) will be credited to your Gujarat GSTR-2B.'
+                              : `Statutory Split: 18% Integrated GST (IGST). Input Tax Credit (ITC) will be credited to State ${enteredGstin.substring(0, 2)} GSTR-2B.`}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -939,7 +1895,7 @@ export const CheckoutModal: React.FC = () => {
                   </span>
                 </div>
 
-                {paymentMethod === 'COD' && (
+                {paymentMethod === 'COD' ? (
                   <div className="space-y-1 bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-xs">
                     <div className="flex justify-between text-amber-900 font-bold">
                       <span>COD Handling Fee (2.5%):</span>
@@ -947,11 +1903,20 @@ export const CheckoutModal: React.FC = () => {
                     </div>
                     {codAdjustment !== 0 && (
                       <div className="flex justify-between text-amber-700 text-[11px] font-mono">
-                        <span>COD Rounding (Multiple of 5):</span>
-                        <span>{codAdjustment > 0 ? `+₹${codAdjustment}` : `-₹${Math.abs(codAdjustment)}`}</span>
+                        <span>Round Off (COD multiple of ₹5):</span>
+                        <span>{codAdjustment > 0 ? `+₹${codAdjustment.toFixed(2)}` : `-₹${Math.abs(codAdjustment).toFixed(2)}`}</span>
                       </div>
                     )}
                   </div>
+                ) : (
+                  onlineRoundOff !== 0 && (
+                    <div className="flex justify-between text-slate-600 text-xs font-medium bg-slate-50 p-2 rounded-xl border border-slate-200">
+                      <span className="text-slate-700 font-bold">Round Off (Online Payment):</span>
+                      <span className={`font-mono font-bold ${onlineRoundOff > 0 ? 'text-slate-800' : 'text-emerald-700'}`}>
+                        {onlineRoundOff > 0 ? `+₹${onlineRoundOff.toFixed(2)}` : `-₹${Math.abs(onlineRoundOff).toFixed(2)}`}
+                      </span>
+                    </div>
+                  )
                 )}
 
                 <div className="pt-3 border-t border-slate-200 flex justify-between text-base font-black text-slate-900">
@@ -968,11 +1933,40 @@ export const CheckoutModal: React.FC = () => {
                 </div>
               )}
 
+              {/* Mandatory Delivery Address Alert */}
+              {(!activeAddress || !activeAddress.fullName?.trim() || activeAddress.fullName.startsWith('Customer ') || !activeAddress.flatBuilding?.trim() || !activeAddress.pincode?.trim()) && (
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-2xl text-amber-800 text-xs font-semibold flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Customer name & delivery address are compulsory to place order.</span>
+                  </div>
+                  {!isEditingAddress && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingAddress(true)}
+                      className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-[11px] shrink-0"
+                    >
+                      Fill Address
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Complete Order Action Button */}
               <button
                 type="button"
                 aria-label="Confirm and place order"
-                disabled={isProcessing || Boolean(apiCatalogError) || !activeAddress}
+                disabled={
+                  isProcessing ||
+                  Boolean(apiCatalogError) ||
+                  !activeAddress ||
+                  !activeAddress.fullName?.trim() ||
+                  activeAddress.fullName.startsWith('Customer ') ||
+                  !activeAddress.flatBuilding?.trim() ||
+                  !activeAddress.pincode?.trim() ||
+                  grandTotal <= 0 ||
+                  quoteStatus === 'QUOTE_LOADING'
+                }
                 onClick={handleInitiateOrder}
                 className={`w-full py-4 font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 ${
                   paymentMethod === 'RAZORPAY' || paymentMethod === 'UPI' || paymentMethod === 'CREDIT_DEBIT_CARD'
@@ -982,14 +1976,21 @@ export const CheckoutModal: React.FC = () => {
                     : 'bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 hover:opacity-95 text-white shadow-blue-700/30'
                 } disabled:opacity-50`}
               >
-                {isProcessing ? (
+                {isProcessing || quoteStatus === 'QUOTE_LOADING' ? (
                   <span className="flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    {paymentMethod === 'COD' ? 'Sending Verification...' : 'Connecting to Gateway...'}
+                    {isProcessing 
+                      ? (paymentMethod === 'COD' ? 'Sending Verification...' : 'Connecting to Gateway...')
+                      : 'Calculating Live Tariff...'}
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
-                    {paymentMethod === 'RAZORPAY' || paymentMethod === 'UPI' || paymentMethod === 'CREDIT_DEBIT_CARD' ? (
+                    {!activeAddress || !activeAddress.fullName?.trim() || activeAddress.fullName.startsWith('Customer ') || !activeAddress.flatBuilding?.trim() || !activeAddress.pincode?.trim() ? (
+                      <>
+                        <AlertTriangle className="w-4 h-4" />
+                        <span>Enter Customer Name & Address to Order</span>
+                      </>
+                    ) : paymentMethod === 'RAZORPAY' || paymentMethod === 'UPI' || paymentMethod === 'CREDIT_DEBIT_CARD' ? (
                       <>
                         <Lock className="w-4 h-4" />
                         <span>Pay ₹{grandTotal.toLocaleString('en-IN')} Securely</span>
@@ -1028,6 +2029,11 @@ export const CheckoutModal: React.FC = () => {
                   Enter 4-digit verification code sent to{' '}
                   <strong className="text-[#0054A6] font-mono">{maskPhone(activeAddress?.phone)}</strong>
                 </p>
+                {codDevOtp && (
+                  <div className="mt-2 inline-block px-3 py-1 bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-mono font-bold">
+                    Test OTP: {codDevOtp}
+                  </div>
+                )}
               </div>
 
               <form onSubmit={handleVerifyCodAndPlaceOrder} className="space-y-4">

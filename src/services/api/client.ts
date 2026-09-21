@@ -97,8 +97,17 @@ export class ApiClient {
     }
 
     const executeFetch = async (): Promise<T> => {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      let controller: AbortController | null = null;
+      try {
+        const AC = (typeof globalThis !== 'undefined' && globalThis.AbortController) || (typeof AbortController !== 'undefined' ? AbortController : null);
+        if (AC) {
+          controller = new AC();
+        }
+      } catch {}
+
+      const isTestEnv = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || Boolean(process.env?.VITEST));
+      const timer = (!isTestEnv && controller) ? setTimeout(() => controller?.abort(), timeoutMs) : null;
+      const shouldAttachSignal = !isTestEnv && controller?.signal && (typeof AbortSignal !== 'undefined' && controller.signal instanceof AbortSignal);
 
       try {
         const response = await fetch(url, {
@@ -106,10 +115,10 @@ export class ApiClient {
           method,
           headers: mergedHeaders,
           credentials: fetchOptions.credentials || 'include',
-          signal: controller.signal,
+          ...(shouldAttachSignal && controller ? { signal: controller.signal } : {}),
         });
 
-        clearTimeout(timer);
+        if (timer) clearTimeout(timer);
 
         if (!response.ok) {
           let errorData: any = null;
@@ -138,7 +147,7 @@ export class ApiClient {
         const data = await response.json();
         return data as T;
       } catch (err: unknown) {
-        clearTimeout(timer);
+        if (timer) clearTimeout(timer);
         if (err instanceof ApiError) {
           throw err;
         }

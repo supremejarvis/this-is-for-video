@@ -51,7 +51,7 @@ class Category(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     slug: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[CategoryStatus] = mapped_column(
-        SQLEnum(CategoryStatus, name="category_status_enum"), default=CategoryStatus.ACTIVE, nullable=False
+        SQLEnum(CategoryStatus, name="category_status_enum", native_enum=False), default=CategoryStatus.ACTIVE, nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
@@ -74,7 +74,7 @@ class Attribute(Base):
     code: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g. "frame_thickness", "pack_size", "material"
     label: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. "Frame Thickness (mm)"
     data_type: Mapped[AttributeDataType] = mapped_column(
-        SQLEnum(AttributeDataType, name="attribute_data_type_enum"), default=AttributeDataType.SELECT, nullable=False
+        SQLEnum(AttributeDataType, name="attribute_data_type_enum", native_enum=False), default=AttributeDataType.SELECT, nullable=False
     )
     unit: Mapped[str | None] = mapped_column(String(20), nullable=True)  # e.g. "mm", "g"
     is_variant_axis: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -176,7 +176,7 @@ class MediaAsset(Base):
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     checksum: Mapped[str] = mapped_column(String(64), nullable=False)  # SHA-256
     status: Mapped[MediaStatus] = mapped_column(
-        SQLEnum(MediaStatus, name="media_status_enum"), default=MediaStatus.READY, nullable=False
+        SQLEnum(MediaStatus, name="media_status_enum", native_enum=False), default=MediaStatus.READY, nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 

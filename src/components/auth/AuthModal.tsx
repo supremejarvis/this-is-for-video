@@ -34,6 +34,8 @@ export const AuthModal: React.FC = () => {
   const [countdown, setCountdown] = useState(30);
   const [attempts, setAttempts] = useState(0);
   const [devOtpCode, setDevOtpCode] = useState<string | null>(null);
+  const [otpChannel, setOtpChannel] = useState<'SMS' | 'WHATSAPP'>('SMS');
+  const [isReconnecting, setIsReconnecting] = useState(false);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Policy Modals View
@@ -176,27 +178,81 @@ export const AuthModal: React.FC = () => {
     }
 
     setIsSendingOtp(true);
-    try {
-      const data = await authApi.sendOtp(mobileNumber);
-      setIsSendingOtp(false);
 
-      if (data && (data.success || data.type === 'success')) {
-        setOtpStep(true);
-        setCountdown(30);
-        setOtpDigits(['', '', '', '']);
-        setDevOtpCode(data.dev_code || null);
-        showToast('Secure 4-digit OTP dispatched to your mobile number.', 'info');
-      } else {
-        const msg = data?.detail || data?.message || 'We couldn’t send the OTP. Please try again.';
-        setErrorMessage(msg);
-        showToast(msg, 'error');
+    const attemptSend = async (isRetry = false): Promise<boolean> => {
+      try {
+        const data = await authApi.sendOtp(mobileNumber, otpChannel);
+        setIsSendingOtp(false);
+        setIsReconnecting(false);
+
+        if (data && (data.success || data.type === 'success')) {
+          setOtpStep(true);
+          setCountdown(30);
+          setOtpDigits(['', '', '', '']);
+          setDevOtpCode(data.dev_code || null);
+          setErrorMessage(null);
+          showToast(
+            otpChannel === 'WHATSAPP'
+              ? 'Secure 4-digit OTP dispatched to your WhatsApp.'
+              : 'Secure 4-digit OTP dispatched to your mobile number.',
+            'info'
+          );
+          return true;
+        } else {
+          const rawMsg = data?.detail || data?.message || '';
+          const cooldownMatch = typeof rawMsg === 'string' && rawMsg.match(/wait\s+(\d+)\s+seconds/i);
+          if (cooldownMatch) {
+            const remainingSeconds = parseInt(cooldownMatch[1], 10) || 30;
+            setOtpStep(true);
+            setCountdown(remainingSeconds);
+            setOtpDigits(['', '', '', '']);
+            setErrorMessage(null);
+            showToast(`OTP already dispatched. Please enter 4-digit code (resend in ${remainingSeconds}s).`, 'info');
+            return true;
+          }
+          throw new Error(typeof rawMsg === 'string' ? rawMsg : 'Failed to send OTP');
+        }
+      } catch (err: any) {
+        const rawErr = err?.message || '';
+        const cooldownMatch = typeof rawErr === 'string' && rawErr.match(/wait\s+(\d+)\s+seconds/i);
+        if (cooldownMatch || err?.statusCode === 429) {
+          const remainingSeconds = cooldownMatch ? (parseInt(cooldownMatch[1], 10) || 30) : 30;
+          setIsSendingOtp(false);
+          setIsReconnecting(false);
+          setOtpStep(true);
+          setCountdown(remainingSeconds);
+          setOtpDigits(['', '', '', '']);
+          setErrorMessage(null);
+          showToast(`OTP already dispatched. Please enter 4-digit code (resend in ${remainingSeconds}s).`, 'info');
+          return true;
+        }
+
+        const isConnErr = typeof rawErr === 'string' && (
+          rawErr.includes('500') ||
+          rawErr.toLowerCase().includes('internal server error') ||
+          rawErr.toLowerCase().includes('network failure') ||
+          rawErr.toLowerCase().includes('failed to fetch') ||
+          rawErr.toLowerCase().includes('timed out')
+        );
+
+        if (isConnErr && !isRetry) {
+          setIsReconnecting(true);
+          await new Promise((r) => setTimeout(r, 1200));
+          return await attemptSend(true);
+        }
+
+        setIsSendingOtp(false);
+        setIsReconnecting(false);
+        const userMsg = isConnErr 
+          ? 'OTP authentication service is reconnecting. Please retry in a moment.' 
+          : (rawErr || 'We couldn’t send the OTP. Please check your connection.');
+        setErrorMessage(userMsg);
+        showToast(userMsg, 'error');
+        return false;
       }
-    } catch (err: any) {
-      setIsSendingOtp(false);
-      const msg = err.message || 'We couldn’t send the OTP. Please check your connection.';
-      setErrorMessage(msg);
-      showToast(msg, 'error');
-    }
+    };
+
+    await attemptSend();
   };
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -249,8 +305,8 @@ export const AuthModal: React.FC = () => {
     }
 
     if (!acceptWarranty || !acceptReturnPolicy || !acceptCancelPolicy || !acceptDeliveryTimeline) {
-      setErrorMessage('Please accept all mandatory Terms & Conditions to proceed.');
-      showToast('Please accept all mandatory Terms & Conditions to proceed.', 'warning');
+      setErrorMessage('Please accept all statutory policies and warranty terms.');
+      showToast('Please accept all statutory policies.', 'warning');
       return;
     }
 
@@ -266,13 +322,49 @@ export const AuthModal: React.FC = () => {
         setDevOtpCode(data.dev_code || null);
         showToast('Secure 4-digit OTP dispatched to your mobile number.', 'info');
       } else {
-        const msg = data?.detail || data?.message || 'We couldn’t send the OTP. Please try again.';
+        const rawMsg = data?.detail || data?.message || '';
+        let msg = 'We couldn’t send the OTP. Please try again.';
+        if (typeof rawMsg === 'string' && (rawMsg.includes('500') || rawMsg.toLowerCase().includes('internal server error'))) {
+          msg = 'OTP authentication service is reconnecting. Please retry in a moment.';
+        } else if (rawMsg) {
+          msg = typeof rawMsg === 'string' ? rawMsg : JSON.stringify(rawMsg);
+        }
+
+        const cooldownMatch = typeof msg === 'string' && msg.match(/wait\s+(\d+)\s+seconds/i);
+        if (cooldownMatch) {
+          const remainingSeconds = parseInt(cooldownMatch[1], 10) || 30;
+          setOtpStep(true);
+          setCountdown(remainingSeconds);
+          setOtpDigits(['', '', '', '']);
+          setErrorMessage(null);
+          showToast(`OTP already dispatched. Please enter 4-digit code (resend in ${remainingSeconds}s).`, 'info');
+          return;
+        }
+
         setErrorMessage(msg);
         showToast(msg, 'error');
       }
     } catch (err: any) {
       setIsSendingOtp(false);
-      const msg = err.message || 'We couldn’t send the OTP. Please check your connection.';
+      const rawErr = err?.message || '';
+      let msg = 'We couldn’t send the OTP. Please check your connection.';
+      if (typeof rawErr === 'string' && (rawErr.includes('500') || rawErr.toLowerCase().includes('internal server error'))) {
+        msg = 'OTP authentication service is reconnecting. Please retry in a moment.';
+      } else if (rawErr) {
+        msg = rawErr;
+      }
+
+      const cooldownMatch = typeof msg === 'string' && msg.match(/wait\s+(\d+)\s+seconds/i);
+      if (cooldownMatch) {
+        const remainingSeconds = parseInt(cooldownMatch[1], 10) || 30;
+        setOtpStep(true);
+        setCountdown(remainingSeconds);
+        setOtpDigits(['', '', '', '']);
+        setErrorMessage(null);
+        showToast(`OTP already dispatched. Please enter 4-digit code (resend in ${remainingSeconds}s).`, 'info');
+        return;
+      }
+
       setErrorMessage(msg);
       showToast(msg, 'error');
     }
@@ -344,34 +436,38 @@ export const AuthModal: React.FC = () => {
           ? 'B2B_BUYER'
           : (isPrivileged ? (user?.role === 'OWNER' ? 'OWNER' : (user?.role === 'SUPPORT' ? 'SUPPORT' : (user?.role === 'AUDITOR' ? 'AUDITOR' : 'SUPER_ADMIN'))) : 'B2C_CUSTOMER'));
 
-      // Authentic Name Resolution:
+      // Authentic Name Resolution (Empty for first-time OTP login so customer enters real name):
       let resolvedName = '';
       if (authMode === 'SIGNUP' && fullName.trim()) {
         resolvedName = fullName.trim();
-      } else if (matchedUser?.name && !matchedUser.name.startsWith('Customer ')) {
+      } else if (matchedUser?.name && !matchedUser.name.startsWith('Customer ') && matchedUser.name !== 'Valued Customer') {
         resolvedName = matchedUser.name;
-      } else if (user?.full_name && !user.full_name.startsWith('Customer ')) {
+      } else if (user?.full_name && !user.full_name.startsWith('Customer ') && user.full_name !== 'Valued Customer') {
         resolvedName = user.full_name;
       } else {
-        resolvedName = `Customer (${cleanPhone10.slice(-4)})`;
+        resolvedName = '';
       }
 
       let resolvedEmail = '';
       if (authMode === 'SIGNUP' && emailId.trim()) {
         resolvedEmail = emailId.trim();
-      } else if (matchedUser?.email && !matchedUser.email.includes('@ape-store.com')) {
+      } else if (matchedUser?.email && !matchedUser.email.includes('@ape-store.com') && !matchedUser.email.includes('@phone.')) {
         resolvedEmail = matchedUser.email;
-      } else if (user?.email && !user.email.includes('@ape-store.com')) {
+      } else if (user?.email && !user.email.includes('@ape-store.com') && !user.email.includes('@phone.')) {
         resolvedEmail = user.email;
       } else {
-        resolvedEmail = user?.email || `${cleanPhone10}@ape-store.com`;
+        resolvedEmail = '';
       }
+
+      const formattedPhone = targetPhone.startsWith('+91') 
+        ? targetPhone 
+        : `+91 ${cleanPhone10}`;
 
       const authenticatedUser: UserProfile = {
         id: user?.id || matchedUser?.id || `usr_${Date.now()}`,
         name: resolvedName,
         email: resolvedEmail,
-        phone: targetPhone,
+        phone: formattedPhone,
         role: role,
         isPrime: false,
         createdAt: user?.created_at || matchedUser?.createdAt || new Date().toISOString()
@@ -441,7 +537,37 @@ export const AuthModal: React.FC = () => {
         saveStored('apollo_shipping_address', regAddress);
         saveStored('apollo_billing_address', regAddress);
         saveStored('apollo_addresses', [regAddress, ...useStore.getState().addresses.filter(a => a.id !== regAddress.id)]);
+
+        // Persist to backend PostgreSQL
+        authApi.addCustomerAddress({
+          address_type: accountType === 'B2B' ? 'OFFICE' : 'SHIPPING',
+          full_name: regAddress.fullName,
+          phone: regAddress.phone,
+          company_name: accountType === 'B2B' ? companyName.trim() : undefined,
+          gstin: accountType === 'B2B' && gstin ? gstin.trim().toUpperCase() : undefined,
+          flat_building: regAddress.flatBuilding,
+          street_area: regAddress.streetArea,
+          pincode: regAddress.pincode,
+          city: regAddress.city,
+          state: regAddress.state,
+          state_code: regAddress.stateCode,
+          is_default: true,
+          is_verified: true,
+        }).catch(() => {});
       }
+
+      if (authMode === 'SIGNUP') {
+        authApi.updateCustomerProfile({
+          full_name: resolvedName,
+          email: resolvedEmail && !resolvedEmail.includes('@ape-store.com') ? resolvedEmail : undefined,
+          account_type: accountType,
+          company_name: accountType === 'B2B' ? companyName.trim() : undefined,
+          gstin: accountType === 'B2B' && gstin ? gstin.trim().toUpperCase() : undefined,
+          terms_accepted: true,
+        }).catch(() => {});
+      }
+
+      await useStore.getState().checkAuthSession();
 
       setIsAuthModalOpen(false);
 
@@ -570,7 +696,7 @@ export const AuthModal: React.FC = () => {
             <img 
               src="/logo.webp" 
               alt="Apollo Engineering" 
-              className="h-9 sm:h-10 w-auto object-contain mx-auto mb-3 pointer-events-none select-none"
+              className="h-9 sm:h-10 w-auto object-contain mx-auto mb-2 pointer-events-none select-none"
             />
             <h2 id="auth-modal-title" className="text-xl sm:text-2xl font-black text-[#0A0F1C] tracking-tight">
               {otpStep 
@@ -595,10 +721,24 @@ export const AuthModal: React.FC = () => {
           {errorMessage && (
             <div 
               role="alert" 
-              className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-center gap-2"
+              className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-center justify-between gap-2 animate-fadeIn"
             >
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-              <span>{errorMessage}</span>
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{errorMessage}</span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  setErrorMessage(null);
+                  handleSendOtp(e);
+                }}
+                disabled={isSendingOtp || isReconnecting}
+                className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-[11px] shrink-0 flex items-center gap-1 transition-all"
+              >
+                <RefreshCw className={`w-3 h-3 ${isSendingOtp || isReconnecting ? 'animate-spin' : ''}`} />
+                <span>Retry</span>
+              </button>
             </div>
           )}
 
@@ -727,7 +867,13 @@ export const AuthModal: React.FC = () => {
                     required
                     value={mobileNumber}
                     onChange={(e) => {
-                      const clean = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      let clean = e.target.value.replace(/\D/g, '');
+                      if (clean.startsWith('91') && clean.length > 10) {
+                        clean = clean.slice(2);
+                      } else if (clean.startsWith('0') && clean.length > 10) {
+                        clean = clean.slice(1);
+                      }
+                      clean = clean.slice(0, 10);
                       setMobileNumber(clean);
                       if (errorMessage) setErrorMessage(null);
                     }}
@@ -743,20 +889,53 @@ export const AuthModal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Primary Action Button: SEND 4-DIGIT OTP */}
+              {/* Delivery Channel Selector: SMS or WhatsApp */}
+              <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setOtpChannel('SMS')}
+                  className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    otpChannel === 'SMS'
+                      ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Phone className="w-3.5 h-3.5 text-[#F58220]" />
+                  <span>SMS OTP</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOtpChannel('WHATSAPP')}
+                  className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    otpChannel === 'WHATSAPP'
+                      ? 'bg-white text-emerald-700 shadow-sm border border-emerald-200'
+                      : 'text-slate-600 hover:text-emerald-700'
+                  }`}
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>WhatsApp OTP</span>
+                </button>
+              </div>
+
+              {/* Primary Action Button */}
               <button
                 type="submit"
-                disabled={!isMobileValid || isSendingOtp}
+                disabled={!isMobileValid || isSendingOtp || isReconnecting}
                 className="w-full h-12 bg-[#F58220] hover:bg-[#E07218] active:scale-[0.99] disabled:bg-slate-200 disabled:text-slate-400 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-[#F58220]/25 hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed mt-2"
               >
-                {isSendingOtp ? (
+                {isReconnecting ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                    <span>CONNECTING SERVICE (AUTO-RETRY)...</span>
+                  </>
+                ) : isSendingOtp ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
                     <span>SENDING OTP...</span>
                   </>
                 ) : (
                   <>
-                    <span>SEND 4-DIGIT OTP</span>
+                    <span>{otpChannel === 'WHATSAPP' ? 'SEND VIA WHATSAPP' : 'SEND 4-DIGIT OTP'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -914,7 +1093,16 @@ export const AuthModal: React.FC = () => {
                       maxLength={10}
                       required
                       value={signupMobile}
-                      onChange={(e) => setSignupMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      onChange={(e) => {
+                        let clean = e.target.value.replace(/\D/g, '');
+                        if (clean.startsWith('91') && clean.length > 10) {
+                          clean = clean.slice(2);
+                        } else if (clean.startsWith('0') && clean.length > 10) {
+                          clean = clean.slice(1);
+                        }
+                        clean = clean.slice(0, 10);
+                        setSignupMobile(clean);
+                      }}
                       placeholder="10-digit number"
                       className="w-full h-9 px-2 font-mono text-slate-900 focus:outline-none"
                     />

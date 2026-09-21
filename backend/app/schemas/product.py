@@ -126,7 +126,7 @@ class ProductCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=255, description="Product title")
     description: str | None = Field(default=None, description="Detailed product description")
     hsn_code: str = Field(default="73269099", min_length=4, max_length=20, description="Statutory HSN code")
-    is_active: bool = Field(default=False, description="Initial publication state (False = DRAFT, True = PUBLISHED)")
+    is_active: bool = Field(default=True, description="Initial publication state (False = DRAFT, True = PUBLISHED)")
     variants: list[ProductVariantCreate] = Field(default_factory=list, description="Initial variants to configure")
 
 

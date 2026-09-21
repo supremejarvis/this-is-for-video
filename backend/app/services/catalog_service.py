@@ -134,7 +134,7 @@ class CatalogService:
             await cls._add_variant_internal(db, product.id, v_data, creator_user_id)
 
         await db.commit()
-        return await cls.get_product_required(db, product.id)
+        return await cls.get_product_required(db, product.id, include_drafts=True)
 
     @classmethod
     async def _add_variant_internal(
@@ -291,7 +291,7 @@ class CatalogService:
         )
         if not include_archived:
             stmt = stmt.where(Product.is_archived.is_(False))
-        if not include_drafts:
+        if not include_drafts and not include_archived:
             stmt = stmt.where(Product.is_active.is_(True))
 
         return (await db.execute(stmt)).scalar_one_or_none()
@@ -323,7 +323,7 @@ class CatalogService:
         )
         if not include_archived:
             stmt = stmt.where(Product.is_archived.is_(False))
-        if not include_drafts:
+        if not include_drafts and not include_archived:
             stmt = stmt.where(Product.is_active.is_(True))
 
         return (await db.execute(stmt)).scalars().all()
@@ -454,12 +454,12 @@ class CatalogService:
         )
 
         await db.commit()
-        return await cls.get_product_required(db, product_id)
+        return await cls.get_product_required(db, product_id, include_drafts=True)
 
     @classmethod
     async def archive_product(cls, db: AsyncSession, product_id: uuid.UUID) -> Product:
         """Soft-archive product and all its variants (no hard delete)."""
-        product = await cls.get_product_required(db, product_id, include_archived=True)
+        product = await cls.get_product_required(db, product_id, include_archived=True, include_drafts=True)
         product.is_archived = True
         product.is_active = False
         product.version += 1
@@ -480,7 +480,7 @@ class CatalogService:
         )
 
         await db.commit()
-        return await cls.get_product_required(db, product_id, include_archived=True)
+        return await cls.get_product_required(db, product_id, include_archived=True, include_drafts=True)
 
     @classmethod
     async def update_variant(

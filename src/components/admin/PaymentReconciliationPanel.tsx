@@ -7,81 +7,54 @@ import {
 import { useStore } from '../../store/useStore';
 import { PaymentReconciliationRecord } from '../../types';
 
-const INITIAL_RECONCILIATION_RECORDS: PaymentReconciliationRecord[] = [
-  {
-    id: 'recon_01',
-    date: '2026-09-11',
-    orderNumber: 'APE-ORD-8821',
-    customerName: 'Rajesh Patel',
-    method: 'RAZORPAY_PREPAID',
-    grossAmount: 38400,
-    gatewayFee: 768, // 2%
-    gatewayGst: 138.24, // 18% on fee
-    netSettlement: 37493.76,
-    status: 'RECONCILED',
-    settlementDate: '2026-09-12',
-    referenceId: 'pay_rzp_live_99214'
-  },
-  {
-    id: 'recon_02',
-    date: '2026-09-10',
-    orderNumber: 'APE-ORD-8819',
-    customerName: 'SunPower Renewable Infra',
-    method: 'DIRECT_UPI_NEFT',
-    grossAmount: 92500,
-    gatewayFee: 0,
-    gatewayGst: 0,
-    netSettlement: 92500,
-    status: 'RECONCILED',
-    settlementDate: '2026-09-10',
-    referenceId: 'UTR-HDFC-992817263'
-  },
-  {
-    id: 'recon_03',
-    date: '2026-09-09',
-    orderNumber: 'APE-ORD-8818',
-    customerName: 'Manoj Verma',
-    method: 'COD',
-    grossAmount: 1980,
-    gatewayFee: 49.50, // 2.5% COD collection surcharge
-    gatewayGst: 8.91,
-    netSettlement: 1921.59,
-    status: 'IN_TRANSIT',
-    referenceId: 'COD-SPEEDPOST-382430-8818'
-  },
-  {
-    id: 'recon_04',
-    date: '2026-09-08',
-    orderNumber: 'APE-ORD-8815',
-    customerName: 'Rajasthan Solar Green Ltd',
-    method: 'RAZORPAY_PREPAID',
-    grossAmount: 48600,
-    gatewayFee: 972,
-    gatewayGst: 174.96,
-    netSettlement: 47453.04,
-    status: 'RECONCILED',
-    settlementDate: '2026-09-09',
-    referenceId: 'pay_rzp_live_88471'
-  },
-  {
-    id: 'recon_05',
-    date: '2026-09-07',
-    orderNumber: 'APE-ORD-8812',
-    customerName: 'Gujarat Solar EPC Hardware',
-    method: 'RAZORPAY_PREPAID',
-    grossAmount: 14500,
-    gatewayFee: 290,
-    gatewayGst: 52.20,
-    netSettlement: 14157.80,
-    status: 'SETTLED',
-    settlementDate: '2026-09-08',
-    referenceId: 'pay_rzp_live_77312'
-  }
-];
-
 export const PaymentReconciliationPanel: React.FC = () => {
-  const { showToast } = useStore();
-  const [records, setRecords] = useState<PaymentReconciliationRecord[]>(INITIAL_RECONCILIATION_RECORDS);
+  const { showToast, orders } = useStore();
+
+  const derivedRecords = React.useMemo<PaymentReconciliationRecord[]>(() => {
+    if (!orders || orders.length === 0) return [];
+    return orders.map((ord, idx) => {
+      const isCod = ord.paymentDetail?.method === 'COD';
+      const isDirectUpi = ord.paymentDetail?.method === 'UPI' && !ord.paymentDetail?.razorpayPaymentId;
+      const method: 'RAZORPAY_PREPAID' | 'COD' | 'DIRECT_UPI_NEFT' = isCod 
+        ? 'COD' 
+        : isDirectUpi 
+        ? 'DIRECT_UPI_NEFT' 
+        : 'RAZORPAY_PREPAID';
+      
+      const gross = Number(ord.pricingSummary?.grandTotal) || 0;
+      let fee = 0;
+      let feeGst = 0;
+      if (method === 'RAZORPAY_PREPAID') {
+        fee = Number((gross * 0.02).toFixed(2));
+        feeGst = Number((fee * 0.18).toFixed(2));
+      } else if (method === 'COD') {
+        fee = Number((gross * 0.025).toFixed(2));
+        feeGst = Number((fee * 0.18).toFixed(2));
+      }
+      const net = Number((gross - fee - feeGst).toFixed(2));
+
+      return {
+        id: `recon_${ord.id || idx}`,
+        date: ord.createdAt ? ord.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+        orderNumber: ord.orderNumber || ord.id,
+        customerName: ord.customerName || ord.deliveryAddress?.fullName || 'Customer',
+        method,
+        grossAmount: gross,
+        gatewayFee: fee,
+        gatewayGst: feeGst,
+        netSettlement: net,
+        status: ord.paymentDetail?.paymentStatus === 'PAID' ? 'RECONCILED' : 'IN_TRANSIT',
+        settlementDate: ord.paymentDetail?.paidAt ? ord.paymentDetail.paidAt.split('T')[0] : undefined,
+        referenceId: ord.paymentDetail?.transactionId || ord.orderNumber
+      };
+    });
+  }, [orders]);
+
+  const [records, setRecords] = useState<PaymentReconciliationRecord[]>(derivedRecords);
+
+  React.useEffect(() => {
+    setRecords(derivedRecords);
+  }, [derivedRecords]);
   const [methodFilter, setMethodFilter] = useState<'ALL' | 'RAZORPAY' | 'COD' | 'DIRECT_UPI'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -237,7 +210,22 @@ export const PaymentReconciliationPanel: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-sans">
-              {filteredRecords.map((r) => (
+              {filteredRecords.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-12 text-center">
+                    <div className="flex flex-col items-center justify-center max-w-md mx-auto">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mb-3">
+                        <CreditCard className="w-6 h-6" />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-800 mb-1">No Reconciliation Records Found</h4>
+                      <p className="text-xs text-slate-500 font-sans">
+                        {searchQuery ? 'No payment records match your active search or filter criteria.' : 'Settlement and reconciliation entries will automatically appear here as real prepaid, direct UPI, and COD orders are placed.'}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredRecords.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
                   {/* Date & Order */}
                   <td className="p-3.5 font-mono">
@@ -301,7 +289,7 @@ export const PaymentReconciliationPanel: React.FC = () => {
                     {r.referenceId}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

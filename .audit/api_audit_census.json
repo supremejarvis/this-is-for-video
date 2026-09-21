@@ -1,0 +1,898 @@
+{
+  "total_apis": 125,
+  "working_ok": 21,
+  "handled_client_error": 30,
+  "security_guarded": 74,
+  "failed_500": 0,
+  "wrong_answers": 0,
+  "domain_breakdown": {
+    "Health": 1,
+    "System Diagnostics": 1,
+    "Auth": 2,
+    "Admin Catalog": 7,
+    "Admin Pricing": 3,
+    "Quotes": 1,
+    "Orders": 1,
+    "products": 1,
+    "pricing": 1,
+    "Root": 1,
+    "Inquiries (Next.js)": 2
+  },
+  "audit_details": {
+    "working_ok": [
+      {
+        "method": "GET",
+        "path": "/api/v1/health",
+        "tag": "Health",
+        "status": 200,
+        "summary": "Health check"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/system/status",
+        "tag": "System Diagnostics",
+        "status": 200,
+        "summary": "Real-time Enterprise Reliability Suite Status"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/logout",
+        "tag": "Auth",
+        "status": 200,
+        "summary": "Logout"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "tag": "Auth",
+        "status": 200,
+        "summary": "Get Session Status"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/categories",
+        "tag": "Admin Catalog",
+        "status": 200,
+        "summary": "List Categories"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/categories/tree",
+        "tag": "Admin Catalog",
+        "status": 200,
+        "summary": "Get Category Tree"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/attributes",
+        "tag": "Admin Catalog",
+        "status": 200,
+        "summary": "List Attributes"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/products",
+        "tag": "Admin Catalog",
+        "status": 200,
+        "summary": "List Admin Products"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/variants",
+        "tag": "Admin Catalog",
+        "status": 200,
+        "summary": "List All Variants"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/variants/export",
+        "tag": "Admin Catalog",
+        "status": 200,
+        "summary": "Export Variants Safe Csv"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/variants/import",
+        "tag": "Admin Catalog",
+        "status": 200,
+        "summary": "Import Variants Csv"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/customer-groups",
+        "tag": "Admin Pricing",
+        "status": 200,
+        "summary": "List Customer Groups"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/price-lists",
+        "tag": "Admin Pricing",
+        "status": 200,
+        "summary": "List Price Lists"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/tax-profiles",
+        "tag": "Admin Pricing",
+        "status": 200,
+        "summary": "List Tax Profiles"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/quotes",
+        "tag": "Quotes",
+        "status": 201,
+        "summary": "Generate Authoritative Expiring Quote"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/orders",
+        "tag": "Orders",
+        "status": 201,
+        "summary": "Create Order"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/products/",
+        "tag": "products",
+        "status": 200,
+        "summary": "List Products"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/pricing/calculate",
+        "tag": "pricing",
+        "status": 200,
+        "summary": "Calculate Order"
+      },
+      {
+        "method": "GET",
+        "path": "/",
+        "tag": "Root",
+        "status": 200,
+        "summary": "Root"
+      }
+    ],
+    "handled_client_error": [
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/admin-login",
+        "tag": "Auth",
+        "status": 422,
+        "summary": "Admin Login"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/otp/request",
+        "tag": "OTP",
+        "status": 422,
+        "summary": "Request Otp"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/otp/resend",
+        "tag": "OTP",
+        "status": 422,
+        "summary": "Resend Otp"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/otp/verify",
+        "tag": "OTP",
+        "status": 400,
+        "summary": "Verify Otp"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/otp/dev-code",
+        "tag": "OTP",
+        "status": 422,
+        "summary": "Get Dev Otp Code"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/categories",
+        "tag": "Admin Catalog",
+        "status": 422,
+        "summary": "Create Category"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/admin/categories/{category_id}",
+        "tag": "Admin Catalog",
+        "status": 422,
+        "summary": "Update Category"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/attributes",
+        "tag": "Admin Catalog",
+        "status": 422,
+        "summary": "Create Attribute"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/attributes/{attribute_id}/values",
+        "tag": "Admin Catalog",
+        "status": 422,
+        "summary": "Add Attribute Value"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/products/{product_id}/publish",
+        "tag": "Admin Catalog",
+        "status": 404,
+        "summary": "Publish Product"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/products/{product_id}/unpublish",
+        "tag": "Admin Catalog",
+        "status": 404,
+        "summary": "Unpublish Product"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/products/{product_id}/archive",
+        "tag": "Admin Catalog",
+        "status": 404,
+        "summary": "Archive Product"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/products/{product_id}/variants/preview",
+        "tag": "Admin Catalog",
+        "status": 422,
+        "summary": "Preview Variant Combinations"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/products/{product_id}/variants/generate",
+        "tag": "Admin Catalog",
+        "status": 422,
+        "summary": "Batch Generate Variants"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/admin/variants/{variant_id}",
+        "tag": "Admin Catalog",
+        "status": 404,
+        "summary": "Update Variant Inline"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/variants/{variant_id}/deactivate",
+        "tag": "Admin Catalog",
+        "status": 404,
+        "summary": "Deactivate Variant"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/customer-groups",
+        "tag": "Admin Pricing",
+        "status": 422,
+        "summary": "Create Customer Group"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/price-lists",
+        "tag": "Admin Pricing",
+        "status": 422,
+        "summary": "Create Price List"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/price-rules",
+        "tag": "Admin Pricing",
+        "status": 422,
+        "summary": "Create Price Rule"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/tax-profiles",
+        "tag": "Admin Pricing",
+        "status": 422,
+        "summary": "Create Tax Profile"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/pricing/preview",
+        "tag": "Admin Pricing",
+        "status": 422,
+        "summary": "Preview Pricing Calculation"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/quotes/{quote_id}",
+        "tag": "Quotes",
+        "status": 404,
+        "summary": "Retrieve Authoritative Expiring Quote"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/orders/{order_id_or_number}",
+        "tag": "Orders",
+        "status": 404,
+        "summary": "Get Order"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/payments/razorpay/create-order",
+        "tag": "Payments",
+        "status": 404,
+        "summary": "Razorpay Create Order"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/payments/razorpay/verify",
+        "tag": "Payments",
+        "status": 422,
+        "summary": "Razorpay Verify Payment"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/payments/status/{order_id}",
+        "tag": "Payments",
+        "status": 404,
+        "summary": "Get Payment Status"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/products/{product_id}",
+        "tag": "products",
+        "status": 404,
+        "summary": "Get Product"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/products/{product_id}",
+        "tag": "products",
+        "status": 428,
+        "summary": "Update Product",
+        "detail": {
+          "detail": "Update requires expected version in body or If-Match header."
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/products/{product_id}",
+        "tag": "products",
+        "status": 428,
+        "summary": "Update Product",
+        "detail": {
+          "detail": "Update requires expected version in body or If-Match header."
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/pricing/active",
+        "tag": "pricing",
+        "status": 422,
+        "summary": "Get Active Price"
+      }
+    ],
+    "security_guarded": [
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "tag": "Auth",
+        "status": 401,
+        "summary": "Login"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/logout-all",
+        "tag": "Auth",
+        "status": 401,
+        "summary": "Logout All"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/me",
+        "tag": "Auth",
+        "status": 401,
+        "summary": "Get Me"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/auth/me",
+        "tag": "Auth",
+        "status": 401,
+        "summary": "Update My Profile"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "tag": "Auth",
+        "status": 401,
+        "summary": "Get Csrf"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/customers/me",
+        "tag": "Customers",
+        "status": 401,
+        "summary": "Get My Customer Profile"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/customers/me",
+        "tag": "Customers",
+        "status": 401,
+        "summary": "Update My Customer Profile"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/customers/me/addresses",
+        "tag": "Customers",
+        "status": 401,
+        "summary": "List My Addresses"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/customers/me/addresses",
+        "tag": "Customers",
+        "status": 401,
+        "summary": "Create My Address"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/customers/me/addresses/{address_id}",
+        "tag": "Customers",
+        "status": 401,
+        "summary": "Update My Address"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/customers/me/addresses/{address_id}",
+        "tag": "Customers",
+        "status": 401,
+        "summary": "Delete My Address"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/customers/me/sessions",
+        "tag": "Customers",
+        "status": 401,
+        "summary": "List My Active Sessions"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/users",
+        "tag": "Admin Users",
+        "status": 401,
+        "summary": "List Staff Users"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/users",
+        "tag": "Admin Users",
+        "status": 401,
+        "summary": "Create Staff User"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/admin/users/{user_id}",
+        "tag": "Admin Users",
+        "status": 401,
+        "summary": "Update Staff User"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/inventory/warehouses",
+        "tag": "admin-inventory",
+        "status": 401,
+        "summary": "List Warehouses"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/inventory/warehouses",
+        "tag": "admin-inventory",
+        "status": 401,
+        "summary": "Create Warehouse"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/inventory/balances",
+        "tag": "admin-inventory",
+        "status": 401,
+        "summary": "List Balances"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/inventory/adjustments",
+        "tag": "admin-inventory",
+        "status": 401,
+        "summary": "Adjust Stock"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/inventory/transfers",
+        "tag": "admin-inventory",
+        "status": 401,
+        "summary": "List Transfers"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/inventory/transfers",
+        "tag": "admin-inventory",
+        "status": 401,
+        "summary": "Create Transfer"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/admin/inventory/transfers/{transfer_id}/dispatch",
+        "tag": "admin-inventory",
+        "status": 401,
+        "summary": "Dispatch Transfer"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/admin/inventory/transfers/{transfer_id}/receive",
+        "tag": "admin-inventory",
+        "status": 401,
+        "summary": "Receive Transfer"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/inventory/counts",
+        "tag": "admin-inventory",
+        "status": 401,
+        "summary": "List Stock Counts"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/inventory/counts",
+        "tag": "admin-inventory",
+        "status": 401,
+        "summary": "Create Stock Count"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/inventory/counts/{count_id}/reconcile",
+        "tag": "admin-inventory",
+        "status": 401,
+        "summary": "Reconcile Stock Count"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/orders",
+        "tag": "admin-orders",
+        "status": 401,
+        "summary": "List Orders"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/orders/{order_id_or_number}",
+        "tag": "admin-orders",
+        "status": 401,
+        "summary": "Get Order Detail"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/orders/{order_id}/confirm",
+        "tag": "admin-orders",
+        "status": 401,
+        "summary": "Confirm Order"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/orders/{order_id}/cancel",
+        "tag": "admin-orders",
+        "status": 401,
+        "summary": "Cancel Order"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/shipping/rates",
+        "tag": "Admin Shipping",
+        "status": 401,
+        "summary": "List Shipping Rates"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/shipping/quotes",
+        "tag": "Admin Shipping",
+        "status": 401,
+        "summary": "Calculate Shipping Quote"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/shipping/shipments",
+        "tag": "Admin Shipping",
+        "status": 401,
+        "summary": "List Shipments"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/shipping/shipments/book",
+        "tag": "Admin Shipping",
+        "status": 401,
+        "summary": "Book Shipment"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/shipping/shipments/{id}/dispatch",
+        "tag": "Admin Shipping",
+        "status": 401,
+        "summary": "Dispatch Shipment"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/shipping/shipments/{id}/events",
+        "tag": "Admin Shipping",
+        "status": 401,
+        "summary": "Record Tracking Event"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/shipping/manifest",
+        "tag": "Admin Shipping",
+        "status": 401,
+        "summary": "Get Dispatch Manifest"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/payments",
+        "tag": "Admin Payments",
+        "status": 401,
+        "summary": "List Payments"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/payments/{id}/verify-upi",
+        "tag": "Admin Payments",
+        "status": 401,
+        "summary": "Verify Upi Payment"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/payments/refund",
+        "tag": "Admin Payments",
+        "status": 401,
+        "summary": "Issue Refund"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/payments/reconciliation",
+        "tag": "Admin Payments",
+        "status": 401,
+        "summary": "Get Payment Reconciliation"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/returns",
+        "tag": "Admin Returns",
+        "status": 401,
+        "summary": "Create Return Case"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/returns",
+        "tag": "Admin Returns",
+        "status": 401,
+        "summary": "List Returns"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/returns/{id}",
+        "tag": "Admin Returns",
+        "status": 401,
+        "summary": "Get Return Detail"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/returns/{id}/inspect-caliper",
+        "tag": "Admin Returns",
+        "status": 401,
+        "summary": "Inspect Caliper"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/returns/{id}/receive",
+        "tag": "Admin Returns",
+        "status": 401,
+        "summary": "Receive Return Items"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/accounting/accounts",
+        "tag": "Admin Accounting",
+        "status": 401,
+        "summary": "List Accounts"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/accounting/accounts",
+        "tag": "Admin Accounting",
+        "status": 401,
+        "summary": "Create Account"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/accounting/periods",
+        "tag": "Admin Accounting",
+        "status": 401,
+        "summary": "List Fiscal Periods"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/accounting/periods/{period_id}/lock",
+        "tag": "Admin Accounting",
+        "status": 401,
+        "summary": "Lock Fiscal Period"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/accounting/invoices/issue",
+        "tag": "Admin Accounting",
+        "status": 401,
+        "summary": "Issue Tax Invoice"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/accounting/invoices",
+        "tag": "Admin Accounting",
+        "status": 401,
+        "summary": "List Invoices"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/accounting/payment-allocations",
+        "tag": "Admin Accounting",
+        "status": 401,
+        "summary": "Allocate Payment"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/accounting/journals",
+        "tag": "Admin Accounting",
+        "status": 401,
+        "summary": "Post Journal"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/accounting/journals",
+        "tag": "Admin Accounting",
+        "status": 401,
+        "summary": "List Journals"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/admin/accounting/journals/{journal_id}/reverse",
+        "tag": "Admin Accounting",
+        "status": 401,
+        "summary": "Reverse Journal"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/accounting/reports/trial-balance",
+        "tag": "Admin Accounting",
+        "status": 401,
+        "summary": "Get Trial Balance"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/accounting/reports/profit-and-loss",
+        "tag": "Admin Accounting",
+        "status": 401,
+        "summary": "Get Profit And Loss"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/accounting/reports/gst-subledger",
+        "tag": "Admin Accounting",
+        "status": 401,
+        "summary": "Get Gst Subledger"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/orders",
+        "tag": "Orders",
+        "status": 401,
+        "summary": "List Orders"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/orders/{order_id_or_number}/status",
+        "tag": "Orders",
+        "status": 401,
+        "summary": "Update Order Status"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/orders/{order_id}/replacement",
+        "tag": "Orders",
+        "status": 401,
+        "summary": "Initiate a replacement case for a delivered order"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/payments/razorpay/webhook",
+        "tag": "Payments",
+        "status": 401,
+        "summary": "Razorpay Webhook"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/products/",
+        "tag": "products",
+        "status": 401,
+        "summary": "Create Product"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/products/{product_id}",
+        "tag": "products",
+        "status": 401,
+        "summary": "Archive Product"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/products/{product_id}/variants",
+        "tag": "products",
+        "status": 401,
+        "summary": "Create Variant"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/products/variants/{variant_id}",
+        "tag": "products",
+        "status": 401,
+        "summary": "Update Variant"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/products/variants/{variant_id}",
+        "tag": "products",
+        "status": 401,
+        "summary": "Archive Variant"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/pricing/versions",
+        "tag": "pricing",
+        "status": 401,
+        "summary": "Create Price Version"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/pricing/versions",
+        "tag": "pricing",
+        "status": 401,
+        "summary": "List Price Versions"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/inventory/items",
+        "tag": "inventory",
+        "status": 401,
+        "summary": "List Inventory Items"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/inventory/receipt",
+        "tag": "inventory",
+        "status": 401,
+        "summary": "Receive Stock"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/inventory/adjustment",
+        "tag": "inventory",
+        "status": 401,
+        "summary": "Adjust Stock"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/inventory/movements",
+        "tag": "inventory",
+        "status": 401,
+        "summary": "List Movements"
+      }
+    ],
+    "failed_500_crash": [],
+    "wrong_answers": []
+  }
+}

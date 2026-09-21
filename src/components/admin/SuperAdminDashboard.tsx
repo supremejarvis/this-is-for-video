@@ -39,7 +39,6 @@ import { PriceListManager } from './PriceListManager';
 import { VariantCatalogManager } from './VariantCatalogManager';
 import { WarehouseInventoryConsole } from './WarehouseInventoryConsole';
 import { OrderManagementConsole } from './OrderManagementConsole';
-import { ShippingFulfillmentConsole } from './ShippingFulfillmentConsole';
 import { PaymentReconciliationConsole } from './PaymentReconciliationConsole';
 import { ReturnsDeskConsole } from './ReturnsDeskConsole';
 import { AccountingLedgerConsole } from './AccountingLedgerConsole';
@@ -287,8 +286,6 @@ export const SuperAdminDashboard: React.FC = () => {
   // ─────────────────────────────────────────────────────────────────────────────
   const DEFAULT_ADMIN_EMAIL = 'admin@apolloengineering.co.in';
   const DEFAULT_ADMIN_PHONE = '8511626267';
-  const DEFAULT_ADMIN_TOTP_SECRET = 'JBSWY3DPEHPK3PXP';
-  const DEFAULT_ADMIN_PASSWORD = 'NIL@apl321';
 
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
   const [adminUser, setAdminUser] = useState<any>(null);
@@ -308,8 +305,6 @@ export const SuperAdminDashboard: React.FC = () => {
   const [adminEnteredOtp, setAdminEnteredOtp] = useState('');
   const [googleAuthCode, setGoogleAuthCode] = useState('');
   const [isAdminVerifying, setIsAdminVerifying] = useState(false);
-  const [copiedSecret, setCopiedSecret] = useState(false);
-  const [showQrCode, setShowQrCode] = useState(false);
   const [otpResentMsg, setOtpResentMsg] = useState('');
 
   // Forgot Password State
@@ -381,50 +376,9 @@ export const SuperAdminDashboard: React.FC = () => {
     setIsAdminVerifying(false);
     setAuthError('');
 
-    // Pre-generate valid 6-digit TOTP code from default secret if available
-    try {
-      const code = await totpService.generateTOTP(DEFAULT_ADMIN_TOTP_SECRET);
-      setGoogleAuthCode(code);
-    } catch {}
-
     // Step 1: Credentials validated, proceed to Google Authenticator 6-digit TOTP verification
     setAuthStage('GOOGLE_AUTH');
     showToast(`Credentials verified for ${cleanEmail}. Enter 6-digit Google Authenticator code.`, 'info');
-  };
-
-  const handleDirectMasterLogin = async () => {
-    const cleanEmail = adminIdInput.trim().toLowerCase() || DEFAULT_ADMIN_EMAIL;
-    const cleanPass = adminPasswordInput || DEFAULT_ADMIN_PASSWORD;
-    setAdminIdInput(cleanEmail);
-    setAdminPasswordInput(cleanPass);
-    setIsAdminVerifying(true);
-    setAuthError('');
-
-    try {
-      const code = await totpService.generateTOTP(DEFAULT_ADMIN_TOTP_SECRET);
-      setGoogleAuthCode(code);
-      const data = await authApi.adminLogin({
-        email: cleanEmail,
-        password: cleanPass,
-        totp_code: code,
-      });
-
-      if (data && data.user) {
-        completeAdminLogin(data.user);
-      } else {
-        setIsAdminVerifying(false);
-        setAuthError('Authentication succeeded but server did not return user profile.');
-        showToast('Authentication failed', 'error');
-      }
-    } catch (err: any) {
-      setIsAdminVerifying(false);
-      const isOffline = err?.statusCode === 0 || err?.message?.toLowerCase().includes('network') || err?.message?.toLowerCase().includes('failed to fetch');
-      const detail = isOffline
-        ? 'Backend authentication service offline. Please ensure the backend is running.'
-        : (err?.message || 'Invalid administrator password or 6-digit authenticator code.');
-      setAuthError(detail);
-      showToast(detail, 'error');
-    }
   };
 
   const handleVerifyMobileOtp = async (e: React.FormEvent) => {
@@ -560,24 +514,31 @@ export const SuperAdminDashboard: React.FC = () => {
   // ─────────────────────────────────────────────────────────────────────────────
   // 🧭 DASHBOARD NAVIGATION TABS (ENTERPRISE INDUSTRIAL PILLARS - URL SYNCED ADM-001)
   // ─────────────────────────────────────────────────────────────────────────────
-  type AdminTab = 'PRODUCTS' | 'VARIANTS' | 'CATEGORIES_ATTRIBUTES' | 'PRICE_LISTS' | 'INVENTORY' | 'ORDERS' | 'SHIPPING' | 'PAYMENTS' | 'CUSTOMERS' | 'INQUIRIES' | 'COUPONS' | 'RETURNS' | 'REPORTS' | 'ACCOUNTING';
+  type AdminTab = 'PRODUCTS' | 'ORDERS' | 'PAYMENTS' | 'CUSTOMERS' | 'COUPONS' | 'REPORTS' | 'ACCOUNTING';
 
   const getInitialAdminTab = (): AdminTab => {
     try {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab')?.toUpperCase();
-      if (tab && ['PRODUCTS', 'VARIANTS', 'CATEGORIES_ATTRIBUTES', 'PRICE_LISTS', 'INVENTORY', 'ORDERS', 'SHIPPING', 'PAYMENTS', 'CUSTOMERS', 'INQUIRIES', 'COUPONS', 'RETURNS', 'REPORTS', 'ACCOUNTING'].includes(tab)) {
+      if (tab === 'SHIPPING') {
+        return 'ORDERS';
+      }
+      if (tab && ['PRODUCTS', 'ORDERS', 'PAYMENTS', 'CUSTOMERS', 'COUPONS', 'REPORTS', 'ACCOUNTING'].includes(tab)) {
         return tab as any;
       }
     } catch {}
     return 'PRODUCTS';
   };
 
-  const getInitialOrdersView = (): 'DISPATCH_PIPELINE' | 'FINAL_ORDERS' | 'PENDING_CARTS' | 'SAGA_PIPELINE' => {
+  const getInitialOrdersView = (): 'DISPATCH_PIPELINE' | 'FINAL_ORDERS' | 'PENDING_CARTS' | 'RETURNS' => {
     try {
       const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab')?.toUpperCase();
+      if (tab === 'SHIPPING') {
+        return 'DISPATCH_PIPELINE';
+      }
       const view = params.get('view')?.toUpperCase();
-      if (view && ['DISPATCH_PIPELINE', 'FINAL_ORDERS', 'PENDING_CARTS', 'SAGA_PIPELINE'].includes(view)) {
+      if (view && ['DISPATCH_PIPELINE', 'FINAL_ORDERS', 'PENDING_CARTS', 'RETURNS'].includes(view)) {
         return view as any;
       }
     } catch {}
@@ -586,8 +547,8 @@ export const SuperAdminDashboard: React.FC = () => {
 
   const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>(getInitialAdminTab);
   
-  // Orders Sub-tab: Dispatch Pipeline vs Final Orders vs Pending Carts vs Distributed Saga
-  const [ordersViewMode, setOrdersViewMode] = useState<'DISPATCH_PIPELINE' | 'FINAL_ORDERS' | 'PENDING_CARTS' | 'SAGA_PIPELINE'>(getInitialOrdersView);
+  // Orders Sub-tab: Dispatch Pipeline vs Final Orders vs Pending Carts vs Returns
+  const [ordersViewMode, setOrdersViewMode] = useState<'DISPATCH_PIPELINE' | 'FINAL_ORDERS' | 'PENDING_CARTS' | 'RETURNS'>(getInitialOrdersView);
 
   // ADM-001: Sync admin navigation tabs to URL query params and support browser Back/Forward navigation
   useEffect(() => {
@@ -617,11 +578,14 @@ export const SuperAdminDashboard: React.FC = () => {
       try {
         const params = new URLSearchParams(window.location.search);
         const tab = params.get('tab')?.toUpperCase();
-        if (tab && ['PRODUCTS', 'VARIANTS', 'CATEGORIES_ATTRIBUTES', 'PRICE_LISTS', 'INVENTORY', 'ORDERS', 'SHIPPING', 'PAYMENTS', 'CUSTOMERS', 'INQUIRIES', 'COUPONS', 'RETURNS', 'REPORTS', 'ACCOUNTING'].includes(tab)) {
+        if (tab === 'SHIPPING') {
+          setActiveAdminTab('ORDERS');
+          setOrdersViewMode('DISPATCH_PIPELINE');
+        } else if (tab && ['PRODUCTS', 'ORDERS', 'PAYMENTS', 'CUSTOMERS', 'COUPONS', 'REPORTS', 'ACCOUNTING'].includes(tab)) {
           setActiveAdminTab(tab as any);
         }
         const view = params.get('view')?.toUpperCase();
-        if (view && ['DISPATCH_PIPELINE', 'FINAL_ORDERS', 'PENDING_CARTS'].includes(view)) {
+        if (view && ['DISPATCH_PIPELINE', 'FINAL_ORDERS', 'PENDING_CARTS', 'RETURNS'].includes(view)) {
           setOrdersViewMode(view as any);
         }
         const subtab = params.get('subtab')?.toUpperCase();
@@ -1331,27 +1295,6 @@ export const SuperAdminDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 text-[11px] text-amber-900 space-y-1">
-                  <div className="flex justify-between items-center font-bold">
-                    <span>Admin Credentials:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAdminIdInput(DEFAULT_ADMIN_EMAIL);
-                        setAdminPasswordInput(DEFAULT_ADMIN_PASSWORD);
-                        showToast('Default credentials filled!', 'info');
-                      }}
-                      className="text-xs font-bold text-amber-800 hover:text-amber-950 underline cursor-pointer"
-                    >
-                      Fill Credentials
-                    </button>
-                  </div>
-                  <div className="font-mono text-[10px] text-amber-800 flex justify-between">
-                    <span>Email: {DEFAULT_ADMIN_EMAIL}</span>
-                    <span>Pass: {DEFAULT_ADMIN_PASSWORD}</span>
-                  </div>
-                </div>
-
                 <button
                   type="submit"
                   disabled={isAdminVerifying}
@@ -1494,70 +1437,9 @@ export const SuperAdminDashboard: React.FC = () => {
                   />
                 </div>
 
-                <div className="flex items-center justify-between gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setShowQrCode(!showQrCode)}
-                    className="text-[11px] font-bold text-[#0054A6] hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <QrCode className="w-3.5 h-3.5" />
-                    <span>{showQrCode ? 'Hide QR Code' : 'Scan QR Code / Key'}</span>
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const code = await totpService.generateTOTP(DEFAULT_ADMIN_TOTP_SECRET);
-                        setGoogleAuthCode(code);
-                        showToast('Auto-filled current valid 6-digit code!', 'success');
-                      } catch {
-                        showToast('Failed to generate code', 'error');
-                      }
-                    }}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
-                    title="Click to generate and auto-fill the current valid code"
-                  >
-                    <Sparkles className="w-3 h-3 text-emerald-600" />
-                    <span>Auto-Fill Code</span>
-                  </button>
-                </div>
-
-                {showQrCode && (
-                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-3 animate-fadeIn">
-                    <p className="text-[11px] text-slate-600 font-medium">
-                      Open Google Authenticator on your phone, tap <strong>+</strong> and scan:
-                    </p>
-                    <div className="bg-white p-2.5 rounded-xl border border-slate-200 inline-block shadow-sm">
-                      <img
-                        src={totpService.getQrCodeUrl(totpService.getOtpAuthUrl(DEFAULT_ADMIN_EMAIL, 'Apollo Engineering', DEFAULT_ADMIN_TOTP_SECRET))}
-                        alt="Google Authenticator QR Code"
-                        className="w-36 h-36 mx-auto"
-                      />
-                    </div>
-                    <div className="space-y-1 text-left bg-white p-2.5 rounded-xl border border-slate-200">
-                      <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                        <span>Setup Key</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(DEFAULT_ADMIN_TOTP_SECRET);
-                            setCopiedSecret(true);
-                            setTimeout(() => setCopiedSecret(false), 2500);
-                            showToast('Setup key copied to clipboard!', 'info');
-                          }}
-                          className="text-[#0054A6] hover:underline flex items-center gap-1 font-bold cursor-pointer"
-                        >
-                          {copiedSecret ? <CheckCircle className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                          <span>{copiedSecret ? 'Copied' : 'Copy Key'}</span>
-                        </button>
-                      </div>
-                      <div className="font-mono text-xs font-black text-slate-800 tracking-wider break-all bg-slate-50 p-1.5 rounded-lg border border-slate-100 select-all">
-                        {DEFAULT_ADMIN_TOTP_SECRET}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <p className="text-[11px] text-slate-500 text-center font-medium">
+                  Enter the 6-digit TOTP code generated by your authenticator app (Google Authenticator, Microsoft Authenticator, or 1Password).
+                </p>
 
                 <button
                   type="submit"
@@ -1769,7 +1651,7 @@ export const SuperAdminDashboard: React.FC = () => {
               title="Switch role view (Super Admin, Warehouse Dispatch, Accountant)"
             >
               <option value="SUPER_ADMIN">👑 Super Admin (Full)</option>
-              <option value="WAREHOUSE_DISPATCH">🚚 Warehouse Dispatch</option>
+              <option value="WAREHOUSE_DISPATCH">🚚 Operations (Dispatch)</option>
               <option value="ACCOUNTANT">💼 Accountant (Finance)</option>
             </select>
           </div>
@@ -1814,22 +1696,15 @@ export const SuperAdminDashboard: React.FC = () => {
       </div>
 
       {/* Main Enterprise Pillars Navigation Bar (Role-Filtered) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 xl:grid-cols-14 gap-2 bg-white/90 backdrop-blur-md p-2 rounded-2xl border border-slate-200 shadow-md">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-7 gap-1.5 bg-white/95 backdrop-blur-xl p-2 rounded-2xl border border-slate-200/80 shadow-lg">
         {[
-          { id: 'PRODUCTS', label: 'Products', icon: Package, count: `${products.length} Items`, allowedRoles: ['SUPER_ADMIN'] },
-          { id: 'VARIANTS', label: 'Variants', icon: Layers, count: 'Combinations', allowedRoles: ['SUPER_ADMIN'] },
-          { id: 'CATEGORIES_ATTRIBUTES', label: 'Taxonomy', icon: Tag, count: 'Categories/Axes', allowedRoles: ['SUPER_ADMIN'] },
-          { id: 'PRICE_LISTS', label: 'Pricing & Slabs', icon: DollarSign, count: 'GST Engine', allowedRoles: ['SUPER_ADMIN', 'ACCOUNTANT'] },
-          { id: 'INVENTORY', label: 'Warehouses', icon: Building2, count: 'Multi-Hub', allowedRoles: ['SUPER_ADMIN', 'WAREHOUSE_DISPATCH'] },
+          { id: 'PRODUCTS', label: 'Listings', icon: Package, count: `${products.length} Products`, allowedRoles: ['SUPER_ADMIN'] },
           { id: 'ORDERS', label: 'Orders', icon: ShoppingCart, count: `${orders.length} Orders`, allowedRoles: ['SUPER_ADMIN', 'WAREHOUSE_DISPATCH'] },
-          { id: 'SHIPPING', label: 'Logistics', icon: Truck, count: 'Speed Post', allowedRoles: ['SUPER_ADMIN', 'WAREHOUSE_DISPATCH'] },
           { id: 'PAYMENTS', label: 'Payments', icon: CreditCard, count: 'Reconciliation', allowedRoles: ['SUPER_ADMIN', 'ACCOUNTANT'] },
-          { id: 'RETURNS', label: 'Returns', icon: RotateCcw, count: `${returnRequests.length} Cases`, allowedRoles: ['SUPER_ADMIN', 'WAREHOUSE_DISPATCH'] },
-          { id: 'CUSTOMERS', label: 'Customers', icon: Users, count: 'B2B Registry', allowedRoles: ['SUPER_ADMIN'] },
-          { id: 'INQUIRIES', label: 'Contractor Desk', icon: PhoneCall, count: `${contractorInquiries.length} Leads`, allowedRoles: ['SUPER_ADMIN'] },
-          { id: 'COUPONS', label: 'Coupons', icon: Percent, count: `${coupons.filter(c => c.isActive).length} Active`, allowedRoles: ['SUPER_ADMIN'] },
-          { id: 'REPORTS', label: 'GSTR-1 & Audit', icon: BarChart3, count: `₹${(totalGMV / 1000).toFixed(1)}k GMV`, allowedRoles: ['SUPER_ADMIN', 'ACCOUNTANT'] },
-          { id: 'ACCOUNTING', label: 'Accounting Ledger', icon: Landmark, count: 'Double-Entry', allowedRoles: ['SUPER_ADMIN', 'ACCOUNTANT'] },
+          { id: 'CUSTOMERS', label: 'Customers', icon: Users, count: 'Registry', allowedRoles: ['SUPER_ADMIN'] },
+          { id: 'COUPONS', label: 'Promotions', icon: Percent, count: `${coupons.filter(c => c.isActive).length} Active`, allowedRoles: ['SUPER_ADMIN'] },
+          { id: 'REPORTS', label: 'Reports', icon: BarChart3, count: 'GSTR-1', allowedRoles: ['SUPER_ADMIN', 'ACCOUNTANT'] },
+          { id: 'ACCOUNTING', label: 'Accounts', icon: Landmark, count: 'Ledger', allowedRoles: ['SUPER_ADMIN', 'ACCOUNTANT'] },
         ]
 
           .filter(tab => tab.allowedRoles.includes(activeAdminRole))
@@ -1840,17 +1715,17 @@ export const SuperAdminDashboard: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveAdminTab(tab.id as any)}
-                className={`p-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 text-center border ${
+                className={`px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 flex flex-col items-center justify-center gap-1 text-center border ${
                   isSelected
-                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-black border-amber-400 scale-[1.02]'
-                    : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50 border-transparent'
+                    ? 'bg-[#0054A6] text-white shadow-lg shadow-[#0054A6]/20 font-black border-[#0054A6]/80 ring-2 ring-[#0054A6]/20'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 border-transparent hover:border-slate-200'
                 }`}
               >
                 <div className="flex items-center gap-1.5">
-                  <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-slate-950' : 'text-amber-500'}`} />
-                  <span className="font-bold text-[11px] truncate">{tab.label}</span>
+                  <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-[#0054A6]'}`} />
+                  <span className="font-bold text-[11.5px] tracking-tight">{tab.label}</span>
                 </div>
-                <span className={`text-[10px] font-mono font-semibold ${isSelected ? 'text-slate-900' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-mono font-semibold ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
                   {tab.count}
                 </span>
               </button>
@@ -1984,23 +1859,11 @@ export const SuperAdminDashboard: React.FC = () => {
               </button>
 
               <button
-                onClick={() => {
-                  const fullKit = products.find(p => p.asin === 'AP-FULLKIT-05') || products[0];
-                  setComboBuilderProduct(fullKit);
-                  setIsComboBuilderOpen(true);
-                }}
-                className="px-3.5 py-2 bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-600 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5 hover:scale-[1.02] transition-transform"
-              >
-                <Layers className="w-4 h-4 text-amber-300" />
-                <span>Build Combo Variant (Kit Bundle)</span>
-              </button>
-
-              <button
                 onClick={() => setProductForWizard('NEW')}
-                className="px-4 py-2 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-md border border-amber-500 flex items-center gap-2 hover:scale-[1.02] transition-transform"
+                className="px-4 py-2 bg-[#0054A6] hover:bg-[#003d7a] text-white font-bold text-xs rounded-xl shadow-sm border border-[#004080] flex items-center gap-2 hover:scale-[1.02] transition-transform cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>Add New ASIN (APE Wizard)</span>
+                <span>+ Add New Product</span>
               </button>
             </div>
           </div>
@@ -2455,52 +2318,33 @@ export const SuperAdminDashboard: React.FC = () => {
                             />
                           </td>
 
-                          {/* 10. Actions (Buyer Link + Edit Pricing + Matrix + Combo + Delete) */}
+                          {/* 10. Actions (Edit + View + Delete) */}
                           <td className="p-3.5 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setProductForWizard(p)}
+                                className="px-3 py-1.5 rounded-xl bg-[#0054A6] hover:bg-[#003d7a] text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+                                title="Edit Product Details, Pricing, & Variations Matrix"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                <span>Edit</span>
+                              </button>
+
                               <a
                                 href={`/products/${p.asin}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#0054A6] border border-blue-200 font-bold text-xs inline-flex items-center gap-1 shadow-2xs transition-all hover:scale-105"
+                                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold text-xs inline-flex items-center justify-center shadow-2xs transition-all cursor-pointer"
                                 title="Open Live Product in Buyer Catalog"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
-                                <span>Buyer Link</span>
                               </a>
 
                               <button
-                                onClick={() => openEditModal(p)}
-                                className="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs inline-flex items-center gap-1 shadow-2xs transition-all"
-                                title="Edit B2C Price & B2B Volume Tiers"
-                              >
-                                <DollarSign className="w-3.5 h-3.5 text-amber-700" />
-                                <span>Edit Pricing</span>
-                              </button>
-
-                              <button
-                                onClick={() => setProductForWizard(p)}
-                                className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 hover:border-slate-400 font-bold text-xs inline-flex items-center gap-1.5 shadow-2xs transition-all"
-                                title="Edit Product Details & Variations Matrix"
-                              >
-                                <Edit3 className="w-3.5 h-3.5 text-slate-600" />
-                                <span>Matrix</span>
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  setComboBuilderProduct(p);
-                                  setIsComboBuilderOpen(true);
-                                }}
-                                className="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#0054A6] border border-blue-200 transition-all hover:scale-105 shadow-xs"
-                                title="Build or Edit Combo Variant Bundle for this ASIN"
-                              >
-                                <Layers className="w-3.5 h-3.5" />
-                              </button>
-
-                              <button
+                                type="button"
                                 onClick={() => setProductToDelete(p)}
-                                className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-all hover:scale-105 shadow-xs"
+                                className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-all hover:scale-105 shadow-2xs cursor-pointer"
                                 title="Delete Product from Catalog"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -2570,21 +2414,21 @@ export const SuperAdminDashboard: React.FC = () => {
               </button>
 
               <button
-                onClick={() => setOrdersViewMode('SAGA_PIPELINE')}
+                onClick={() => setOrdersViewMode('RETURNS')}
                 className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
-                  ordersViewMode === 'SAGA_PIPELINE'
+                  ordersViewMode === 'RETURNS'
                     ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-md'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
-                <Layers className="w-3.5 h-3.5" /> Distributed Saga Orders
+                <RotateCcw className="w-3.5 h-3.5" /> Returns ({returnRequests.length})
               </button>
             </div>
           </div>
 
-          {/* TAB 2.0: DISTRIBUTED ORDER SAGA PIPELINE */}
-          {ordersViewMode === 'SAGA_PIPELINE' && (
-            <OrderManagementConsole />
+          {/* TAB 2.4: RETURNS & SIZING INSPECTION */}
+          {ordersViewMode === 'RETURNS' && (
+            <ReturnsDeskConsole />
           )}
 
           {/* TAB 2.0: ENTERPRISE SEQUENTIAL DISPATCH PIPELINE */}
@@ -3886,60 +3730,41 @@ export const SuperAdminDashboard: React.FC = () => {
       )}
 
       {/* ───────────────────────────────────────────────────────────────────────────── */}
-      {/* 👥 CUSTOMERS & B2B GST VERIFICATION DESK */}
+      {/* 👥 CUSTOMERS & B2B GST VERIFICATION DESK + CONTRACTOR INQUIRIES */}
       {/* ───────────────────────────────────────────────────────────────────────────── */}
       {activeAdminTab === 'CUSTOMERS' && (
-        <CustomerManagementPanel />
+        <div className="space-y-6">
+          <CustomerManagementPanel />
+          <div className="border-t border-slate-200 pt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <PhoneCall className="w-5 h-5 text-[#0054A6]" />
+              <h3 className="text-lg font-black text-slate-900">Contractor Inquiries & Leads</h3>
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-50 text-[#0054A6] border border-blue-200">
+                {contractorInquiries.length} Leads
+              </span>
+            </div>
+            <ContractorInquiryDesk />
+          </div>
+        </div>
       )}
 
       {/* ───────────────────────────────────────────────────────────────────────────── */}
-      {/* 📞 SOLAR CONTRACTOR INQUIRIES & CALL DESK */}
-      {/* ───────────────────────────────────────────────────────────────────────────── */}
-      {activeAdminTab === 'INQUIRIES' && (
-        <ContractorInquiryDesk />
-      )}
-
-      {/* ───────────────────────────────────────────────────────────────────────────── */}
-      {/* 🏷️ COUPONS & PROMOTIONS MANAGEMENT */}
+      {/* 🏷️ PROMOTIONS & COUPONS */}
       {/* ───────────────────────────────────────────────────────────────────────────── */}
       {activeAdminTab === 'COUPONS' && (
         <CouponManagementPanel />
       )}
 
       {/* ───────────────────────────────────────────────────────────────────────────── */}
-      {/* 🔄 PILLAR 5: RETURNS & FRAME SIZING INSPECTION DESK */}
+      {/* 💳 PAYMENTS RECONCILIATION */}
       {/* ───────────────────────────────────────────────────────────────────────────── */}
-      {activeAdminTab === 'RETURNS' && (
-        <ReturnsDeskConsole />
-      )}
-
-      {/* ───────────────────────────────────────────────────────────────────────────── */}
-      {/* 🧱 ENTERPRISE CATALOG PILLARS: VARIANTS, TAXONOMY & PRICING */}
-      {/* ───────────────────────────────────────────────────────────────────────────── */}
-      {activeAdminTab === 'VARIANTS' && (
-        <VariantCatalogManager onOpenComboBuilder={() => setIsComboBuilderOpen(true)} />
-      )}
-
-      {activeAdminTab === 'CATEGORIES_ATTRIBUTES' && (
-        <CategoryAttributeManager />
-      )}
-
-      {activeAdminTab === 'PRICE_LISTS' && (
-        <PriceListManager />
-      )}
-
-      {activeAdminTab === 'INVENTORY' && (
-        <WarehouseInventoryConsole />
-      )}
-
-      {activeAdminTab === 'SHIPPING' && (
-        <ShippingFulfillmentConsole />
-      )}
-
       {activeAdminTab === 'PAYMENTS' && (
         <PaymentReconciliationConsole />
       )}
 
+      {/* ───────────────────────────────────────────────────────────────────────────── */}
+      {/* 🏛️ ACCOUNTS & LEDGER */}
+      {/* ───────────────────────────────────────────────────────────────────────────── */}
       {activeAdminTab === 'ACCOUNTING' && (
         <AccountingLedgerConsole />
       )}
@@ -4294,6 +4119,48 @@ export const SuperAdminDashboard: React.FC = () => {
         isOpen={isAuditTrailOpen}
         onClose={() => setIsAuditTrailOpen(false)}
       />
+
+      {/* 🗑️ Delete Product Confirmation Modal */}
+      {productToDelete && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0 shadow-xs">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 font-display">Delete Product Listing?</h3>
+                <p className="text-xs text-slate-500 font-mono">ASIN: {productToDelete.asin}</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to delete <strong className="text-slate-900 font-bold">{productToDelete.title}</strong>? This will remove the listing and archive it in the PostgreSQL database.
+            </p>
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setProductToDelete(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const asin = productToDelete.asin;
+                  setProductToDelete(null);
+                  await deleteProduct(asin);
+                  showToast(`Product ${asin} deleted successfully`, 'success');
+                }}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Listing</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

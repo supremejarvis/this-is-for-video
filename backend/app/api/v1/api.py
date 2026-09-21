@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
     admin_returns,
     admin_shipping,
     auth,
+    customers,
     health,
     inventory,
     orders,
@@ -28,6 +29,8 @@ api_router.include_router(health.router, tags=["Health"])
 api_router.include_router(system.router)
 api_router.include_router(auth.router, prefix="/auth", tags=["Auth"])
 api_router.include_router(otp.router, prefix="/auth/otp", tags=["OTP"])
+api_router.include_router(customers.router, prefix="/customers", tags=["Customers"])
+
 api_router.include_router(users.router, prefix="/admin/users", tags=["Admin Users"])
 api_router.include_router(admin_catalog.router)
 api_router.include_router(admin_pricing.router)

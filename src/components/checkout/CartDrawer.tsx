@@ -422,7 +422,7 @@ export const CartDrawer: React.FC = () => {
                 </div>
 
                 {/* Quote State Banners */}
-                {quoteStatus === 'QUOTE_REQUIRED' && (
+                {quoteStatus === 'QUOTE_REQUIRED' && !currentQuote && (
                   <div className="bg-blue-50 border border-blue-200 p-3 rounded-2xl flex items-start gap-2.5 text-xs text-blue-900 shadow-sm animate-pulse">
                     <RefreshCw className="w-4 h-4 text-[#0054A6] shrink-0 mt-0.5 animate-spin" />
                     <div className="flex-1">
@@ -452,8 +452,8 @@ export const CartDrawer: React.FC = () => {
                   </div>
                 )}
 
-                {/* Loading State Spinner */}
-                {quoteStatus === 'QUOTE_LOADING' && (
+                {/* Loading State Spinner - only show when no quote is currently cached */}
+                {quoteStatus === 'QUOTE_LOADING' && !currentQuote && (
                   <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-center space-y-2">
                     <RefreshCw className="w-5 h-5 text-[#0054A6] animate-spin mx-auto" />
                     <p className="text-xs text-blue-900 font-bold">{t.calculatingQuote}</p>
@@ -475,7 +475,7 @@ export const CartDrawer: React.FC = () => {
                 )}
 
                 {/* Authoritative Calculation Breakdown */}
-                {quoteStatus === 'QUOTE_VALID' && currentQuote && (() => {
+                {(quoteStatus === 'QUOTE_VALID' || Boolean(currentQuote)) && currentQuote && (() => {
                   const itemsGrossTotal = cart.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
                   const totalWeightGrams = cart.reduce((sum, item) => sum + (item.weightGrams || 100) * item.quantity, 0);
 

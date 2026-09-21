@@ -77,6 +77,9 @@ export interface UpdateOrderStatusPayload {
   carrier?: string;
 }
 
+const isUuid = (val?: string): boolean =>
+  Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val));
+
 export class OrderApi {
   /**
    * Create an authoritative order in the PostgreSQL database
@@ -87,7 +90,7 @@ export class OrderApi {
       items: (payload.items || []).map((i) => ({
         sku: i.sku,
         quantity: i.quantity,
-        ...(i.variant_id ? { variant_id: i.variant_id } : {}),
+        ...(isUuid(i.variant_id) ? { variant_id: i.variant_id } : {}),
       })),
     };
     return apiClient.post<BackendOrderResponse>('/orders', cleanPayload);

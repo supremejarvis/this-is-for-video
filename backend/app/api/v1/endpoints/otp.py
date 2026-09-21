@@ -1,36 +1,42 @@
 import logging
-import secrets
-from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CSRF_COOKIE_NAME, SESSION_COOKIE_NAME
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import generate_secure_token, hash_password, hash_token
-from app.models.auth import User, UserRole, UserSession
 from app.schemas.auth import UserResponse
+from app.schemas.customer import CustomerProfileResponse
 from app.schemas.otp import (
     SendOtpRequest,
     SendOtpResponse,
     VerifyOtpRequest,
     VerifyOtpResponse,
 )
-from app.services.otp_service import otp_service
+from app.services.customer_auth_service import CustomerAuthService, mask_phone_number
 
 logger = logging.getLogger("apollo.otp")
 
 router = APIRouter()
 
 
-@router.post("/send", response_model=SendOtpResponse)
-async def send_otp(request: Request, payload: SendOtpRequest) -> SendOtpResponse:
-    """Dispatches a secure 4-digit OTP to the verified 10-digit Indian mobile number."""
+@router.post("/request", response_model=SendOtpResponse)
+@router.post("/send", response_model=SendOtpResponse, include_in_schema=False)
+async def request_otp(
+    request: Request,
+    payload: SendOtpRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> SendOtpResponse:
+    """Dispatches a secure 4-digit OTP challenge to a 10-digit Indian mobile number."""
     ip_address = request.client.host if request.client else None
-    success, message, masked, code = otp_service.send_otp(payload.phone, ip_address)
+    success, message, masked, challenge_id, code = await CustomerAuthService.request_otp(
+        db=db,
+        phone=payload.phone,
+        purpose=payload.purpose,
+        ip_address=ip_address,
+    )
 
     if not success:
         raise HTTPException(
@@ -44,15 +50,22 @@ async def send_otp(request: Request, payload: SendOtpRequest) -> SendOtpResponse
         success=True,
         message=message,
         masked_phone=masked,
-        cooldown_seconds=30,
+        challenge_id=challenge_id,
+        cooldown_seconds=CustomerAuthService.RESEND_COOLDOWN_SECONDS,
+        expires_in_seconds=CustomerAuthService.EXPIRY_MINUTES * 60,
         dev_code=dev_code,
     )
 
 
-@router.post("/retry", response_model=SendOtpResponse)
-async def retry_otp(request: Request, payload: SendOtpRequest) -> SendOtpResponse:
-    """Retry alias for send_otp dispatch."""
-    return await send_otp(request, payload)
+@router.post("/resend", response_model=SendOtpResponse)
+@router.post("/retry", response_model=SendOtpResponse, include_in_schema=False)
+async def resend_otp(
+    request: Request,
+    payload: SendOtpRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> SendOtpResponse:
+    """Resends a secure 4-digit OTP challenge with server-enforced cooldown."""
+    return await request_otp(request, payload, db)
 
 
 @router.post("/verify", response_model=VerifyOtpResponse)
@@ -62,106 +75,80 @@ async def verify_otp(
     payload: VerifyOtpRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> VerifyOtpResponse:
-    """Verifies the 4-digit OTP against active non-expired session and logs the user in."""
-    is_verified, message, masked = otp_service.verify_otp(payload.phone, payload.otp)
+    """Atomically verifies the 4-digit OTP challenge, provisions/loads customer, and sets session cookies."""
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
 
-    if not is_verified:
+    (
+        is_verified,
+        message,
+        user,
+        profile,
+        is_first_time,
+        raw_session_token,
+        raw_csrf_token,
+    ) = await CustomerAuthService.verify_otp(
+        db=db,
+        phone=payload.phone,
+        entered_otp=payload.otp,
+        challenge_id=payload.challenge_id,
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+
+    if not is_verified or not user or not raw_session_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message,
         )
 
-    user_response = None
-    raw_csrf_token = None
+    # Set secure HttpOnly session cookie
+    is_secure = (
+        request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto") == "https"
+        or settings.ENVIRONMENT == "production"
+    )
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=raw_session_token,
+        httponly=True,
+        secure=is_secure,
+        samesite="lax",
+        max_age=86400,
+        path="/",
+    )
 
-    try:
-        phone_email = f"{payload.phone}@ape-store.com"
-        clean_phone = payload.phone.replace("+", "").replace("-", "").strip()
-        # If this is the configured administrator mobile number, link to the existing OWNER account
-        is_admin_phone = clean_phone.endswith("8511626267")
-        if is_admin_phone and settings.ADMIN_INIT_EMAIL:
-            stmt = select(User).where(User.email.in_([settings.ADMIN_INIT_EMAIL, phone_email]))
-        else:
-            stmt = select(User).where(User.email == phone_email)
-        res = await db.execute(stmt)
-        user = res.scalar_one_or_none()
+    # Set client-readable CSRF cookie for double-submit
+    response.set_cookie(
+        key=CSRF_COOKIE_NAME,
+        value=raw_csrf_token,
+        httponly=False,
+        secure=is_secure,
+        samesite="lax",
+        max_age=86400,
+        path="/",
+    )
 
-        if not user:
-            user = User(
-                email=phone_email,
-                password_hash=hash_password(secrets.token_urlsafe(32)),
-                full_name=f"Customer {masked}",
-                role=UserRole.CUSTOMER,
-                is_active=True,
-            )
-            db.add(user)
-            await db.flush()
-
-        ip_address = request.client.host if request.client else None
-        user_agent = request.headers.get("user-agent")
-        now = datetime.now(UTC)
-        raw_session_token = generate_secure_token(32)
-        raw_csrf_token = generate_secure_token(32)
-
-        user_session = UserSession(
-            user_id=user.id,
-            session_token_hash=hash_token(raw_session_token),
-            csrf_token_hash=hash_token(raw_csrf_token),
-            ip_address=ip_address,
-            user_agent=user_agent[:500] if user_agent else None,
-            absolute_expires_at=now + timedelta(hours=24),
-            idle_expires_at=now + timedelta(hours=2),
-        )
-        db.add(user_session)
-        await db.commit()
-        await db.refresh(user)
-
-        user_response = UserResponse.model_validate(user)
-
-        # Set secure HttpOnly session cookie
-        is_secure = (
-            request.url.scheme == "https"
-            or request.headers.get("x-forwarded-proto") == "https"
-            or settings.ENVIRONMENT == "production"
-        )
-        response.set_cookie(
-            key=SESSION_COOKIE_NAME,
-            value=raw_session_token,
-            httponly=True,
-            secure=is_secure,
-            samesite="lax",
-            max_age=86400,
-            path="/",
-        )
-
-        response.set_cookie(
-            key=CSRF_COOKIE_NAME,
-            value=raw_csrf_token,
-            httponly=False,
-            secure=is_secure,
-            samesite="lax",
-            max_age=86400,
-            path="/",
-        )
-    except Exception as exc:
-        # If DB is unavailable, verification itself succeeded but log the error
-        logger.warning("DB session recording failed during OTP verify: %s", exc)
-        await db.rollback()
+    masked = mask_phone_number(payload.phone)
 
     return VerifyOtpResponse(
         success=True,
+        is_verified=True,
+        is_first_time=is_first_time,
         message=message,
         masked_phone=masked,
-        user=user_response,
+        user=UserResponse.model_validate(user),
+        customer_profile=CustomerProfileResponse.model_validate(profile) if profile else None,
         csrf_token=raw_csrf_token,
     )
 
 
-
 if settings.ENVIRONMENT in ("development", "test", "automated_test"):
     @router.get("/dev-code")
-    async def get_dev_otp_code(phone: str) -> dict[str, str | None]:
+    async def get_dev_otp_code(
+        phone: str,
+        db: Annotated[AsyncSession, Depends(get_db)],
+    ) -> dict[str, str | None]:
         """Development-only endpoint for automated E2E testing."""
-        code = otp_service._get_active_code_for_testing(phone)
+        code = await CustomerAuthService.get_active_code_for_testing(db, phone)
         return {"phone": phone, "code": code}
-

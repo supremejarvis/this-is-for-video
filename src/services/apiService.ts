@@ -125,26 +125,62 @@ export async function fetchWithRetry<T>(
 // ─────────────────────────────────────────────────────────────────────────────
 const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
-const STATE_CODE_MAP: Record<string, string> = {
+export const STATE_CODE_MAP: Record<string, string> = {
   '01': 'Jammu & Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab', '04': 'Chandigarh',
   '05': 'Uttarakhand', '06': 'Haryana', '07': 'Delhi', '08': 'Rajasthan', '09': 'Uttar Pradesh',
-  '10': 'Bihar', '19': 'West Bengal', '24': 'Gujarat', '27': 'Maharashtra', '29': 'Karnataka',
-  '33': 'Tamil Nadu', '36': 'Telangana', '37': 'Andhra Pradesh'
+  '10': 'Bihar', '11': 'Sikkim', '12': 'Arunachal Pradesh', '13': 'Nagaland', '14': 'Manipur',
+  '15': 'Mizoram', '16': 'Tripura', '17': 'Meghalaya', '18': 'Assam', '19': 'West Bengal',
+  '20': 'Jharkhand', '21': 'Odisha', '22': 'Chhattisgarh', '23': 'Madhya Pradesh', '24': 'Gujarat',
+  '26': 'Dadra and Nagar Haveli and Daman and Diu', '27': 'Maharashtra', '28': 'Andhra Pradesh',
+  '29': 'Karnataka', '30': 'Goa', '31': 'Lakshadweep', '32': 'Kerala', '33': 'Tamil Nadu',
+  '34': 'Puducherry', '35': 'Andaman & Nicobar Islands', '36': 'Telangana', '37': 'Andhra Pradesh (New)',
+  '38': 'Ladakh'
 };
 
-export function validateGstinFormat(gstin: string): { isValid: boolean; stateName?: string; reason?: string } {
-  const clean = gstin.trim().toUpperCase();
+export interface GstinValidationResult {
+  isValid: boolean;
+  pan?: string;
+  stateCode?: string;
+  stateName?: string;
+  reason?: string;
+}
+
+/**
+ * Automatically extracts the 10-character PAN from a statutory 15-character GSTIN.
+ * In India, characters 3 through 12 (indices 2 to 12) represent the business PAN.
+ */
+export function extractPanFromGstin(gstin: string): string | null {
+  if (!gstin) return null;
+  const clean = gstin.trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
+  if (clean.length >= 12) {
+    const candidate = clean.substring(2, 12);
+    if (/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+export function validateGstinFormat(gstin: string): GstinValidationResult {
+  const clean = gstin.trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
   if (clean.length !== 15) {
-    return { isValid: false, reason: 'GSTIN must be exactly 15 alphanumeric characters.' };
+    return { 
+      isValid: false, 
+      reason: `GSTIN must be exactly 15 alphanumeric characters (currently ${clean.length}).` 
+    };
   }
   if (!GSTIN_REGEX.test(clean)) {
-    return { isValid: false, reason: 'Invalid GSTIN structure (Format: 24AABCA1234F1Z5).' };
+    return { 
+      isValid: false, 
+      reason: 'Invalid GSTIN structure (Format: 2-digit State + 10-character PAN + 1 entity + Z + 1 check digit).' 
+    };
   }
 
   const stateCode = clean.substring(0, 2);
+  const pan = clean.substring(2, 12);
   const stateName = STATE_CODE_MAP[stateCode] || 'Other State / UT';
 
-  return { isValid: true, stateName };
+  return { isValid: true, pan, stateCode, stateName };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

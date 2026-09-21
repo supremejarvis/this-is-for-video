@@ -16,6 +16,7 @@ export interface RazorpayPaymentOptions {
   amount: number; // in INR (e.g. 1596.64)
   orderNumber: string;
   razorpayOrderId?: string;
+  keyId?: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
@@ -53,7 +54,7 @@ class RazorpayService {
 
       const timer = setTimeout(() => {
         resolve(false);
-      }, 1000);
+      }, 10000);
 
       script.onload = () => {
         clearTimeout(timer);
@@ -74,6 +75,13 @@ class RazorpayService {
    * Launch Razorpay Standard Modal Checkout Popup
    */
   public async openCheckout(options: RazorpayPaymentOptions): Promise<void> {
+    if (!options.amount || options.amount < 1) {
+      options.onError({
+        description: 'Payment amount must be at least ₹1 to initiate transaction.'
+      });
+      return;
+    }
+
     const isLoaded = await this.loadScript();
 
     const amountInPaise = Math.round(options.amount * 100);
@@ -88,7 +96,7 @@ class RazorpayService {
 
     try {
       const rzpOptions: Record<string, any> = {
-        key: RAZORPAY_CONFIG.keyId,
+        key: options.keyId || RAZORPAY_CONFIG.keyId,
         amount: amountInPaise,
         currency: 'INR',
         name: RAZORPAY_CONFIG.merchantName,

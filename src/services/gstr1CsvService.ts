@@ -808,60 +808,7 @@ export function getGstr1Hsn12Rows(orders: Order[]): { summary: Gstr1Hsn12Summary
     }
   });
 
-  // Ensure default industrial product HSNs are present if orders array is empty
-  if (Object.keys(hsnMap).length === 0) {
-    hsnMap['7326_18'] = {
-      hsn: '7326',
-      description: '',
-      uqc: 'PCS-PIECES',
-      totalQuantity: 1327,
-      rate: 18,
-      taxableValue: 21827.85,
-      integratedTaxAmount: 2891.00,
-      centralTaxAmount: 519.01,
-      stateUtTaxAmount: 519.01
-    };
-    hsnMap['8424_5'] = {
-      hsn: '8424',
-      description: '',
-      uqc: 'PCS-PIECES',
-      totalQuantity: 149,
-      rate: 5,
-      taxableValue: 6234.00,
-      integratedTaxAmount: 21.70,
-      centralTaxAmount: 145.00,
-      stateUtTaxAmount: 145.00
-    };
-    hsnMap['7216_18'] = {
-      hsn: '7216',
-      description: '',
-      uqc: 'OTH-OTHERS',
-      totalQuantity: 7,
-      rate: 18,
-      taxableValue: 210.00,
-      integratedTaxAmount: 37.80,
-      centralTaxAmount: 0.00,
-      stateUtTaxAmount: 0.00
-    };
-    hsnMap['3917_18'] = {
-      hsn: '3917',
-      description: '',
-      uqc: 'PCS-PIECES',
-      totalQuantity: 7,
-      rate: 18,
-      taxableValue: 105.00,
-      integratedTaxAmount: 18.90,
-      centralTaxAmount: 0.00,
-      stateUtTaxAmount: 0.00
-    };
 
-    if (shippingTaxable === 0) {
-      shippingTaxable = 4318.80;
-      shippingIgst = 619.16;
-      shippingCgst = 79.11;
-      shippingSgst = 79.11;
-    }
-  }
 
   // Convert map to sorted rows
   const productRows: Gstr1Hsn12Row[] = Object.values(hsnMap).map(item => {

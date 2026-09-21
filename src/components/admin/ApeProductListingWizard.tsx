@@ -81,8 +81,6 @@ function getDefaultVariantPackaging(opts: DefaultVariantPackagingOpts = {}) {
     unitOfMeasure: (opts.uom || 'PCS') as any
   };
 }
-  };
-}
 
 interface TagBadgeListProps {
   items: string[];
@@ -236,7 +234,7 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
     Boolean(initialProduct?.isComboBundle || initialProduct?.variants?.[0]?.isComboVariant)
   );
   const [comboComponents, setComboComponents] = useState<ComboComponentItem[]>(
-    initialProduct?.comboComponents || initialProduct?.variants?.[0]?.comboComponents || []
+    initialProduct?.variants?.[0]?.comboComponents || []
   );
 
   // Bundle Component Entry Inputs
@@ -686,8 +684,9 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
   };
 
   const handleLoadManualSampleClips = () => {
-    setManualItems(DEFAULT_SAMPLE_MANUAL_ITEMS);
-    showToast('Loaded 5 sample items into manual builder.', 'info');
+    setManualItems([
+      { size: '', sku: '', b2cPrice: 0, b2bPrice: 0, b2bMoq: 50, inventory: 0, barcode: '' }
+    ]);
   };
 
   const handleApplyManualItems = () => {
@@ -1066,7 +1065,6 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
       countryOfOrigin: countryOfOrigin || 'India',
       includedComponents: computedIncludedComponents,
       isComboBundle: isComboBundle,
-      comboComponents: isComboBundle && comboComponents.length > 0 ? comboComponents : undefined,
       handlingTimeDays,
       isCodAllowed,
       maxOrderQuantity,
@@ -2113,8 +2111,6 @@ export const ApeProductListingWizard: React.FC<ApeProductListingWizardProps> = (
                     >
                       <Plus className="w-4 h-4 text-slate-500" /> + Add Blank Row
                     </button>
-                  </div>
-
                   </div>
                 </div>
 

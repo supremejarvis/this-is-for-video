@@ -1,13 +1,22 @@
-"""Application Configuration Module."""
+from pathlib import Path
 from decimal import Decimal
 
 from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_BASE_DIR = Path(__file__).resolve().parents[2]
+_ENV_CANDIDATES = (
+    str(_BASE_DIR / ".env"),
+    str(_BASE_DIR / "backend" / ".env"),
+    "/app/.env",
+    ".env",
+    "backend/.env",
+)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(".env", "backend/.env"),
+        env_file=_ENV_CANDIDATES,
         env_file_encoding="utf-8",
         extra="ignore"
     )
@@ -39,8 +48,8 @@ class Settings(BaseSettings):
     )
 
     # MSG91 Official OTP, SMS & WhatsApp Integration (Server-Side Only)
-    MSG91_AUTH_KEY: str = Field(default="", description="MSG91 Private Auth Key")
-    MSG91_TEMPLATE_ID: str = Field(default="", description="MSG91 SMS Template ID")
+    MSG91_AUTH_KEY: str = Field(default="561266ADmXXclWZ6a81f661P1", description="MSG91 Private Auth Key")
+    MSG91_TEMPLATE_ID: str = Field(default="6a986d4effc61fd8910a4952", description="MSG91 SMS Template ID")
     MSG91_WHATSAPP_NUMBER: str = Field(default="919714710854", description="MSG91 Integrated WhatsApp Number")
     MSG91_WHATSAPP_TEMPLATE_NAME: str = Field(default="apollo_engineering", description="MSG91 WhatsApp Template Name")
 

@@ -16,7 +16,7 @@ import { ApiProduct, CatalogService } from '../services/catalogService';
 import { SupportedLanguage } from '../utils/i18n';
 import { runStorageMigration } from '../utils/storageMigration';
 import { apiService } from '../services/apiService';
-import { authApi, catalogApi, quoteApi, orderApi, paymentApi, inventoryApi } from '../services/api';
+import { authApi, catalogApi, quoteApi, orderApi, paymentApi, inventoryApi, CustomerProfile } from '../services/api';
 
 // Run storage migration immediately
 runStorageMigration();
@@ -55,12 +55,15 @@ export interface AppStore {
   checkAuthSession: () => Promise<void>;
   currentUser: UserProfile;
   setCurrentUser: (user: UserProfile) => void;
+  customerProfile: CustomerProfile | null;
+  setCustomerProfile: (profile: CustomerProfile | null) => void;
   updateUserProfile: (updates: Partial<UserProfile>) => void;
   currentOrg: B2BOrganization;
   updateOrgDetails: (org: Partial<B2BOrganization>) => void;
   clearOrgDetails: () => void;
   allUsers: UserProfile[];
   logout: () => Promise<void>;
+  logoutAll: () => Promise<void>;
 
   // Delivery & Addresses & Dual Billing/Shipping
   addresses: DeliveryAddress[];
@@ -164,6 +167,8 @@ export interface AppStore {
   schedulePickupForOrder: (orderId: string, packageId: string, slot: string, courier: string, date: string) => void;
   confirmPackedAndReady: (orderId: string, packageId: string) => void;
   confirmHandoverToCourier: (orderId: string, packageId: string) => void;
+  confirmDelivered: (orderId: string, packageId: string) => void;
+  verifyDirectUpiPayment: (orderId: string, utrNumber: string, notes?: string) => void;
   batchSchedulePickup: (orderIds: string[], slot: string, courier: string, date: string) => void;
   redispatchOrder: (orderId: string) => void;
   selectedOrderForDetail: Order | null;
@@ -488,513 +493,7 @@ export const GUEST_USER: UserProfile = {
   createdAt: ''
 };
 
-const DEFAULT_SAMPLE_ORDERS: Order[] = [
-  {
-    id: 'ord_sample_8821',
-    orderNumber: 'APE-ORD-8821',
-    invoiceNumber: 'INV-2026-08821',
-    userId: 'usr_guest_8821',
-    customerName: 'Rajesh Patel',
-    customerEmail: 'rajesh.patel@gmail.com',
-    customerPhone: '9825012345',
-    orderType: 'B2C',
-    isInputTaxCreditClaimed: false,
-    deliveryAddress: {
-      id: 'addr_sample_1',
-      userId: 'usr_guest_8821',
-      fullName: 'Rajesh Patel',
-      phone: '9825012345',
-      addressType: 'HOME',
-      flatBuilding: 'B-402, Samruddhi Residency',
-      streetArea: 'Near Prahlad Nagar Garden',
-      city: 'Ahmedabad',
-      state: 'Gujarat',
-      stateCode: '24',
-      pincode: '380015',
-      postOffice: {
-        name: 'PRAHLADNAGAR S.O',
-        branchType: 'Sub Post Office',
-        deliveryStatus: 'Delivery',
-        circle: 'Gujarat',
-        district: 'Ahmedabad',
-        state: 'Gujarat',
-        facilityId: '21260015'
-      },
-      landmark: 'Opp Titanium City Center',
-      isDefault: true
-    },
-    shipments: [
-      {
-        packageId: 'PKG-APE-8821-01',
-        sellerId: 'apollo_mfg_kathwada',
-        sellerName: 'Apollo Engineering Direct Hub',
-        status: 'CONFIRMED',
-        shippingDetail: {
-          articleNumber: 'EK382430011IN',
-          originPincode: '382430',
-          originHubName: 'Kathwada GIDC Express Logistics Hub',
-          destinationPincode: '380015',
-          destinationPostOffice: 'PRAHLADNAGAR S.O',
-          bookingTimestamp: new Date().toISOString(),
-          weightGrams: 360,
-          chargeableWeightGrams: 500,
-          tariffAmount: 50,
-          gstAmount: 9,
-          totalPostage: 59,
-          barcode128: 'EK382430011IN',
-          manifestId: 'MNF-PENDING',
-          carrier: 'INDIA_POST_SPEED_POST'
-        },
-        items: [createMockSprinklerItem(2)],
-        milestones: [
-          {
-            status: 'ORDER_PLACED',
-            timestamp: '09:30 AM',
-            location: 'Kathwada GIDC Hub',
-            description: 'Order confirmed and verified via UPI Prepaid',
-            isCompleted: true
-          }
-        ]
-      }
-    ],
-    pricingSummary: {
-      itemsTotal: 440,
-      discountTotal: 0,
-      taxableValue: 372.88,
-      cgstAmount: 33.56,
-      sgstAmount: 33.56,
-      igstAmount: 0,
-      totalTax: 67.12,
-      shippingTotal: 0,
-      grandTotal: 440
-    },
-    paymentDetail: {
-      method: 'UPI',
-      transactionId: 'TXN_UPI_8821990',
-      paymentStatus: 'PAID',
-      paidAt: new Date().toISOString(),
-      idempotencyKey: 'idemp_8821'
-    },
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'ord_sample_8822',
-    orderNumber: 'APE-ORD-8822',
-    invoiceNumber: 'INV-2026-08822',
-    userId: 'usr_b2b_8822',
-    customerName: 'SunShine Solar EPC Ltd',
-    customerEmail: 'purchase@sunshinesolar.in',
-    customerPhone: '9714710854',
-    orderType: 'B2B',
-    gstin: '24AABCS1429B1Z1',
-    isInputTaxCreditClaimed: true,
-    deliveryAddress: {
-      id: 'addr_sample_2',
-      userId: 'usr_b2b_8822',
-      fullName: 'SunShine Solar EPC Ltd',
-      phone: '9714710854',
-      addressType: 'WAREHOUSE',
-      flatBuilding: 'Plot 45, GIDC Industrial Estate',
-      streetArea: 'Sachin GIDC',
-      city: 'Surat',
-      state: 'Gujarat',
-      stateCode: '24',
-      pincode: '394230',
-      postOffice: {
-        name: 'SACHIN S.O',
-        branchType: 'Sub Post Office',
-        deliveryStatus: 'Delivery',
-        circle: 'Gujarat',
-        district: 'Surat',
-        state: 'Gujarat',
-        facilityId: '21264230'
-      },
-      landmark: 'Near Water Tank',
-      isDefault: true
-    },
-    shipments: [
-      {
-        packageId: 'PKG-APE-8822-01',
-        sellerId: 'apollo_mfg_kathwada',
-        sellerName: 'Apollo Engineering Direct Hub',
-        status: 'CONFIRMED',
-        shippingDetail: {
-          articleNumber: 'EK382430012IN',
-          originPincode: '382430',
-          originHubName: 'Kathwada GIDC Express Logistics Hub',
-          destinationPincode: '394230',
-          destinationPostOffice: 'SACHIN S.O',
-          bookingTimestamp: new Date().toISOString(),
-          weightGrams: 24000,
-          chargeableWeightGrams: 24000,
-          tariffAmount: 380,
-          gstAmount: 68.4,
-          totalPostage: 448.4,
-          barcode128: 'EK382430012IN',
-          manifestId: 'MNF-PENDING',
-          carrier: 'INDIA_POST_SPEED_POST'
-        },
-        items: [
-          {
-            sku: 'AE-CLIPS-SS304-35MM',
-            parentAsin: 'AP-DRAINCLIPS-02',
-            productTitle: 'SS304 Solar Auto Drain Clips 35mm',
-            variantTitle: '35mm SS304 Body - Snap-On Tool-Free',
-            attributes: { size: '35mm', material: 'SS304' },
-            imageUrl: '/Drain_clips.webp',
-            unitPrice: 12.75,
-            mrp: 120,
-            gstRate: 18,
-            hsnCode: '73269099',
-            sellerId: 'apollo_mfg',
-            sellerName: 'Apollo Engineering',
-            fulfillmentType: 'FBF',
-            weightGrams: 48,
-            quantity: 500,
-            isB2BPricingApplied: true
-          }
-        ],
-        milestones: [
-          {
-            status: 'ORDER_PLACED',
-            timestamp: '10:15 AM',
-            location: 'Kathwada GIDC Hub',
-            description: 'Corporate B2B Net 30 PO Verified',
-            isCompleted: true
-          }
-        ]
-      }
-    ],
-    pricingSummary: {
-      itemsTotal: 6375,
-      discountTotal: 0,
-      taxableValue: 5402.54,
-      cgstAmount: 486.23,
-      sgstAmount: 486.23,
-      igstAmount: 0,
-      totalTax: 972.46,
-      shippingTotal: 0,
-      grandTotal: 6375
-    },
-    paymentDetail: {
-      method: 'NET_30_PO',
-      transactionId: 'PO-SUN-2026-908',
-      paymentStatus: 'PAID',
-      paidAt: new Date().toISOString(),
-      idempotencyKey: 'idemp_8822'
-    },
-    createdAt: new Date(Date.now() - 7200000).toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'ord_sample_8819',
-    orderNumber: 'APE-ORD-8819',
-    invoiceNumber: 'INV-2026-08819',
-    userId: 'usr_guest_8819',
-    customerName: 'Amit Shah Solar Systems',
-    customerEmail: 'amit.shah@gmail.com',
-    customerPhone: '9824099887',
-    orderType: 'B2C',
-    isInputTaxCreditClaimed: false,
-    deliveryAddress: {
-      id: 'addr_sample_3',
-      userId: 'usr_guest_8819',
-      fullName: 'Amit Shah',
-      phone: '9824099887',
-      addressType: 'OFFICE',
-      flatBuilding: '12, Alkapuri Arcade',
-      streetArea: 'R.C. Dutt Road',
-      city: 'Vadodara',
-      state: 'Gujarat',
-      stateCode: '24',
-      pincode: '390007',
-      postOffice: {
-        name: 'ALKAPURI S.O',
-        branchType: 'Sub Post Office',
-        deliveryStatus: 'Delivery',
-        circle: 'Gujarat',
-        district: 'Vadodara',
-        state: 'Gujarat',
-        facilityId: '21263007'
-      },
-      landmark: 'Near Railway Station',
-      isDefault: true
-    },
-    shipments: [
-      {
-        packageId: 'PKG-APE-8819-01',
-        sellerId: 'apollo_mfg_kathwada',
-        sellerName: 'Apollo Engineering Direct Hub',
-        status: 'PROCESSING_PICK_PACK',
-        pickupDetail: {
-          slot: 'Morning (10:00 AM – 01:00 PM)',
-          date: new Date().toISOString().split('T')[0],
-          courier: 'Priority Express Delivery (Kathwada Hub 382430)',
-          scheduledAt: new Date(Date.now() - 1800000).toISOString()
-        },
-        shippingDetail: {
-          articleNumber: 'EK382430019IN',
-          originPincode: '382430',
-          originHubName: 'Kathwada GIDC Express Logistics Hub',
-          destinationPincode: '390007',
-          destinationPostOffice: 'ALKAPURI S.O',
-          bookingTimestamp: new Date().toISOString(),
-          weightGrams: 1800,
-          chargeableWeightGrams: 2000,
-          tariffAmount: 90,
-          gstAmount: 16.2,
-          totalPostage: 106.2,
-          barcode128: 'EK382430019IN',
-          manifestId: 'MNF-PENDING',
-          carrier: 'INDIA_POST_SPEED_POST'
-        },
-        items: [createMockSprinklerItem(10)],
-        milestones: [
-          {
-            status: 'PICKUP_SCHEDULED',
-            timestamp: '11:00 AM',
-            location: 'Kathwada GIDC Hub',
-            description: 'Pickup scheduled for Today Morning slot with Priority Express Logistics',
-            isCompleted: true
-          }
-        ]
-      }
-    ],
-    pricingSummary: {
-      itemsTotal: 2200,
-      discountTotal: 0,
-      taxableValue: 1864.41,
-      cgstAmount: 167.80,
-      sgstAmount: 167.80,
-      igstAmount: 0,
-      totalTax: 335.60,
-      shippingTotal: 0,
-      grandTotal: 2200
-    },
-    paymentDetail: {
-      method: 'RAZORPAY',
-      transactionId: 'pay_rzp_881900',
-      paymentStatus: 'PAID',
-      paidAt: new Date(Date.now() - 10800000).toISOString(),
-      idempotencyKey: 'idemp_8819'
-    },
-    createdAt: new Date(Date.now() - 10800000).toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'ord_sample_8815',
-    orderNumber: 'APE-ORD-8815',
-    invoiceNumber: 'INV-2026-08815',
-    userId: 'usr_b2b_8815',
-    customerName: 'Gujarat Green Power Infra',
-    customerEmail: 'procurement@greengujarat.org',
-    customerPhone: '9988112233',
-    orderType: 'B2B',
-    gstin: '24AAACG1111A1Z9',
-    isInputTaxCreditClaimed: true,
-    deliveryAddress: {
-      id: 'addr_sample_4',
-      userId: 'usr_b2b_8815',
-      fullName: 'Gujarat Green Power Infra',
-      phone: '9988112233',
-      addressType: 'WAREHOUSE',
-      flatBuilding: 'Shed 88, Aji GIDC Industrial Area',
-      streetArea: 'Phase II',
-      city: 'Rajkot',
-      state: 'Gujarat',
-      stateCode: '24',
-      pincode: '360003',
-      postOffice: {
-        name: 'AJI GIDC S.O',
-        branchType: 'Sub Post Office',
-        deliveryStatus: 'Delivery',
-        circle: 'Gujarat',
-        district: 'Rajkot',
-        state: 'Gujarat',
-        facilityId: '21268003'
-      },
-      landmark: 'Near Substation',
-      isDefault: true
-    },
-    shipments: [
-      {
-        packageId: 'PKG-APE-8815-01',
-        sellerId: 'apollo_mfg_kathwada',
-        sellerName: 'Apollo Engineering Direct Hub',
-        status: 'AWB_GENERATED',
-        pickupDetail: {
-          slot: 'Afternoon (02:00 PM – 06:00 PM)',
-          date: new Date().toISOString().split('T')[0],
-          courier: 'Delhivery B2B Surface Logistics',
-          manifestId: 'MNF-KATH-20260910-01',
-          scheduledAt: new Date(Date.now() - 7200000).toISOString()
-        },
-        shippingDetail: {
-          articleNumber: 'DEL382430015IN',
-          originPincode: '382430',
-          originHubName: 'Kathwada GIDC Express Logistics Hub',
-          destinationPincode: '360003',
-          destinationPostOffice: 'AJI GIDC S.O',
-          bookingTimestamp: new Date().toISOString(),
-          weightGrams: 15000,
-          chargeableWeightGrams: 15000,
-          tariffAmount: 250,
-          gstAmount: 45,
-          totalPostage: 295,
-          barcode128: 'DEL382430015IN',
-          manifestId: 'MNF-KATH-20260910-01',
-          carrier: 'INDIA_POST_SPEED_POST'
-        },
-        items: [
-          {
-            sku: 'AE-GICLAMP-03',
-            parentAsin: 'AP-GICLAMP-03',
-            productTitle: 'GI Solar Pipe Clamp (Galvanized Iron - L-Shape)',
-            variantTitle: 'GI Solar Pipe Clamp - ½" Pipe Mount (Pack of 24 pcs)',
-            attributes: { material: 'Galvanized Iron' },
-            imageUrl: '/solar_sprinkler.webp',
-            unitPrice: 120,
-            mrp: 180,
-            gstRate: 18,
-            hsnCode: '73269099',
-            sellerId: 'apollo_mfg',
-            sellerName: 'Apollo Engineering',
-            fulfillmentType: 'FBF',
-            weightGrams: 150,
-            quantity: 100,
-            isB2BPricingApplied: true
-          }
-        ],
-        milestones: [
-          {
-            status: 'PACKED_READY_FOR_PICKUP',
-            timestamp: '01:15 PM',
-            location: 'Kathwada GIDC Dispatch Bay',
-            description: 'Box packed, shipping label verified, included in manifest MNF-KATH-20260910-01',
-            isCompleted: true
-          }
-        ]
-      }
-    ],
-    pricingSummary: {
-      itemsTotal: 12000,
-      discountTotal: 0,
-      taxableValue: 10169.49,
-      cgstAmount: 915.25,
-      sgstAmount: 915.25,
-      igstAmount: 0,
-      totalTax: 1830.51,
-      shippingTotal: 0,
-      grandTotal: 12000
-    },
-    paymentDetail: {
-      method: 'NET_30_PO',
-      transactionId: 'PO-GGPI-7712',
-      paymentStatus: 'PAID',
-      paidAt: new Date(Date.now() - 14400000).toISOString(),
-      idempotencyKey: 'idemp_8815'
-    },
-    createdAt: new Date(Date.now() - 14400000).toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'ord_sample_8810',
-    orderNumber: 'APE-ORD-8810',
-    invoiceNumber: 'INV-2026-08810',
-    userId: 'usr_guest_8810',
-    customerName: 'Paresh Desai',
-    customerEmail: 'paresh.desai@yahoo.com',
-    customerPhone: '9426011223',
-    orderType: 'B2C',
-    isInputTaxCreditClaimed: false,
-    deliveryAddress: {
-      id: 'addr_sample_5',
-      userId: 'usr_guest_8810',
-      fullName: 'Paresh Desai',
-      phone: '9426011223',
-      addressType: 'HOME',
-      flatBuilding: '10, Gokul Farm',
-      streetArea: 'Nikol Gam Road',
-      city: 'Ahmedabad',
-      state: 'Gujarat',
-      stateCode: '24',
-      pincode: '382350',
-      postOffice: {
-        name: 'NIKOL S.O',
-        branchType: 'Sub Post Office',
-        deliveryStatus: 'Delivery',
-        circle: 'Gujarat',
-        district: 'Ahmedabad',
-        state: 'Gujarat',
-        facilityId: '21260350'
-      },
-      landmark: 'Near Nikol Canal',
-      isDefault: true
-    },
-    shipments: [
-      {
-        packageId: 'PKG-APE-8810-01',
-        sellerId: 'apollo_mfg_kathwada',
-        sellerName: 'Apollo Engineering Direct Hub',
-        status: 'IN_TRANSIT',
-        pickupDetail: {
-          slot: 'Morning (10:00 AM – 01:00 PM)',
-          date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-          courier: 'Priority Express Delivery (Kathwada Hub 382430)',
-          manifestId: 'MNF-KATH-20260909-01',
-          scheduledAt: new Date(Date.now() - 86400000).toISOString()
-        },
-        shippingDetail: {
-          articleNumber: 'EK382430010IN',
-          originPincode: '382430',
-          originHubName: 'Kathwada GIDC Express Logistics Hub',
-          destinationPincode: '382350',
-          destinationPostOffice: 'NIKOL S.O',
-          bookingTimestamp: new Date(Date.now() - 86400000).toISOString(),
-          weightGrams: 500,
-          chargeableWeightGrams: 500,
-          tariffAmount: 45,
-          gstAmount: 8.1,
-          totalPostage: 53.1,
-          barcode128: 'EK382430010IN',
-          manifestId: 'MNF-KATH-20260909-01',
-          carrier: 'INDIA_POST_SPEED_POST'
-        },
-        items: [createMockSprinklerItem(1)],
-        milestones: [
-          {
-            status: 'DISPATCHED',
-            timestamp: '03:40 PM',
-            location: 'Ahmedabad Sorting Hub',
-            description: 'Item dispatched from Kathwada GIDC Hub towards Nikol delivery sub-office',
-            isCompleted: true
-          }
-        ]
-      }
-    ],
-    pricingSummary: {
-      itemsTotal: 220,
-      discountTotal: 0,
-      taxableValue: 186.44,
-      cgstAmount: 16.78,
-      sgstAmount: 16.78,
-      igstAmount: 0,
-      totalTax: 33.56,
-      shippingTotal: 0,
-      grandTotal: 220
-    },
-    paymentDetail: {
-      method: 'UPI',
-      transactionId: 'TXN_UPI_8810',
-      paymentStatus: 'PAID',
-      paidAt: new Date(Date.now() - 90000000).toISOString(),
-      idempotencyKey: 'idemp_8810'
-    },
-    createdAt: new Date(Date.now() - 90000000).toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
+const DEFAULT_SAMPLE_ORDERS: Order[] = [];
 
 // Strict Session & PII State Defaults (Deterministic for Server-Side Rendering & Hydration)
 const initialUsers: UserProfile[] = [];
@@ -1003,9 +502,7 @@ const initialAddresses: DeliveryAddress[] = [];
 const initialShippingAddress: DeliveryAddress | null = null;
 const initialBillingAddress: DeliveryAddress | null = null;
 const initialActiveAddress: DeliveryAddress | null = null;
-const initialOrders: Order[] = DEFAULT_SAMPLE_ORDERS;
-
-// Track explicitly deleted product ASINs
+const initialOrders: Order[] = loadStored<Order[]>('apollo_orders', []).filter(o => !o.id?.startsWith('ord_sample_'));
 const initialDeletedProductAsins: string[] = [];
 export const deletedProductAsinsSet = new Set<string>(initialDeletedProductAsins);
 
@@ -1025,7 +522,7 @@ const initialCoupons = loadStored<Coupon[]>('apollo_coupons', [
     validFrom: '2026-01-01T00:00:00Z',
     validUntil: '2026-12-31T23:59:59Z',
     usageLimit: 100,
-    usedCount: 23,
+    usedCount: 0,
     isActive: true
   },
   {
@@ -1038,7 +535,7 @@ const initialCoupons = loadStored<Coupon[]>('apollo_coupons', [
     validFrom: '2026-01-01T00:00:00Z',
     validUntil: '2026-12-31T23:59:59Z',
     usageLimit: 500,
-    usedCount: 87,
+    usedCount: 0,
     isActive: true
   },
   {
@@ -1051,115 +548,18 @@ const initialCoupons = loadStored<Coupon[]>('apollo_coupons', [
     validFrom: '2026-01-01T00:00:00Z',
     validUntil: '2026-12-31T23:59:59Z',
     usageLimit: 50,
-    usedCount: 12,
+    usedCount: 0,
     isActive: true,
     applicableCategories: ['SS304 GRADE']
   }
 ]);
 const initialReturns = loadStored<ReturnRequest[]>('apollo_returns', []);
-const initialAuditLogs = loadStored<AdminAuditLog[]>('apollo_admin_audit_logs', [
-  {
-    id: 'log_01',
-    timestamp: new Date(Date.now() - 3600000 * 5).toISOString(),
-    userEmail: 'admin@apolloengineering.co.in',
-    actionType: 'STOCK_UPDATE',
-    entityId: 'AP-SPRINKLER-01:AE-SPRINKLER-SS304',
-    entityTitle: 'SS304 Solar Panel Sprinkler',
-    oldValue: '950',
-    newValue: '1000',
-    notes: 'Warehouse batch receipt +50 pcs from Kathwada manufacturing plant'
-  },
-  {
-    id: 'log_02',
-    timestamp: new Date(Date.now() - 3600000 * 18).toISOString(),
-    userEmail: 'admin@apolloengineering.co.in',
-    actionType: 'PRICE_UPDATE',
-    entityId: 'AP-DRAINCLIP-02:AE-DRAIN-35MM-SS304',
-    entityTitle: 'SS304 Solar Panel Auto Drain Clips (35mm)',
-    oldValue: '₹22',
-    newValue: '₹20',
-    notes: 'GST-inclusive volume discount adjustment for B2C retail tier'
-  },
-  {
-    id: 'log_03',
-    timestamp: new Date(Date.now() - 3600000 * 28).toISOString(),
-    userEmail: 'admin@apolloengineering.co.in',
-    actionType: 'MOQ_UPDATE',
-    entityId: 'AP-FULLKIT-05:AE-KIT-3KW-SS304',
-    entityTitle: 'Apollo Complete Solar Cleaning Sprinkler Full Kit (3kW - 5kW)',
-    oldValue: '1 Set',
-    newValue: '1 Set',
-    notes: 'B2B Wholesale minimum order quantity verified'
-  },
-  {
-    id: 'log_04',
-    timestamp: new Date(Date.now() - 3600000 * 40).toISOString(),
-    userEmail: 'admin@apolloengineering.co.in',
-    actionType: 'COUPON_CREATED',
-    entityId: 'COUPON:SOLAR10',
-    entityTitle: 'Discount Promo Code SOLAR10',
-    oldValue: 'Inactive',
-    newValue: '10% Discount Active',
-    notes: 'Monsoon Rooftop Plant campaign promo code launched'
-  }
-]);
-
-const initialContractorInquiries = loadStored<SolarContractorInquiry[]>('apollo_contractor_inquiries', [
-  {
-    id: 'inq_001',
-    contractorName: 'Pravin Solanki',
-    firmName: 'SuryaTech Solar EPC Solutions',
-    phone: '9825123456',
-    city: 'Rajkot',
-    state: 'Gujarat',
-    pincode: '360002',
-    panelBrand: 'Adani Solar 550W Bifacial',
-    recommendedFrameThickness: '35mm',
-    productOfInterest: 'SS304 Water Drain Clips (35mm)',
-    estimatedQty: 1200,
-    status: 'NEW',
-    notes: 'Inquired about 1200 pcs drain clips for 500kW rooftop plant in Shapar GIDC. Wants sample test.',
-    nextFollowUpDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-    createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
-    lastContactedAt: new Date(Date.now() - 3600000 * 3).toISOString()
-  },
-  {
-    id: 'inq_002',
-    contractorName: 'Kishore Dave',
-    firmName: 'Om Solar Power Infra',
-    phone: '9714567890',
-    city: 'Surat',
-    state: 'Gujarat',
-    pincode: '395007',
-    panelBrand: 'Waaree 540W Mono PERC',
-    recommendedFrameThickness: '35mm',
-    productOfInterest: 'SS304 Solar Panel Sprinklers & 35mm Mid Clamps',
-    estimatedQty: 500,
-    status: 'FOLLOW_UP',
-    notes: 'Looking for complete cleaning kit and 35mm clamps. Quoted factory price ₹20/clip and ₹220/sprinkler.',
-    nextFollowUpDate: new Date().toISOString().split('T')[0],
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    lastContactedAt: new Date(Date.now() - 86400000).toISOString()
-  },
-  {
-    id: 'inq_003',
-    contractorName: 'Anil Verma',
-    firmName: 'Rays Infra Projects Pvt Ltd',
-    phone: '9427891234',
-    city: 'Jaipur',
-    state: 'Rajasthan',
-    pincode: '302001',
-    panelBrand: 'Vikram Solar 450W SOMERA',
-    recommendedFrameThickness: '30mm',
-    productOfInterest: '30mm SS304 Water Drain Clips',
-    estimatedQty: 3000,
-    status: 'QUOTATION_SENT',
-    notes: 'Inter-state project. Requires formal PI with 18% IGST and Kathwada dispatch schedule.',
-    nextFollowUpDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-    createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-    lastContactedAt: new Date(Date.now() - 86400000 * 2).toISOString()
-  }
-]);
+const initialAuditLogs = loadStored<AdminAuditLog[]>('apollo_admin_audit_logs', []).filter(
+  l => !l.id?.startsWith('log_')
+);
+const initialContractorInquiries = loadStored<SolarContractorInquiry[]>('apollo_contractor_inquiries', []).filter(
+  i => !i.id?.startsWith('inq_00') && !i.id?.startsWith('inq_sample')
+);
 
 /**
  * Authoritative converter from local Product to API Catalog ApiProduct
@@ -1593,64 +993,113 @@ export const useStore = create<AppStore>((set, get) => ({
   authStatus: 'GUEST' as AuthStatus,
   authDestination: null as AuthDestination,
   setAuthDestination: (dest) => set({ authDestination: dest }),
+  customerProfile: null as CustomerProfile | null,
+  setCustomerProfile: (profile) => set({ customerProfile: profile }),
   checkAuthSession: async () => {
     set({ authStatus: 'AUTH_CHECKING' });
     try {
       const sessionResult = await authApi.getSession().catch(() => null);
-      const data: any = sessionResult?.authenticated ? sessionResult.user : null;
-      if (data && data.id) {
-        const isPrivileged = ['OWNER', 'SUPER_ADMIN', 'ADMIN', 'CATALOG_MANAGER', 'INVENTORY_MANAGER', 'ORDER_OPERATIONS', 'FINANCE', 'SUPPORT', 'AUDITOR'].includes(data.role) || Boolean(data.is_superuser);
-        const role: UserRole = isPrivileged
-          ? (data.role === 'OWNER' ? 'OWNER' : (data.role === 'SUPPORT' ? 'SUPPORT' : (data.role === 'AUDITOR' ? 'AUDITOR' : 'SUPER_ADMIN')))
-          : 'B2C_CUSTOMER';
-        const userPhone = data.phone || (data.email?.includes('@ape-store.com') ? data.email.split('@')[0] : '');
-
-        // Check if we have a saved profile for this user/phone in persistent storage
-        const savedUser = loadStored<UserProfile | null>('apollo_current_user', null);
-        const allUsersList = get().allUsers || [];
-        const matchedLocal = allUsersList.find(u => (u.id === data.id) || (userPhone && u.phone && u.phone.endsWith(userPhone.slice(-10))));
-
-        // Resolved authentic full name: preserve local customized name if backend returns generic Customer name
-        let resolvedName = data.full_name;
-        if (!resolvedName || resolvedName.startsWith('Customer ') || resolvedName === 'Valued Customer') {
-          if (matchedLocal?.name && !matchedLocal.name.startsWith('Customer ')) {
-            resolvedName = matchedLocal.name;
-          } else if (savedUser?.name && !savedUser.name.startsWith('Customer ')) {
-            resolvedName = savedUser.name;
-          } else {
-            resolvedName = data.full_name || (userPhone ? `Customer (${userPhone.slice(-4)})` : 'Valued Customer');
-          }
-        }
-
-        let resolvedEmail = data.email || '';
-        if (resolvedEmail.includes('@ape-store.com') && matchedLocal?.email && !matchedLocal.email.includes('@ape-store.com')) {
-          resolvedEmail = matchedLocal.email;
-        }
-
+      if (sessionResult?.authenticated && sessionResult.user) {
+        const u = sessionResult.user;
+        const prof = sessionResult.customer_profile;
+        const isPrivileged = ['OWNER', 'SUPER_ADMIN', 'ADMIN', 'CATALOG_MANAGER', 'INVENTORY_MANAGER', 'ORDER_OPERATIONS', 'FINANCE', 'SUPPORT', 'AUDITOR'].includes(u.role) || Boolean((u as any).is_superuser);
         const resolvedRole: UserRole = isPrivileged
-          ? role
-          : ((matchedLocal?.role && matchedLocal.role.includes('B2B')) ? 'B2B_BUYER' : role);
+          ? (u.role === 'OWNER' ? 'OWNER' : (u.role === 'SUPPORT' ? 'SUPPORT' : (u.role === 'AUDITOR' ? 'AUDITOR' : 'SUPER_ADMIN')))
+          : ((prof?.account_type === 'B2B' || u.role.includes('B2B')) ? 'B2B_BUYER' : 'B2C_CUSTOMER');
 
-        const mappedUser: UserProfile = {
-          id: data.id,
-          name: resolvedName,
-          email: resolvedEmail,
-          phone: userPhone || matchedLocal?.phone || '',
-          role: resolvedRole,
-          isPrime: isPrivileged || false,
-          createdAt: data.created_at || matchedLocal?.createdAt || new Date().toISOString()
+        const isSynthetic = (email?: string | null) => {
+          if (!email) return false;
+          return email.includes('@phone.apolloengineering.co.in') || email.includes('@ape-store.com');
         };
 
-        // If local profile had a customized name that backend doesn't have yet, sync to PostgreSQL backend!
-        if (resolvedName && !resolvedName.startsWith('Customer ') && data.full_name?.startsWith('Customer ')) {
-          authApi.updateProfile({ full_name: resolvedName }).catch(() => {});
+        let rawPhone = prof?.phone || u.phone || '';
+        if (!rawPhone && u.email) {
+          const phoneMatch = u.email.match(/^(\+?91)?([6-9]\d{9})@/);
+          if (phoneMatch) rawPhone = phoneMatch[2];
+        }
+        const cleanDigits = rawPhone.replace(/\D/g, '').slice(-10);
+        const resolvedPhone = cleanDigits ? `+91 ${cleanDigits}` : '';
+        const resolvedEmail = isSynthetic(u.email)
+          ? (prof?.email && !isSynthetic(prof.email) ? prof.email : '')
+          : (prof?.email || u.email || '');
+
+        let resolvedName = prof?.full_name || u.name || (u as any).full_name || '';
+        if (resolvedName.startsWith('Customer ') || resolvedName.startsWith('Customer +91') || resolvedName.startsWith('Customer (') || resolvedName === 'Valued Customer') {
+          resolvedName = '';
         }
 
+        const mappedUser: UserProfile = {
+          id: u.id,
+          name: resolvedName,
+          email: resolvedEmail,
+          phone: resolvedPhone,
+          role: resolvedRole,
+          isPrime: isPrivileged || false,
+          createdAt: u.created_at || new Date().toISOString()
+        };
+
+        // If customer has B2B organization details in PostgreSQL
+        let orgUpdates: B2BOrganization = get().currentOrg;
+        if (prof?.account_type === 'B2B' && (prof.company_name || prof.gstin)) {
+          orgUpdates = {
+            ...get().currentOrg,
+            companyName: prof.company_name || '',
+            gstin: prof.gstin || '',
+            isGstVerified: Boolean(prof.gstin),
+            stateCode: prof.gstin ? prof.gstin.slice(0, 2) : '24',
+          };
+          saveStored('apollo_org', orgUpdates);
+        }
+
+        // Fetch user's persistent addresses from backend
+        try {
+          const backendAddrs = await authApi.getCustomerAddresses();
+          if (Array.isArray(backendAddrs) && backendAddrs.length > 0) {
+            const mappedAddrs: DeliveryAddress[] = backendAddrs.map(ba => ({
+              id: ba.id,
+              userId: u.id,
+              fullName: ba.full_name,
+              phone: ba.phone,
+              alternatePhone: ba.alternate_phone || undefined,
+              addressType: ba.address_type === 'OFFICE' || ba.address_type === 'WAREHOUSE' ? 'OFFICE' : 'HOME',
+              flatBuilding: ba.flat_building,
+              streetArea: ba.street_area,
+              city: ba.city,
+              state: ba.state,
+              stateCode: ba.state_code,
+              pincode: ba.pincode,
+              postOffice: {
+                name: `${ba.city} S.O`,
+                branchType: 'Sub Post Office',
+                deliveryStatus: 'Delivery',
+                circle: ba.state,
+                district: ba.city,
+                state: ba.state,
+                facilityId: `PO-${ba.pincode}`,
+              },
+              landmark: ba.landmark || undefined,
+              companyName: ba.company_name || undefined,
+              gstin: ba.gstin || undefined,
+              isDefault: ba.is_default
+            }));
+            const defaultAddr = mappedAddrs.find(a => a.isDefault) || mappedAddrs[0];
+            set({
+              addresses: mappedAddrs,
+              activeAddress: defaultAddr,
+              shippingAddress: defaultAddr,
+              billingAddress: defaultAddr
+            });
+            saveStored('apollo_addresses', mappedAddrs);
+          }
+        } catch {}
+
         saveStored('apollo_current_user', mappedUser);
-        set({ 
-          authStatus: 'AUTHENTICATED', 
+        set({
+          authStatus: 'AUTHENTICATED',
           currentUser: mappedUser,
-          appMode: (resolvedRole === 'SUPER_ADMIN' || resolvedRole === 'OWNER') ? 'ADMIN' : (resolvedRole === 'B2B_BUYER' ? 'B2B' : get().appMode)
+          customerProfile: prof || null,
+          currentOrg: orgUpdates,
+          appMode: (resolvedRole === 'SUPER_ADMIN' || resolvedRole === 'OWNER') ? 'ADMIN' : (resolvedRole === 'B2B_BUYER' ? 'B2B' : 'B2C')
         });
         return;
       }
@@ -1658,20 +1107,16 @@ export const useStore = create<AppStore>((set, get) => ({
       // Backend unreachable or network error
     }
 
-    // Default to clean guest state ONLY if no active authenticated user is saved in localStorage
-    const existingSession = loadStored<UserProfile | null>('apollo_current_user', null);
-    if (existingSession && existingSession.id && existingSession.id !== 'usr_guest') {
-      set({
-        authStatus: 'AUTHENTICATED',
-        currentUser: existingSession,
-        appMode: existingSession.role.includes('B2B') ? 'B2B' : get().appMode
-      });
-      return;
+    // Default to clean guest state - do NOT trust client-side localStorage flags for authentication
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem('apollo_session_24h');
+      localStorage.removeItem('apollo_current_user');
     }
 
     set({ 
       authStatus: 'GUEST', 
       currentUser: GUEST_USER, 
+      customerProfile: null,
       activeAddress: null, 
       billingAddress: null, 
       shippingAddress: null 
@@ -1785,6 +1230,7 @@ export const useStore = create<AppStore>((set, get) => ({
     set({ 
       authStatus: 'GUEST',
       currentUser: GUEST_USER, 
+      customerProfile: null,
       currentOrg: EMPTY_B2B_ORG,
       activeAddress: null, 
       billingAddress: null, 
@@ -1797,6 +1243,33 @@ export const useStore = create<AppStore>((set, get) => ({
       activeTab: 'store'
     });
     get().showToast('Logged out successfully. Session terminated.', 'info');
+  },
+  logoutAll: async () => {
+    try {
+      await authApi.logoutAll();
+    } catch {}
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem('apollo_session_24h');
+      localStorage.removeItem('apollo_current_user');
+      localStorage.removeItem('apollo_org');
+      localStorage.setItem('apollo_app_mode', 'B2C');
+    }
+    set({ 
+      authStatus: 'GUEST',
+      currentUser: GUEST_USER, 
+      customerProfile: null,
+      currentOrg: EMPTY_B2B_ORG,
+      activeAddress: null, 
+      billingAddress: null, 
+      shippingAddress: null, 
+      orders: [],
+      appMode: 'B2C', 
+      isAccountModalOpen: false, 
+      isAuthModalOpen: false,
+      isCheckoutOpen: false,
+      activeTab: 'store'
+    });
+    get().showToast('Logged out of all sessions across all devices.', 'info');
   },
 
   addresses: initialAddresses,
@@ -1888,29 +1361,15 @@ export const useStore = create<AppStore>((set, get) => ({
   },
   deleteAddress: (addrId) => {
     const currentList = get().addresses;
-    if (currentList.length <= 1) {
-      get().showToast('Cannot remove the only remaining address. Please add a new address first.', 'warning');
-      return;
-    }
     const updated = currentList.filter(a => a.id !== addrId);
     saveStored('apollo_addresses', updated);
     
-    let nextActive = get().activeAddress;
-    let nextShipping = get().shippingAddress;
-    let nextBilling = get().billingAddress;
+    let nextActive = get().activeAddress?.id === addrId ? (updated[0] || null) : get().activeAddress;
+    let nextShipping = get().shippingAddress?.id === addrId ? (updated[0] || null) : get().shippingAddress;
+    let nextBilling = get().billingAddress?.id === addrId ? (updated[0] || null) : get().billingAddress;
 
-    if (nextActive?.id === addrId) {
-      nextActive = updated[0];
-      saveStored('apollo_shipping_address', nextActive);
-    }
-    if (nextShipping?.id === addrId) {
-      nextShipping = updated[0];
-      saveStored('apollo_shipping_address', nextShipping);
-    }
-    if (nextBilling?.id === addrId) {
-      nextBilling = updated[0];
-      saveStored('apollo_billing_address', nextBilling);
-    }
+    saveStored('apollo_shipping_address', nextActive);
+    saveStored('apollo_billing_address', nextBilling);
 
     set({
       addresses: updated,
@@ -2577,11 +2036,14 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
   quotePaymentMethod: 'PREPAID',
   setQuotePaymentMethod: (method) => {
     const effectiveMethod = (get().appMode === 'B2B' && method === 'COD') ? 'PREPAID' : method;
-    set({ quotePaymentMethod: effectiveMethod, quoteStatus: 'QUOTE_REQUIRED', currentQuote: null });
+    const { currentQuote, quoteStatus } = get();
+    // If a valid quote snapshot already exists, preserve QUOTE_VALID so payment toggle is instantaneous with 0ms delay and no loading spinner
+    const nextStatus = (currentQuote && quoteStatus === 'QUOTE_VALID') ? 'QUOTE_VALID' : 'QUOTE_REQUIRED';
+    set({ quotePaymentMethod: effectiveMethod, quoteStatus: nextStatus });
   },
   destinationPincode: '382430',
   setDestinationPincode: (pincode) => {
-    set({ destinationPincode: pincode, quoteStatus: 'QUOTE_REQUIRED', currentQuote: null });
+    set({ destinationPincode: pincode, quoteStatus: 'QUOTE_REQUIRED' });
   },
   fetchAuthoritativeQuote: async () => {
     const { cart, destinationPincode, quotePaymentMethod, appMode } = get();
@@ -3049,6 +2511,58 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
     saveStored('apollo_orders', updatedOrders);
     set({ orders: updatedOrders });
     get().showToast(`Order #${orderId} handed over to courier! Status: In-Transit.`, 'success');
+  },
+
+  confirmDelivered: (orderId, packageId) => {
+    const target = get().orders.find((o) => o.id === orderId || o.orderNumber === orderId);
+    const destinationCity = target?.deliveryAddress?.city || 'Destination';
+    const updatedOrders = updateOrderShipmentHelper(get().orders, orderId, packageId, (shp) => ({
+      ...shp,
+      status: 'DELIVERED' as OrderStatus,
+      milestones: [
+        ...shp.milestones,
+        {
+          status: 'DELIVERED',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          location: destinationCity,
+          description: 'Package delivered to recipient. Proof of Delivery verified.',
+          isCompleted: true
+        }
+      ]
+    }));
+    saveStored('apollo_orders', updatedOrders);
+    set({ orders: updatedOrders });
+    get().showToast(`Order #${target?.orderNumber || orderId} delivered! Proof of delivery verified.`, 'success');
+  },
+
+  verifyDirectUpiPayment: (orderId, utrNumber, notes) => {
+    const updatedOrders = get().orders.map((ord) => {
+      if (ord.id === orderId || ord.orderNumber === orderId) {
+        return {
+          ...ord,
+          paymentDetail: {
+            ...ord.paymentDetail,
+            paymentStatus: 'PAID' as const,
+            transactionId: utrNumber,
+            paidAt: new Date().toISOString(),
+          },
+          shipments: ord.shipments.map(shp => ({
+            ...shp,
+            status: (shp.status === 'PAYMENT_PENDING' ? 'CONFIRMED' : shp.status) as OrderStatus,
+          })),
+          directUpiVerification: {
+            utrNumber,
+            notes: notes || 'Verified via Admin Payment Desk',
+            verifiedAt: new Date().toISOString(),
+            verifiedBy: 'Super Admin',
+          },
+        } as any;
+      }
+      return ord;
+    });
+    saveStored('apollo_orders', updatedOrders);
+    set({ orders: updatedOrders });
+    get().showToast(`UPI payment for Order #${orderId} verified with UTR ${utrNumber}!`, 'success');
   },
 
   batchSchedulePickup: (orderIds, slot, courier, date) => {

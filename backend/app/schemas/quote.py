@@ -28,6 +28,20 @@ class QuoteItemRequest(BaseModel):
         description="Client-supplied price is forbidden; authoritative catalog price is loaded from database"
     )
 
+    @field_validator("variant_id", mode="before")
+    @classmethod
+    def sanitize_variant_id(cls, v: object) -> uuid.UUID | None:
+        if not v:
+            return None
+        if isinstance(v, uuid.UUID):
+            return v
+        if isinstance(v, str):
+            try:
+                return uuid.UUID(v.strip())
+            except ValueError:
+                return None
+        return None
+
     @model_validator(mode="after")
     def validate_identifier(self) -> "QuoteItemRequest":
         if not self.sku and not self.variant_id:

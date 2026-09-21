@@ -11,6 +11,8 @@ import { Order, OrderStatus } from '../../types';
 import { StandardThermalShippingLabel } from './StandardThermalShippingLabel';
 import { StandardTaxInvoice } from './StandardTaxInvoice';
 import { msg91OtpService } from '../../services/msg91OtpService';
+import { ceptIndiaPostService } from '../../services/ceptIndiaPostService';
+import { ORIGIN_HUB_PINCODE } from '../../services/logisticsService';
 
 export type DispatchPipelineStage = 
   | 'UNSHIPPED' 
@@ -26,6 +28,7 @@ export const EnterpriseDispatchConsole: React.FC = () => {
     schedulePickupForOrder, 
     confirmPackedAndReady, 
     confirmHandoverToCourier, 
+    confirmDelivered,
     batchSchedulePickup,
     showToast 
   } = useStore();
@@ -33,6 +36,41 @@ export const EnterpriseDispatchConsole: React.FC = () => {
   const [activeStage, setActiveStage] = useState<DispatchPipelineStage>('UNSHIPPED');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+
+  // Speed Post Statutory Tariff Calculator Modal State
+  const [isTariffCalcModalOpen, setIsTariffCalcModalOpen] = useState(false);
+  const [calcDestPincode, setCalcDestPincode] = useState('400001');
+  const [calcWeightG, setCalcWeightG] = useState(500);
+  const [calcIsCod, setCalcIsCod] = useState(false);
+  const [calcTariffResult, setCalcTariffResult] = useState<any>(null);
+  const [calcLoading, setCalcLoading] = useState(false);
+
+  // Delivered POD & Journey Modal State
+  const [selectedOrderForProof, setSelectedOrderForProof] = useState<Order | null>(null);
+
+  const handleCalculateTariff = async () => {
+    setCalcLoading(true);
+    try {
+      const res = await ceptIndiaPostService.calculateTariff({
+        destinationPincode: calcDestPincode.trim() || '382430',
+        weight: calcWeightG || 500,
+        sourcePincode: ORIGIN_HUB_PINCODE,
+      });
+      let codSurcharge = 0;
+      if (calcIsCod) {
+        codSurcharge = Math.round(res.final_amount * 0.025 * 100) / 100;
+      }
+      setCalcTariffResult({
+        ...res,
+        codSurcharge,
+        finalPayable: (res.final_amount + codSurcharge).toFixed(2),
+      });
+    } catch {
+      showToast('Could not calculate statutory tariff', 'error');
+    } finally {
+      setCalcLoading(false);
+    }
+  };
 
   // Barcode Scanner Gun Mode
   const [isBarcodeScannerActive, setIsBarcodeScannerActive] = useState(false);
@@ -231,7 +269,6 @@ export const EnterpriseDispatchConsole: React.FC = () => {
             </p>
           </div>
 
-          {/* Quick Carrier Badges */}
           {/* Carrier Badges & Scan-to-Ship Toggle */}
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -245,6 +282,26 @@ export const EnterpriseDispatchConsole: React.FC = () => {
             >
               <QrCode className="w-4 h-4 text-amber-600" />
               <span>{isBarcodeScannerActive ? 'Barcode Gun Active' : 'Scan-to-Ship Mode'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsTariffCalcModalOpen(true)}
+              className="px-3.5 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-2 shadow-xs border bg-white hover:bg-slate-50 text-slate-800 border-slate-300"
+              title="Speed Post statutory tariff calculator (Origin Kathwada 382430)"
+            >
+              <Truck className="w-4 h-4 text-blue-600" />
+              <span>Speed Post Calculator</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setManifestModalOrders(orders.filter(o => o.shipments[0]?.status === 'DISPATCHED' || o.shipments[0]?.status === 'CONFIRMED' || o.shipments[0]?.status === 'DELIVERED'))}
+              className="px-3.5 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-2 shadow-xs border bg-white hover:bg-slate-50 text-slate-800 border-slate-300"
+              title="Generate courier handover & dispatch manifest"
+            >
+              <FileText className="w-4 h-4 text-amber-600" />
+              <span>Handover Manifest</span>
             </button>
 
             <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-200 text-xs">
@@ -439,9 +496,9 @@ export const EnterpriseDispatchConsole: React.FC = () => {
               </span>
             </div>
             <div className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Delivered & Done
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Delivered & Fulfilled
             </div>
-            <div className="text-[11px] text-slate-500 mt-1">Proof of Delivery Received</div>
+            <div className="text-[11px] text-slate-500 mt-1">Proof of Delivery Verified · Complete</div>
           </button>
         </div>
       </div>
@@ -501,6 +558,44 @@ export const EnterpriseDispatchConsole: React.FC = () => {
               >
                 <FileText className="w-4 h-4" />
                 <span>Handover Manifest</span>
+              </button>
+            </div>
+          )}
+
+          {activeStage === 'IN_TRANSIT' && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const ordersToDeliver = currentStageOrders.filter(o => selectedOrderIds.length === 0 || selectedOrderIds.includes(o.id));
+                  ordersToDeliver.forEach(o => confirmDelivered(o.id, o.shipments[0]?.packageId || 'PKG-1'));
+                  setSelectedOrderIds([]);
+                  showToast(`Marked ${ordersToDeliver.length} order(s) as Delivered with Proof of Delivery!`, 'success');
+                }}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-md transition-all flex items-center gap-1.5"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Mark Delivered ({selectedOrderIds.length || currentStageOrders.length})</span>
+              </button>
+            </div>
+          )}
+
+          {activeStage === 'DELIVERED' && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentStageOrders, null, 2));
+                  const a = document.createElement('a');
+                  a.setAttribute('href', dataStr);
+                  a.setAttribute('download', `apollo_delivered_consignments_${new Date().toISOString().split('T')[0]}.json`);
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  showToast(`Exported ${currentStageOrders.length} delivered consignments manifest JSON`, 'success');
+                }}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md transition-all flex items-center gap-1.5"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export Delivered Consignments ({currentStageOrders.length})</span>
               </button>
             </div>
           )}
@@ -715,7 +810,7 @@ export const EnterpriseDispatchConsole: React.FC = () => {
                             </>
                           )}
 
-                          {/* Stage 4: In Transit Tracking */}
+                          {/* Stage 3: In Transit Tracking & Delivery */}
                           {activeStage === 'IN_TRANSIT' && (
                             <>
                               <button
@@ -726,6 +821,15 @@ export const EnterpriseDispatchConsole: React.FC = () => {
                               >
                                 <Truck className="w-3.5 h-3.5" /> Live Tracking
                               </button>
+                              <button
+                                onClick={() => {
+                                  confirmDelivered(ord.id, shp?.packageId || 'PKG-1');
+                                }}
+                                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-sm transition-all flex items-center gap-1"
+                                title="Confirm delivery and record Proof of Delivery"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Mark Delivered
+                              </button>
                               <a
                                 href={msg91OtpService.generateWhatsAppWebUrl(
                                   ord.customerPhone,
@@ -735,6 +839,45 @@ export const EnterpriseDispatchConsole: React.FC = () => {
                                 rel="noreferrer"
                                 className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-300 shadow-2xs flex items-center gap-1 transition-all"
                                 title="Send Live WhatsApp Tracking to Buyer"
+                              >
+                                <span>💬 WA</span>
+                              </a>
+                            </>
+                          )}
+
+                          {/* Stage 4: Delivered & Fulfilled Operations */}
+                          {activeStage === 'DELIVERED' && (
+                            <>
+                              <button
+                                onClick={() => setSelectedOrderForProof(ord)}
+                                className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-300 flex items-center gap-1 shadow-2xs"
+                                title="View Proof of Delivery & Milestone Timeline"
+                              >
+                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> POD & Journey
+                              </button>
+                              <button
+                                onClick={() => setPrintingInvoiceOrder(ord)}
+                                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-300 shadow-2xs flex items-center gap-1"
+                                title="Print Statutory GST Tax Invoice"
+                              >
+                                <FileText className="w-3.5 h-3.5" /> Tax Inv
+                              </button>
+                              <button
+                                onClick={() => setPrintingLabelOrder(ord)}
+                                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-300 shadow-2xs flex items-center gap-1"
+                                title="View 4x6 Thermal Shipping Label"
+                              >
+                                <Printer className="w-3.5 h-3.5" /> Label
+                              </button>
+                              <a
+                                href={msg91OtpService.generateWhatsAppWebUrl(
+                                  ord.customerPhone,
+                                  `Hello ${ord.customerName}, your Apollo Engineering industrial equipment order #${ord.orderNumber} has been successfully delivered at ${ord.deliveryAddress.city}! Thank you for choosing Apollo Engineering.`
+                                )}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-300 shadow-2xs flex items-center gap-1 transition-all"
+                                title="Send WhatsApp Delivery Confirmation to Buyer"
                               >
                                 <span>💬 WA</span>
                               </a>
@@ -963,6 +1106,218 @@ export const EnterpriseDispatchConsole: React.FC = () => {
                 className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md transition-all flex items-center gap-1.5"
               >
                 <CheckCircle2 className="w-4 h-4" /> Confirm Courier Handover
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────────────────────── */}
+      {/* MODAL: SPEED POST STATUTORY TARIFF CALCULATOR (ORIGIN: KATHWADA GIDC 382430)  */}
+      {/* ───────────────────────────────────────────────────────────────────────────── */}
+      {isTariffCalcModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 space-y-5 text-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+                  <Truck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 font-display">
+                    Speed Post Freight & Tariff Calculator
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Origin: Kathwada GIDC Central Hub (PIN: 382430) · Statutory CEPT Rate Slabs
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsTariffCalcModalOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Destination PIN Code *
+                  </label>
+                  <input
+                    type="text"
+                    value={calcDestPincode}
+                    onChange={(e) => setCalcDestPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="e.g. 400001 or 380001"
+                    maxLength={6}
+                    className="w-full text-xs font-mono border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Consignment Weight (Grams) *
+                  </label>
+                  <input
+                    type="number"
+                    value={calcWeightG}
+                    onChange={(e) => setCalcWeightG(Math.max(1, parseInt(e.target.value) || 1))}
+                    min={1}
+                    className="w-full text-xs font-mono border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="calcCodCheck"
+                  checked={calcIsCod}
+                  onChange={(e) => setCalcIsCod(e.target.checked)}
+                  className="rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+                />
+                <label htmlFor="calcCodCheck" className="text-xs font-semibold text-slate-700">
+                  Cash on Delivery (COD) · Adds 2.5% statutory surcharge
+                </label>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCalculateTariff}
+                disabled={calcLoading || calcDestPincode.length !== 6}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-black rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${calcLoading ? 'animate-spin' : ''}`} />
+                <span>Calculate Authoritative CEPT Tariff</span>
+              </button>
+
+              {calcTariffResult && (
+                <div className="p-4 bg-slate-50 rounded-2xl border border-blue-200 space-y-3 animate-fadeIn">
+                  <div className="flex items-center justify-between text-xs font-bold text-blue-900 border-b border-blue-100 pb-2">
+                    <span>Rate Breakdown for {calcDestPincode}</span>
+                    <span className="font-mono text-[11px] text-blue-700">
+                      {calcTariffResult.is_local ? 'Local Zone' : calcTariffResult.distance_km < 300 ? 'Intra-State Zone' : 'Inter-State National Zone'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                      <span className="text-[10px] text-slate-400 block font-mono">Base Tariff:</span>
+                      <span className="font-black text-slate-900">₹{calcTariffResult.base_tariff}</span>
+                    </div>
+                    <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                      <span className="text-[10px] text-slate-400 block font-mono">GST (18%):</span>
+                      <span className="font-black text-slate-900">₹{calcTariffResult.total_tax}</span>
+                    </div>
+                    <div className="p-2.5 bg-white rounded-xl border border-slate-200">
+                      <span className="text-[10px] text-slate-400 block font-mono">COD Surcharge:</span>
+                      <span className="font-black text-amber-700">₹{calcTariffResult.codSurcharge}</span>
+                    </div>
+                    <div className="p-2.5 bg-blue-50 rounded-xl border border-blue-200">
+                      <span className="text-[10px] text-blue-600 block font-mono">Total Freight:</span>
+                      <span className="font-black text-blue-950 text-sm">₹{calcTariffResult.finalPayable}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsTariffCalcModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ───────────────────────────────────────────────────────────────────────────── */}
+      {/* MODAL: PROOF OF DELIVERY (POD) & CARRIER TRACKING JOURNEY                     */}
+      {/* ───────────────────────────────────────────────────────────────────────────── */}
+      {selectedOrderForProof && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 space-y-5 text-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 font-display">
+                    Proof of Delivery & Consignment Journey
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Order #{selectedOrderForProof.orderNumber} · Recipient: {selectedOrderForProof.customerName}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedOrderForProof(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                <div>
+                  <div className="font-bold text-xs text-emerald-950">Delivered & Verified</div>
+                  <div className="text-[11px] text-emerald-800">
+                    Destination: {selectedOrderForProof.deliveryAddress.city}, {selectedOrderForProof.deliveryAddress.state} ({selectedOrderForProof.deliveryAddress.pincode})
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] font-mono text-emerald-700 uppercase">Carrier AWB</div>
+                <div className="font-mono font-bold text-xs text-slate-900">
+                  {selectedOrderForProof.shipments[0]?.shippingDetail?.articleNumber || 'EK382430018IN'}
+                </div>
+              </div>
+            </div>
+
+            {/* Milestones Journey */}
+            <div className="space-y-3">
+              <div className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono">
+                Consignment Milestones Timeline:
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                {(selectedOrderForProof.shipments[0]?.milestones || []).map((m, mIdx) => (
+                  <div key={mIdx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-3 text-xs">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <strong className="text-slate-900 font-bold">{m.status}</strong>
+                        <span className="font-mono text-[10px] text-slate-500">{m.timestamp || 'Recorded'}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-600 mt-0.5">{m.description}</div>
+                      <div className="text-[10px] font-mono text-slate-400 mt-0.5">Location: {m.location}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <button
+                onClick={() => {
+                  setPrintingInvoiceOrder(selectedOrderForProof);
+                  setSelectedOrderForProof(null);
+                }}
+                className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5"
+              >
+                <FileText className="w-3.5 h-3.5" /> Print Invoice
+              </button>
+              <button
+                onClick={() => setSelectedOrderForProof(null)}
+                className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800"
+              >
+                Done
               </button>
             </div>
           </div>

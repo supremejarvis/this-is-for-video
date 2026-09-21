@@ -24,6 +24,9 @@ is_sqlite = "sqlite" in settings.DATABASE_URL.lower()
 engine_kwargs: dict[str, Any] = {}
 if is_sqlite:
     engine_kwargs["connect_args"] = {"check_same_thread": False}
+    if ":memory:" in settings.DATABASE_URL.lower():
+        from sqlalchemy.pool import StaticPool
+        engine_kwargs["poolclass"] = StaticPool
 else:
     # Serverless-safe PostgreSQL configuration
     engine_kwargs["poolclass"] = NullPool

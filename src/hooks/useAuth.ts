@@ -7,8 +7,12 @@ import { useState } from 'react';
 export function useAuth() {
   const {
     currentUser,
+    customerProfile,
+    authStatus,
+    checkAuthSession,
     setCurrentUser,
     logout: storeLogout,
+    logoutAll: storeLogoutAll,
     isAuthModalOpen,
     setIsAuthModalOpen,
   } = useStore();
@@ -16,7 +20,7 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isAuthenticated = Boolean(currentUser);
+  const isAuthenticated = authStatus === 'AUTHENTICATED' && Boolean(currentUser?.id && currentUser.id !== 'usr_guest');
   const isAdmin = Boolean(
     currentUser?.role &&
     (currentUser.role.includes('ADMIN') || currentUser.role === 'OWNER' || currentUser.role === 'SUPER_ADMIN')
@@ -38,22 +42,13 @@ export function useAuth() {
     }
   };
 
-  const verifyOtp = async (mobile: string, otp: string) => {
+  const verifyOtp = async (mobile: string, otp: string, challengeId?: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await authApi.verifyOtp({ mobile, otp });
-      if (res.user) {
-        setCurrentUser({
-          id: res.user.id,
-          name: res.user.name || 'Customer',
-          email: res.user.email || '',
-          phone: res.user.phone || mobile,
-          role: (res.user.role as any) || 'B2C_CUSTOMER',
-          isPrime: false,
-          createdAt: res.user.created_at || new Date().toISOString(),
-        });
-      }
+      const res = await authApi.verifyOtp({ mobile, otp, challenge_id: challengeId });
+      // Recheck authoritative session to populate profile and backend state
+      await checkAuthSession();
       return res;
     } catch (err: any) {
       const msg = err?.message || 'Invalid or expired OTP';
@@ -74,17 +69,7 @@ export function useAuth() {
         totp_code: totpCode,
         totpCode,
       });
-      if (res.user) {
-        setCurrentUser({
-          id: res.user.id,
-          name: res.user.name || (res.user as any).full_name || 'Administrator',
-          email: res.user.email || email,
-          phone: res.user.phone || '',
-          role: 'SUPER_ADMIN',
-          isPrime: true,
-          createdAt: res.user.created_at || new Date().toISOString(),
-        });
-      }
+      await checkAuthSession();
       return res;
     } catch (err: any) {
       const msg = err?.message || 'Admin authentication failed';
@@ -97,16 +82,24 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      await authApi.logout();
+      await storeLogout();
     } catch {
-      // ignore network logout failures
-    } finally {
-      storeLogout();
+      // ignore
+    }
+  };
+
+  const logoutAll = async () => {
+    try {
+      await storeLogoutAll();
+    } catch {
+      // ignore
     }
   };
 
   return {
     currentUser,
+    customerProfile,
+    authStatus,
     isAuthenticated,
     isAdmin,
     isB2B,
@@ -116,6 +109,8 @@ export function useAuth() {
     verifyOtp,
     loginAdmin,
     logout,
+    logoutAll,
+    checkAuthSession,
     isAuthModalOpen,
     openAuthModal: () => setIsAuthModalOpen(true),
     closeAuthModal: () => setIsAuthModalOpen(false),

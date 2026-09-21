@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { 
   apiService, 
   validateGstinFormat, 
+  extractPanFromGstin, 
   ConnectionManager,
   fetchWithRetry,
   isGstinVerificationResult 
@@ -30,6 +31,21 @@ describe('Centralized Resilient API Service Layer', () => {
 
     expect(validateGstinFormat(shortGstin).isValid).toBe(false);
     expect(validateGstinFormat(invalidChar).isValid).toBe(false);
+  });
+
+  it('automatically extracts 10-character PAN from valid 15-character GSTIN', () => {
+    const gstin = '24ABCDE1234F1Z5';
+    const validation = validateGstinFormat(gstin);
+
+    expect(validation.isValid).toBe(true);
+    expect(validation.pan).toBe('ABCDE1234F');
+    expect(validation.stateCode).toBe('24');
+    expect(validation.stateName).toBe('Gujarat');
+
+    // Test standalone utility
+    expect(extractPanFromGstin(gstin)).toBe('ABCDE1234F');
+    expect(extractPanFromGstin('27AABCM5678G1Z2')).toBe('AABCM5678G');
+    expect(extractPanFromGstin('12345')).toBeNull();
   });
 
   it('successfully verifies GSTIN via apiService with structured legal response', async () => {

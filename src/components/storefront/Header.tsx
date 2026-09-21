@@ -14,7 +14,7 @@ export const Header: React.FC = () => {
   const { 
     appMode, setAppMode, activeTab, setActiveTab, 
     currentUser, activeAddress, cart, setIsCartDrawerOpen, 
-    setIsAddressModalOpen, setIsAuthModalOpen, searchQuery, setSearchQuery, 
+    setIsAuthModalOpen, searchQuery, setSearchQuery, 
     selectedCategory, setSelectedCategory, setSelectedProduct, wishlist
   } = useStore();
 

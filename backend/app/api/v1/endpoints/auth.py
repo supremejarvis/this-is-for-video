@@ -301,7 +301,7 @@ async def logout(
     _: Annotated[None, Depends(verify_csrf)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, str]:
-    """Revoke session in database and delete cookies."""
+    """Revoke current session in database and delete cookies."""
     raw_token = request.cookies.get(SESSION_COOKIE_NAME)
     if raw_token:
         await AuthService.revoke_session(db, raw_token)
@@ -311,18 +311,101 @@ async def logout(
     return {"message": "Logged out successfully"}
 
 
+@router.post("/logout-all")
+async def logout_all(
+    request: Request,
+    response: Response,
+    session_user: Annotated[tuple[UserSession, User], Depends(get_current_session_and_user)],
+    _: Annotated[None, Depends(verify_csrf)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, Any]:
+    """Revoke all active sessions for the authenticated user across all devices."""
+    user_session, user = session_user
+    count = await AuthService.revoke_all_user_sessions(db, user.id, reason="USER_LOGOUT_ALL")
+
+    response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
+    response.delete_cookie(key=CSRF_COOKIE_NAME, path="/")
+    return {
+        "message": "All sessions revoked successfully",
+        "revoked_count": count,
+    }
+
+
 @router.get("/session")
 @router.get("/session/", include_in_schema=False)
 async def get_session_status(
     user: Annotated[User | None, Depends(get_optional_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, Any]:
     """Check session status cleanly without raising 401 on unauthenticated visitors."""
     if user is None:
-        return {"authenticated": False, "user": None}
+        return {"authenticated": False, "user": None, "customer_profile": None}
+
+    from app.models.customer import CustomerAccountType, CustomerProfile, VerifiedIdentifier
+    from app.schemas.customer import CustomerProfileResponse
+
+    stmt_p = select(CustomerProfile).where(CustomerProfile.user_id == user.id)
+    profile = (await db.execute(stmt_p)).scalar_one_or_none()
+
+    if profile is None:
+        stmt_ident = select(VerifiedIdentifier).where(
+            VerifiedIdentifier.user_id == user.id,
+            VerifiedIdentifier.identifier_type == "PHONE",
+        )
+        ident = (await db.execute(stmt_ident)).scalar_one_or_none()
+        derived_phone = ident.normalized_identifier if ident else None
+
+        if not derived_phone and user.email:
+            import re
+            m = re.match(r"^(\+?91)?([6-9]\d{9})@", user.email)
+            if m:
+                derived_phone = m.group(2)
+
+        is_synthetic_email = "@phone.apolloengineering.co.in" in user.email or "@ape-store.com" in user.email
+        profile = CustomerProfile(
+            user_id=user.id,
+            full_name=user.full_name,
+            email=None if is_synthetic_email else user.email,
+            phone=derived_phone,
+            account_type=CustomerAccountType.B2C,
+        )
+        db.add(profile)
+        await db.commit()
+        await db.refresh(profile)
+    elif not profile.phone:
+        stmt_ident = select(VerifiedIdentifier).where(
+            VerifiedIdentifier.user_id == user.id,
+            VerifiedIdentifier.identifier_type == "PHONE",
+        )
+        ident = (await db.execute(stmt_ident)).scalar_one_or_none()
+        if ident:
+            profile.phone = ident.normalized_identifier
+            await db.commit()
+            await db.refresh(profile)
+        elif user.email:
+            import re
+            m = re.match(r"^(\+?91)?([6-9]\d{9})@", user.email)
+            if m:
+                profile.phone = m.group(2)
+                await db.commit()
+                await db.refresh(profile)
+
+    profile_data = (
+        CustomerProfileResponse.model_validate(profile).model_dump(mode="json")
+        if profile
+        else None
+    )
+
+    user_resp = UserResponse.model_validate(user)
+    if profile and profile.phone:
+        user_resp.phone = profile.phone
+
     return {
         "authenticated": True,
-        "user": UserResponse.model_validate(user).model_dump(mode="json"),
+        "user": user_resp.model_dump(mode="json"),
+        "customer_profile": profile_data,
     }
+
 
 
 @router.get("/me", response_model=UserResponse)

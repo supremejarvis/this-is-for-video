@@ -13,7 +13,6 @@ import { CheckCircle2, AlertCircle, Info, RefreshCw } from 'lucide-react';
 // Code-Split Lazy Loaded Global Modals & Drawers
 const CartDrawer = lazy(() => import('../checkout/CartDrawer').then(m => ({ default: m.CartDrawer })));
 const CheckoutModal = lazy(() => import('../checkout/CheckoutModal').then(m => ({ default: m.CheckoutModal })));
-const AddressModal = lazy(() => import('../auth/AddressModal').then(m => ({ default: m.AddressModal })));
 const AuthModal = lazy(() => import('../auth/AuthModal').then(m => ({ default: m.AuthModal })));
 const CustomerAccountModal = lazy(() => import('../auth/CustomerAccountModal').then(m => ({ default: m.CustomerAccountModal })));
 const ProductDetail = lazy(() => import('../storefront/ProductDetail').then(m => ({ default: m.ProductDetail })));
@@ -30,7 +29,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     setActiveTab, selectedProduct, 
     setSelectedProduct, toastMessage, setAppMode,
     isCheckoutOpen, isCartDrawerOpen,
-    isAddressModalOpen, isAuthModalOpen, isAccountModalOpen
+    isAuthModalOpen, isAccountModalOpen
   } = useStore();
 
   const pathname = usePathname() || '/';
@@ -129,11 +128,6 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
       {isCheckoutOpen && (
         <Suspense fallback={null}>
           <CheckoutModal />
-        </Suspense>
-      )}
-      {isAddressModalOpen && (
-        <Suspense fallback={null}>
-          <AddressModal />
         </Suspense>
       )}
       {isAuthModalOpen && (

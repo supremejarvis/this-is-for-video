@@ -3,6 +3,7 @@ import re
 from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.auth import UserResponse
+from app.schemas.customer import CustomerProfileResponse
 
 
 def normalize_phone(v: str) -> str:
@@ -22,6 +23,7 @@ def normalize_phone(v: str) -> str:
 
 class SendOtpRequest(BaseModel):
     phone: str = Field(..., description="10-digit Indian mobile number")
+    purpose: str = Field(default="CUSTOMER_LOGIN", description="Purpose of challenge")
 
     @field_validator("phone")
     @classmethod
@@ -34,12 +36,15 @@ class SendOtpResponse(BaseModel):
     message: str
     masked_phone: str
     cooldown_seconds: int = 30
+    challenge_id: str | None = None
+    expires_in_seconds: int = 600
     dev_code: str | None = None
 
 
 class VerifyOtpRequest(BaseModel):
     phone: str = Field(..., description="10-digit Indian mobile number")
     otp: str = Field(..., description="4-digit OTP code")
+    challenge_id: str | None = Field(default=None, description="Optional challenge ID")
 
     @field_validator("phone")
     @classmethod
@@ -58,8 +63,11 @@ class VerifyOtpRequest(BaseModel):
 class VerifyOtpResponse(BaseModel):
     success: bool
     is_verified: bool = True
+    is_first_time: bool = False
     message: str
     masked_phone: str
     user: UserResponse | None = None
+    customer_profile: CustomerProfileResponse | None = None
     csrf_token: str | None = None
+
 

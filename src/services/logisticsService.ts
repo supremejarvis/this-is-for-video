@@ -271,28 +271,144 @@ export async function lookupPincode(pincode: string): Promise<{
     return { pincode: cleanPin, ...PINCODE_DIRECTORY[cleanPin] };
   }
 
-  // 5. Dynamic localized fallback generator
-  const first2 = cleanPin.substring(0, 2);
+  // 5. Dynamic localized fallback generator (Instant 0ms offline prefix resolution)
+  const prefix3 = cleanPin.substring(0, 3);
+  const prefix2 = cleanPin.substring(0, 2);
+
   let state = 'Gujarat';
   let stateCode = '24';
-  let district = 'Ahmedabad Area';
+  let district = 'Ahmedabad';
 
-  if (first2 === '38' || first2 === '39' || first2 === '36' || first2 === '37') {
+  // Comprehensive Indian Postal Circle & District Prefix Mapping
+  const prefixMap: Record<string, { state: string; stateCode: string; district: string }> = {
+    // Gujarat (24)
+    '380': { state: 'Gujarat', stateCode: '24', district: 'Ahmedabad' },
+    '382': { state: 'Gujarat', stateCode: '24', district: 'Ahmedabad / Gandhinagar' },
+    '383': { state: 'Gujarat', stateCode: '24', district: 'Sabarkantha' },
+    '384': { state: 'Gujarat', stateCode: '24', district: 'Mehsana' },
+    '385': { state: 'Gujarat', stateCode: '24', district: 'Banaskantha' },
+    '387': { state: 'Gujarat', stateCode: '24', district: 'Kheda / Nadiad' },
+    '388': { state: 'Gujarat', stateCode: '24', district: 'Anand' },
+    '390': { state: 'Gujarat', stateCode: '24', district: 'Vadodara' },
+    '391': { state: 'Gujarat', stateCode: '24', district: 'Vadodara Rural' },
+    '392': { state: 'Gujarat', stateCode: '24', district: 'Bharuch' },
+    '393': { state: 'Gujarat', stateCode: '24', district: 'Ankleshwar' },
+    '394': { state: 'Gujarat', stateCode: '24', district: 'Surat Rural' },
+    '395': { state: 'Gujarat', stateCode: '24', district: 'Surat City' },
+    '396': { state: 'Gujarat', stateCode: '24', district: 'Valsad / Vapi' },
+    '360': { state: 'Gujarat', stateCode: '24', district: 'Rajkot' },
+    '361': { state: 'Gujarat', stateCode: '24', district: 'Jamnagar' },
+    '362': { state: 'Gujarat', stateCode: '24', district: 'Junagadh' },
+    '363': { state: 'Gujarat', stateCode: '24', district: 'Surendranagar' },
+    '364': { state: 'Gujarat', stateCode: '24', district: 'Bhavnagar' },
+    '365': { state: 'Gujarat', stateCode: '24', district: 'Amreli' },
+    '370': { state: 'Gujarat', stateCode: '24', district: 'Kutch / Gandhidham' },
+
+    // Maharashtra (27)
+    '400': { state: 'Maharashtra', stateCode: '27', district: 'Mumbai' },
+    '401': { state: 'Maharashtra', stateCode: '27', district: 'Thane / Palghar' },
+    '411': { state: 'Maharashtra', stateCode: '27', district: 'Pune' },
+    '412': { state: 'Maharashtra', stateCode: '27', district: 'Pune Rural' },
+    '416': { state: 'Maharashtra', stateCode: '27', district: 'Kolhapur' },
+    '421': { state: 'Maharashtra', stateCode: '27', district: 'Kalyan' },
+    '422': { state: 'Maharashtra', stateCode: '27', district: 'Nashik' },
+    '431': { state: 'Maharashtra', stateCode: '27', district: 'Chhatrapati Sambhaji Nagar' },
+    '440': { state: 'Maharashtra', stateCode: '27', district: 'Nagpur' },
+
+    // Delhi (07)
+    '110': { state: 'Delhi', stateCode: '07', district: 'New Delhi' },
+
+    // Haryana (06) & Uttar Pradesh (09) NCR
+    '121': { state: 'Haryana', stateCode: '06', district: 'Faridabad' },
+    '122': { state: 'Haryana', stateCode: '06', district: 'Gurugram' },
+    '201': { state: 'Uttar Pradesh', stateCode: '09', district: 'Noida / Ghaziabad' },
+    '208': { state: 'Uttar Pradesh', stateCode: '09', district: 'Kanpur' },
+    '226': { state: 'Uttar Pradesh', stateCode: '09', district: 'Lucknow' },
+    '282': { state: 'Uttar Pradesh', stateCode: '09', district: 'Agra' },
+
+    // Rajasthan (08)
+    '302': { state: 'Rajasthan', stateCode: '08', district: 'Jaipur' },
+    '342': { state: 'Rajasthan', stateCode: '08', district: 'Jodhpur' },
+    '313': { state: 'Rajasthan', stateCode: '08', district: 'Udaipur' },
+
+    // Madhya Pradesh (23)
+    '452': { state: 'Madhya Pradesh', stateCode: '23', district: 'Indore' },
+    '462': { state: 'Madhya Pradesh', stateCode: '23', district: 'Bhopal' },
+
+    // Karnataka (29)
+    '560': { state: 'Karnataka', stateCode: '29', district: 'Bengaluru' },
+    '570': { state: 'Karnataka', stateCode: '29', district: 'Mysuru' },
+
+    // Telangana (36) & Andhra Pradesh (37)
+    '500': { state: 'Telangana', stateCode: '36', district: 'Hyderabad' },
+    '530': { state: 'Andhra Pradesh', stateCode: '37', district: 'Visakhapatnam' },
+
+    // Tamil Nadu (33)
+    '600': { state: 'Tamil Nadu', stateCode: '33', district: 'Chennai' },
+    '641': { state: 'Tamil Nadu', stateCode: '33', district: 'Coimbatore' },
+
+    // Kerala (32)
+    '682': { state: 'Kerala', stateCode: '32', district: 'Kochi' },
+
+    // West Bengal (19)
+    '700': { state: 'West Bengal', stateCode: '19', district: 'Kolkata' },
+
+    // Bihar (10)
+    '800': { state: 'Bihar', stateCode: '10', district: 'Patna' },
+  };
+
+  if (prefixMap[prefix3]) {
+    state = prefixMap[prefix3].state;
+    stateCode = prefixMap[prefix3].stateCode;
+    district = prefixMap[prefix3].district;
+  } else if (prefix2 === '38' || prefix2 === '39' || prefix2 === '36' || prefix2 === '37') {
     state = 'Gujarat';
     stateCode = '24';
-    district = 'Ahmedabad Area';
-  } else if (first2 === '11') {
-    state = 'Delhi';
-    stateCode = '07';
-    district = 'Central Delhi';
-  } else if (first2 === '40' || first2 === '41' || first2 === '42') {
+    district = 'Gujarat Industrial Hub';
+  } else if (prefix2 === '40' || prefix2 === '41' || prefix2 === '42' || prefix2 === '43' || prefix2 === '44') {
     state = 'Maharashtra';
     stateCode = '27';
-    district = 'Western Division';
-  } else if (first2 === '56' || first2 === '57') {
+    district = 'Maharashtra Division';
+  } else if (prefix2 === '11') {
+    state = 'Delhi';
+    stateCode = '07';
+    district = 'Delhi NCR';
+  } else if (prefix2 === '12' || prefix2 === '13') {
+    state = 'Haryana';
+    stateCode = '06';
+    district = 'Haryana Hub';
+  } else if (prefix2 === '20' || prefix2 === '21' || prefix2 === '22' || prefix2 === '24' || prefix2 === '28') {
+    state = 'Uttar Pradesh';
+    stateCode = '09';
+    district = 'Uttar Pradesh Hub';
+  } else if (prefix2 === '30' || prefix2 === '31' || prefix2 === '32' || prefix2 === '33' || prefix2 === '34') {
+    state = 'Rajasthan';
+    stateCode = '08';
+    district = 'Rajasthan Hub';
+  } else if (prefix2 === '45' || prefix2 === '46' || prefix2 === '47' || prefix2 === '48') {
+    state = 'Madhya Pradesh';
+    stateCode = '23';
+    district = 'Madhya Pradesh Hub';
+  } else if (prefix2 === '56' || prefix2 === '57' || prefix2 === '58' || prefix2 === '59') {
     state = 'Karnataka';
     stateCode = '29';
-    district = 'Bengaluru Division';
+    district = 'Karnataka Hub';
+  } else if (prefix2 === '50' || prefix2 === '51' || prefix2 === '52' || prefix2 === '53') {
+    state = 'Telangana';
+    stateCode = '36';
+    district = 'Telangana / AP Hub';
+  } else if (prefix2 === '60' || prefix2 === '61' || prefix2 === '62' || prefix2 === '63' || prefix2 === '64') {
+    state = 'Tamil Nadu';
+    stateCode = '33';
+    district = 'Tamil Nadu Hub';
+  } else if (prefix2 === '67' || prefix2 === '68' || prefix2 === '69') {
+    state = 'Kerala';
+    stateCode = '32';
+    district = 'Kerala Hub';
+  } else if (prefix2 === '70' || prefix2 === '71' || prefix2 === '72' || prefix2 === '73' || prefix2 === '74') {
+    state = 'West Bengal';
+    stateCode = '19';
+    district = 'West Bengal Hub';
   }
 
   const fallbackResult = {
@@ -300,8 +416,8 @@ export async function lookupPincode(pincode: string): Promise<{
     state,
     stateCode,
     postOffices: [
-      { name: `MAIN SUB POST OFFICE (${cleanPin}) S.O.`, branchType: 'Sub Post Office', deliveryStatus: 'Delivery', circle: state, district, state, facilityId: `IN${cleanPin}_01` },
-      { name: `TOWN BRANCH POST OFFICE (${cleanPin}) B.O.`, branchType: 'Branch Post Office', deliveryStatus: 'Delivery', circle: state, district, state, facilityId: `IN${cleanPin}_02` }
+      { name: `${district.toUpperCase()} S.O. (${cleanPin})`, branchType: 'Sub Post Office', deliveryStatus: 'Delivery', circle: state, district, state, facilityId: `IN${cleanPin}_01` },
+      { name: `${district.toUpperCase()} B.O. (${cleanPin})`, branchType: 'Branch Post Office', deliveryStatus: 'Delivery', circle: state, district, state, facilityId: `IN${cleanPin}_02` }
     ]
   };
 

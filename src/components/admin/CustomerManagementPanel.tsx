@@ -24,90 +24,58 @@ interface CustomerRecord {
   joinedDate: string;
 }
 
-const INITIAL_CUSTOMERS: CustomerRecord[] = [
-  {
-    id: 'cust_01',
-    name: 'Nilesh Patel',
-    phone: '9825011223',
-    email: 'nilesh@apolloengineering.co.in',
-    type: 'B2B_ORGANIZATION',
-    companyName: 'Apollo Engineering & Solar EPC Partners',
-    gstin: '24AAACP9999P1Z2',
-    isGstVerified: true,
-    creditTerms: 'NET_30',
-    creditLimit: 1500000,
-    totalOrders: 18,
-    lifetimeValue: 245000,
-    location: 'Kathwada GIDC, Ahmedabad (382430)',
-    joinedDate: '2025-02-10'
-  },
-  {
-    id: 'cust_02',
-    name: 'Rajesh Sharma',
-    phone: '9825012345',
-    email: 'rajesh.patel@gmail.com',
-    type: 'B2C_RETAIL',
-    companyName: 'Solar EPC Contractor (Nikol)',
-    gstin: '24AAAPA1234A1Z5',
-    isGstVerified: true,
-    creditTerms: 'ADVANCE',
-    creditLimit: 50000,
-    totalOrders: 4,
-    lifetimeValue: 38400,
-    location: 'Ahmedabad (380015)',
-    joinedDate: '2025-06-15'
-  },
-  {
-    id: 'cust_03',
-    name: 'SunPower Renewable Infra Pvt Ltd',
-    phone: '9909033445',
-    email: 'procurement@sunpowerinfra.com',
-    type: 'B2B_ORGANIZATION',
-    companyName: 'SunPower Renewable Infra Private Limited',
-    gstin: '24AACCS5544B1ZV',
-    isGstVerified: false,
-    creditTerms: 'NET_15',
-    creditLimit: 500000,
-    totalOrders: 6,
-    lifetimeValue: 185000,
-    location: 'Vadodara (390001)',
-    joinedDate: '2025-08-01'
-  },
-  {
-    id: 'cust_04',
-    name: 'Manoj Verma',
-    phone: '9724088991',
-    email: 'm.verma@gmail.com',
-    type: 'B2C_RETAIL',
-    isGstVerified: false,
-    creditTerms: 'ADVANCE',
-    creditLimit: 0,
-    totalOrders: 2,
-    lifetimeValue: 3960,
-    location: 'Surat (395007)',
-    joinedDate: '2025-09-02'
-  },
-  {
-    id: 'cust_05',
-    name: 'Rajasthan Solar Green Energy Ltd',
-    phone: '9414022334',
-    email: 'billing@rajasthansolar.co.in',
-    type: 'B2B_ORGANIZATION',
-    companyName: 'Rajasthan Solar Green Energy Limited',
-    gstin: '08AABCR8877K1Z4',
-    isGstVerified: true,
-    creditTerms: 'NET_30',
-    creditLimit: 800000,
-    totalOrders: 9,
-    lifetimeValue: 312000,
-    location: 'Jaipur (302001)',
-    joinedDate: '2025-03-20'
-  }
-];
-
 export const CustomerManagementPanel: React.FC = () => {
-  const { showToast } = useStore();
-  const [customers, setCustomers] = useState<CustomerRecord[]>(INITIAL_CUSTOMERS);
+  const { showToast, orders } = useStore();
+
+  // Derive genuine customer accounts dynamically from real placed orders
+  const derivedCustomers = React.useMemo<CustomerRecord[]>(() => {
+    if (!orders || orders.length === 0) return [];
+
+    const customerMap = new Map<string, CustomerRecord>();
+    orders.forEach((order) => {
+      const email = order.customerEmail || '';
+      const phone = order.deliveryAddress?.phone || order.customerPhone || '';
+      const key = email || phone || order.id;
+      if (!key) return;
+
+      const existing = customerMap.get(key);
+      const isB2B = Boolean(order.gstin || order.orderType === 'B2B');
+      const orderTotal = Number(order.pricingSummary?.grandTotal) || 0;
+
+      if (existing) {
+        existing.totalOrders += 1;
+        existing.lifetimeValue += orderTotal;
+        if (order.gstin && !existing.gstin) {
+          existing.gstin = order.gstin;
+        }
+      } else {
+        customerMap.set(key, {
+          id: `cust_${key.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          name: order.customerName || order.deliveryAddress?.fullName || 'Customer',
+          phone: phone,
+          email: email,
+          type: isB2B ? 'B2B_ORGANIZATION' : 'B2C_RETAIL',
+          companyName: isB2B ? order.customerName : undefined,
+          gstin: order.gstin || undefined,
+          isGstVerified: Boolean(order.gstin),
+          creditTerms: isB2B ? 'NET_30' : 'ADVANCE',
+          creditLimit: isB2B ? 500000 : 0,
+          totalOrders: 1,
+          lifetimeValue: orderTotal,
+          location: order.deliveryAddress ? `${order.deliveryAddress.city} (${order.deliveryAddress.pincode})` : 'India',
+          joinedDate: order.createdAt ? order.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
+        });
+      }
+    });
+    return Array.from(customerMap.values());
+  }, [orders]);
+
+  const [customers, setCustomers] = useState<CustomerRecord[]>(derivedCustomers);
+
+  React.useEffect(() => {
+    setCustomers(derivedCustomers);
+  }, [derivedCustomers]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | 'B2B' | 'B2C' | 'UNVERIFIED_GST'>('ALL');
   const [validatingGstinId, setValidatingGstinId] = useState<string | null>(null);
@@ -273,7 +241,22 @@ export const CustomerManagementPanel: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredCustomers.map((c) => {
+              {filteredCustomers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-12 text-center">
+                    <div className="flex flex-col items-center justify-center max-w-md mx-auto">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mb-3">
+                        <Users className="w-6 h-6" />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-800 mb-1">No Customer Records Found</h4>
+                      <p className="text-xs text-slate-500 font-sans">
+                        {searchQuery ? 'No customers match your active search or filter criteria.' : 'Registered retail and B2B customers will automatically appear here as accounts register and orders are placed.'}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredCustomers.map((c) => {
                 const gstinCheck = c.gstin ? validateGstinFormat(c.gstin) : null;
                 const whatsappMsg = `Hello ${c.name}, Apollo Engineering welcomes you! Regarding your industrial solar equipment orders, please let us know how we can assist you today.`;
                 const whatsappUrl = `https://api.whatsapp.com/send?phone=91${c.phone.replace(/\D/g, '')}&text=${encodeURIComponent(whatsappMsg)}`;
@@ -393,7 +376,7 @@ export const CustomerManagementPanel: React.FC = () => {
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>

@@ -13,6 +13,20 @@ class OrderItemInput(BaseModel):
     quantity: int = Field(..., gt=0, le=100000)
     variant_id: uuid.UUID | None = None
 
+    @field_validator("variant_id", mode="before")
+    @classmethod
+    def sanitize_variant_id(cls, v: object) -> uuid.UUID | None:
+        if not v:
+            return None
+        if isinstance(v, uuid.UUID):
+            return v
+        if isinstance(v, str):
+            try:
+                return uuid.UUID(v.strip())
+            except ValueError:
+                return None
+        return None
+
 
 class CustomerInfoInput(BaseModel):
     model_config = ConfigDict(extra="forbid")

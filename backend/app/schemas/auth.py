@@ -55,6 +55,7 @@ class UserResponse(BaseModel):
     is_active: bool
     mfa_enabled: bool
     created_at: datetime
+    phone: str | None = None
 
 
 class LoginSuccessResponse(BaseModel):

@@ -16,7 +16,7 @@ export { apiClient, ApiClient, ApiError } from './client';
 export type { ApiResponse, RequestOptions } from './client';
 
 export { authApi, AuthApi } from './authApi';
-export type { AuthUser, LoginResponse, AdminLoginRequest, SendOtpRequest, SendOtpResponse, VerifyOtpResponse } from './authApi';
+export type { AuthUser, LoginResponse, AdminLoginRequest, SendOtpRequest, SendOtpResponse, VerifyOtpResponse, CustomerProfile, CustomerAddress, ActiveSession } from './authApi';
 
 export { catalogApi, CatalogApi } from './catalogApi';
 

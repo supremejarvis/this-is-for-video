@@ -15,6 +15,9 @@ import { lookupPincode } from '../../services/logisticsService';
 import { ORIGIN_HUB_PINCODE } from '../../constants';
 import { GstInvoice } from '../logistics/GstInvoice';
 import { useNavigate } from '../../lib/navigation';
+import { authApi, ActiveSession } from '../../services/api';
+import { validateGstinFormat, extractPanFromGstin } from '../../services/apiService';
+import { orderService } from '../../services/order.service';
 
 export const CustomerAccountPage: React.FC = () => {
   const navigate = useNavigate();
@@ -22,11 +25,33 @@ export const CustomerAccountPage: React.FC = () => {
     currentUser, updateUserProfile, currentOrg, updateOrgDetails,
     activeAddress, billingAddress, setBillingAddress, 
     shippingAddress, setShippingAddress, isShippingSameAsBilling, setIsShippingSameAsBilling,
-    orders, logout, showToast, setActiveTab, 
+    orders, logout, logoutAll, showToast, setActiveTab, 
     cart, addToCart, setIsCheckoutOpen, setIsCartDrawerOpen, appMode 
   } = useStore();
 
-  const [activeSubTab, setActiveSubTab] = useState<'PROFILE' | 'ORDERS' | 'WARRANTY'>('PROFILE');
+  const [activeSubTab, setActiveSubTab] = useState<'PROFILE' | 'ORDERS' | 'SECURITY' | 'WARRANTY'>('PROFILE');
+  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+
+  const fetchSessions = async () => {
+    setIsLoadingSessions(true);
+    try {
+      const sess = await authApi.getActiveSessions();
+      setActiveSessions(sess || []);
+    } catch {
+      setActiveSessions([]);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSubTab === 'SECURITY') {
+      fetchSessions();
+    } else if (activeSubTab === 'ORDERS' && currentUser.role !== 'GUEST') {
+      orderService.getMyOrders().catch(() => {});
+    }
+  }, [activeSubTab, currentUser]);
   const [selectedInvoiceOrder, setSelectedInvoiceOrder] = useState<Order | null>(null);
   const [orderFilter, setOrderFilter] = useState<'ALL' | 'IN_TRANSIT' | 'DELIVERED' | 'CONFIRMED'>('ALL');
   const [visibleOrderCount, setVisibleOrderCount] = useState<number>(4);
@@ -34,18 +59,36 @@ export const CustomerAccountPage: React.FC = () => {
   // ─────────────────────────────────────────────────────────────
   // 0) PROFILE EDITING STATE & FORM
   // ─────────────────────────────────────────────────────────────
+  const isSyntheticEmail = (email?: string | null) => {
+    if (!email) return true;
+    return email.includes('@ape-store.com') || email.includes('@phone.');
+  };
+
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileName, setProfileName] = useState(currentUser.name || '');
   const [profilePhone, setProfilePhone] = useState(currentUser.phone || '');
-  const [profileEmail, setProfileEmail] = useState(currentUser.email || '');
+  const [profileEmail, setProfileEmail] = useState(isSyntheticEmail(currentUser.email) ? '' : (currentUser.email || ''));
   const [profileCompanyName, setProfileCompanyName] = useState(currentOrg.companyName || '');
   const [profileGstin, setProfileGstin] = useState(currentOrg.gstin || '');
   const [profilePan, setProfilePan] = useState(currentOrg.pan || '');
 
+  const handleGstinChange = (raw: string) => {
+    const clean = raw.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 15);
+    setProfileGstin(clean);
+    if (clean.length >= 12) {
+      const extracted = extractPanFromGstin(clean);
+      if (extracted) {
+        setProfilePan(extracted);
+      }
+    }
+  };
+
+  const gstValidation = profileGstin ? validateGstinFormat(profileGstin) : { isValid: false };
+
   useEffect(() => {
     setProfileName(currentUser.name || '');
     setProfilePhone(currentUser.phone || '');
-    setProfileEmail(currentUser.email || '');
+    setProfileEmail(isSyntheticEmail(currentUser.email) ? '' : (currentUser.email || ''));
     setProfileCompanyName(currentOrg.companyName || '');
     setProfileGstin(currentOrg.gstin || '');
     setProfilePan(currentOrg.pan || '');
@@ -247,15 +290,28 @@ export const CustomerAccountPage: React.FC = () => {
     const trimmedPhone = profilePhone.trim();
     const trimmedEmail = profileEmail.trim();
 
+    const trimmedCompanyName = profileCompanyName.trim();
+    const trimmedGstin = profileGstin.trim().toUpperCase();
+    let trimmedPan = profilePan.trim().toUpperCase();
+
+    if (trimmedGstin) {
+      const gstCheck = validateGstinFormat(trimmedGstin);
+      if (!gstCheck.isValid) {
+        showToast(gstCheck.reason || 'Please enter a valid 15-character GSTIN (e.g. 24ABCDE1234F1Z5)', 'error');
+        return;
+      }
+      if (!trimmedPan) {
+        trimmedPan = extractPanFromGstin(trimmedGstin) || '';
+        setProfilePan(trimmedPan);
+      }
+    }
+
     updateUserProfile({
       name: trimmedName,
       phone: trimmedPhone,
       email: trimmedEmail,
     });
 
-    const trimmedCompanyName = profileCompanyName.trim();
-    const trimmedGstin = profileGstin.trim().toUpperCase();
-    const trimmedPan = profilePan.trim().toUpperCase();
     const hasB2bData = Boolean(trimmedGstin || trimmedCompanyName);
 
     if (hasB2bData) {
@@ -281,6 +337,17 @@ export const CustomerAccountPage: React.FC = () => {
       }
       showToast('Profile saved. Switched to Retail (B2C) customer.', 'success');
     }
+
+    // Authoritatively sync to PostgreSQL backend
+    authApi.updateCustomerProfile({
+      full_name: trimmedName,
+      phone: trimmedPhone || undefined,
+      email: trimmedEmail || undefined,
+      account_type: hasB2bData ? 'B2B' : 'B2C',
+      company_name: hasB2bData ? trimmedCompanyName : undefined,
+      gstin: hasB2bData ? trimmedGstin : undefined,
+      pan_number: hasB2bData ? trimmedPan : undefined,
+    }).catch(() => {});
 
     setIsEditingProfile(false);
   };
@@ -404,7 +471,7 @@ export const CustomerAccountPage: React.FC = () => {
               </span>
             </div>
             <div className="text-[11px] text-slate-500 font-mono">
-              {currentUser.phone || '+91 85116 26267'}
+              {currentUser.phone || 'No mobile linked'}
             </div>
           </div>
         </div>
@@ -445,7 +512,20 @@ export const CustomerAccountPage: React.FC = () => {
               )}
             </button>
 
-            {/* Tab 3: Warranty */}
+            {/* Tab 3: Security & Sessions */}
+            <button
+              onClick={() => setActiveSubTab('SECURITY')}
+              className={`px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${
+                activeSubTab === 'SECURITY'
+                  ? 'bg-[#0054A6] text-white shadow-sm font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
+              }`}
+            >
+              <ShieldCheck className={`w-4 h-4 ${activeSubTab === 'SECURITY' ? 'text-amber-300' : 'text-slate-500'}`} />
+              <span>Security & Sessions</span>
+            </button>
+
+            {/* Tab 4: Warranty */}
             <button
               onClick={() => setActiveSubTab('WARRANTY')}
               className={`px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${
@@ -572,14 +652,27 @@ export const CustomerAccountPage: React.FC = () => {
                       <span className="text-[10px] uppercase font-bold text-slate-400 font-mono">Mobile (OTP Verified)</span>
                       <div className="text-slate-900 font-mono font-bold text-sm flex items-center gap-1.5">
                         <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>{currentUser.phone || '+91 85116 26267'}</span>
+                        <span>{currentUser.phone || <span className="text-slate-400 font-sans italic">No mobile linked</span>}</span>
                       </div>
                     </div>
                     <div className="space-y-1">
                       <span className="text-[10px] uppercase font-bold text-slate-400 font-mono">Email Address</span>
                       <div className="text-slate-900 font-mono text-xs flex items-center gap-1.5">
                         <Mail className="w-3.5 h-3.5 text-[#0054A6]" />
-                        <span>{currentUser.email || 'client@apolloengineering.co.in'}</span>
+                        <span>
+                          {currentUser.email && !currentUser.email.includes('@ape-store.com') && !currentUser.email.includes('@phone.') ? (
+                            currentUser.email
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setIsEditingProfile(true)}
+                              className="text-[#0054A6] hover:underline font-sans font-semibold text-xs flex items-center gap-1"
+                            >
+                              <span className="text-slate-400 italic font-normal">No email registered</span>
+                              <span className="text-[10px] bg-blue-50 text-[#0054A6] px-1.5 py-0.5 rounded border border-blue-200">+ Add Email</span>
+                            </button>
+                          )}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -616,19 +709,18 @@ export const CustomerAccountPage: React.FC = () => {
                         required
                         value={profilePhone}
                         onChange={(e) => setProfilePhone(e.target.value)}
-                        placeholder="+91 85116 26267"
+                        placeholder="+91 98250 12345"
                         className="w-full h-9 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-medium focus:ring-2 focus:ring-[#0054A6] focus:outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-slate-700 font-bold mb-1">Email Address *</label>
+                      <label className="block text-slate-700 font-bold mb-1">Email Address (Optional)</label>
                       <input
                         type="email"
-                        required
                         value={profileEmail}
                         onChange={(e) => setProfileEmail(e.target.value)}
-                        placeholder="email@example.com"
+                        placeholder="yourname@gmail.com (Optional)"
                         className="w-full h-9 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono focus:ring-2 focus:ring-[#0054A6] focus:outline-none"
                       />
                     </div>
@@ -674,22 +766,49 @@ export const CustomerAccountPage: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block text-slate-700 font-bold mb-1">Company GSTIN (18% ITC)</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-slate-700 font-bold">Company GSTIN (18% ITC)</label>
+                          {gstValidation.isValid && (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              ✓ Valid ({gstValidation.stateName})
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="text"
+                          maxLength={15}
                           value={profileGstin}
-                          onChange={(e) => setProfileGstin(e.target.value.toUpperCase())}
+                          onChange={(e) => handleGstinChange(e.target.value)}
                           placeholder="e.g. 24ABCDE1234F1Z5"
-                          className="w-full h-9 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-bold uppercase focus:ring-2 focus:ring-[#0054A6] focus:outline-none"
+                          className={`w-full h-9 px-3 bg-white border rounded-xl text-slate-900 font-mono font-bold uppercase focus:ring-2 focus:outline-none ${
+                            profileGstin.length === 15 
+                              ? (gstValidation.isValid ? 'border-emerald-500 focus:ring-emerald-500' : 'border-rose-500 focus:ring-rose-500')
+                              : 'border-slate-300 focus:ring-[#0054A6]'
+                          }`}
                         />
+                        {profileGstin.length > 0 && !gstValidation.isValid && (
+                          <p className="text-[11px] text-amber-600 mt-1 font-medium">
+                            {profileGstin.length < 15
+                              ? `15 alphanumeric characters required (${profileGstin.length}/15)`
+                              : 'Invalid GST format. Must be 2-digit State + 10-char PAN + Entity + Z + Check Digit'}
+                          </p>
+                        )}
                       </div>
 
                       <div>
-                        <label className="block text-slate-700 font-bold mb-1">Company PAN</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-slate-700 font-bold">Company PAN</label>
+                          {profileGstin.length >= 12 && profilePan && (
+                            <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                              ⚡ Extracted from GSTIN
+                            </span>
+                          )}
+                        </div>
                         <input
                           type="text"
+                          maxLength={10}
                           value={profilePan}
-                          onChange={(e) => setProfilePan(e.target.value.toUpperCase())}
+                          onChange={(e) => setProfilePan(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 10))}
                           placeholder="e.g. ABCDE1234F"
                           className="w-full h-9 px-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-bold uppercase focus:ring-2 focus:ring-[#0054A6] focus:outline-none"
                         />
@@ -1211,10 +1330,22 @@ export const CustomerAccountPage: React.FC = () => {
           {/* SECTION 2: LIVE EXPRESS ORDERS & INVOICES */}
           {/* ───────────────────────────────────────────────────────────── */}
           {activeSubTab === 'ORDERS' && (() => {
-            const inTransitCount = orders.filter(o => o.shipments?.[0]?.status === 'IN_TRANSIT').length;
-            const deliveredCount = orders.filter(o => o.shipments?.[0]?.status === 'DELIVERED').length;
-            const confirmedCount = orders.filter(o => o.shipments?.[0]?.status === 'CONFIRMED' || !o.shipments?.[0]?.status).length;
-            const filteredOrders = orders.filter(o => {
+            const userOrders = orders.filter((o) => {
+              if (!currentUser || currentUser.role === 'GUEST') return false;
+              if (o.userId && o.userId === currentUser.id) return true;
+              const cleanUserPhone = currentUser.phone ? currentUser.phone.replace(/\D/g, '').slice(-10) : '';
+              const cleanOrderPhone = o.customerPhone ? o.customerPhone.replace(/\D/g, '').slice(-10) : '';
+              if (cleanUserPhone && cleanOrderPhone && cleanUserPhone === cleanOrderPhone) return true;
+              const cleanUserEmail = currentUser.email && !currentUser.email.includes('@ape-store.com') && !currentUser.email.includes('@phone.') ? currentUser.email.toLowerCase().trim() : '';
+              const cleanOrderEmail = o.customerEmail ? o.customerEmail.toLowerCase().trim() : '';
+              if (cleanUserEmail && cleanOrderEmail && cleanUserEmail === cleanOrderEmail) return true;
+              return false;
+            });
+
+            const inTransitCount = userOrders.filter(o => o.shipments?.[0]?.status === 'IN_TRANSIT').length;
+            const deliveredCount = userOrders.filter(o => o.shipments?.[0]?.status === 'DELIVERED').length;
+            const confirmedCount = userOrders.filter(o => o.shipments?.[0]?.status === 'CONFIRMED' || !o.shipments?.[0]?.status).length;
+            const filteredOrders = userOrders.filter(o => {
               if (orderFilter === 'IN_TRANSIT') return o.shipments?.[0]?.status === 'IN_TRANSIT';
               if (orderFilter === 'DELIVERED') return o.shipments?.[0]?.status === 'DELIVERED';
               if (orderFilter === 'CONFIRMED') return o.shipments?.[0]?.status === 'CONFIRMED' || !o.shipments?.[0]?.status;
@@ -1253,7 +1384,7 @@ export const CustomerAccountPage: React.FC = () => {
                 {/* Filter Tabs */}
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
                   {[
-                    { id: 'ALL', label: 'All Orders', count: orders.length },
+                    { id: 'ALL', label: 'All Orders', count: userOrders.length },
                     { id: 'IN_TRANSIT', label: 'In Transit', count: inTransitCount },
                     { id: 'DELIVERED', label: 'Delivered', count: deliveredCount },
                     { id: 'CONFIRMED', label: 'Confirmed / Processing', count: confirmedCount },
@@ -1280,20 +1411,35 @@ export const CustomerAccountPage: React.FC = () => {
                   })}
                 </div>
 
-                {displayedOrders.length === 0 ? (
+                {userOrders.length === 0 ? (
                   <div className="p-12 text-center bg-slate-50 rounded-3xl border border-slate-200 space-y-4">
-                    <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 mx-auto">
-                      <Package className="w-6 h-6" />
+                    <div className="w-16 h-16 rounded-2xl bg-blue-50 text-[#0054A6] flex items-center justify-center mx-auto border border-blue-100 shadow-sm">
+                      <Package className="w-8 h-8 text-[#0054A6]" />
                     </div>
-                    <p className="text-sm font-bold text-slate-700">No orders found matching "{orderFilter}" filter.</p>
+                    <div className="space-y-1">
+                      <h4 className="text-lg font-black text-slate-900">હજુ સુધી કોઈ ઓર્ડર આપેલ નથી (No Orders Placed Yet)</h4>
+                      <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                        તમારા એકાઉન્ટ પરથી હજુ સુધી કોઈ ઓર્ડર બુક થયેલ નથી. જ્યારે તમે ઓર્ડર કરશો ત્યારે તમારો India Post Speed Post ટ્રેકિંગ નંબર (AWB) અને અધિકૃત GST ટેક્સ ઇનવોઇસ અહીં ઉપલબ્ધ થશે.
+                      </p>
+                    </div>
                     <button
                       onClick={() => {
                         setActiveTab('store');
                         navigate('/store');
                       }}
-                      className="px-4 py-2 bg-[#0054A6] text-white font-bold text-xs rounded-xl shadow-sm hover:bg-[#003d7a]"
+                      className="px-5 py-2.5 bg-[#0054A6] hover:bg-[#003d7a] text-white font-bold text-xs rounded-xl shadow-md inline-flex items-center gap-2 transition-all"
                     >
-                      Browse Catalog to Place an Order
+                      <ShoppingCart className="w-4 h-4" /> પ્રોડક્ટ્સ જુઓ અને ઓર્ડર કરો (Shop Products)
+                    </button>
+                  </div>
+                ) : displayedOrders.length === 0 ? (
+                  <div className="p-10 text-center bg-slate-50 rounded-3xl border border-slate-200 space-y-3">
+                    <p className="text-sm font-bold text-slate-700">No orders matching "{orderFilter}" filter.</p>
+                    <button
+                      onClick={() => setOrderFilter('ALL')}
+                      className="px-4 py-2 bg-slate-200 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-300"
+                    >
+                      View All Orders ({userOrders.length})
                     </button>
                   </div>
                 ) : (
@@ -1434,7 +1580,154 @@ export const CustomerAccountPage: React.FC = () => {
           })()}
 
           {/* ───────────────────────────────────────────────────────────── */}
-          {/* SECTION 3: 10-YEAR SS304 RUST-PROOF WARRANTY */}
+          {/* SECTION 3: SECURITY & SESSIONS MANAGEMENT */}
+          {/* ───────────────────────────────────────────────────────────── */}
+          {activeSubTab === 'SECURITY' && (
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xl space-y-8 animate-fadeIn">
+              <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                <div>
+                  <span className="text-xs font-mono font-bold text-[#0054A6] uppercase tracking-wider">
+                    Statutory Authentication & Device Controls
+                  </span>
+                  <h3 className="text-2xl font-black text-slate-900">
+                    Security, Devices & Active Sessions
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={fetchSessions}
+                    disabled={isLoadingSessions}
+                    className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition-all flex items-center gap-1.5"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSessions ? 'animate-spin' : ''}`} />
+                    <span>Refresh</span>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await logoutAll();
+                      navigate('/store');
+                    }}
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all flex items-center gap-1.5 shadow-sm"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Logout All Devices</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Verified Identity Card */}
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-50/80 to-slate-50 border border-blue-100 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2 text-xs font-black text-[#0054A6]">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <span>Verified Mobile Identifier</span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold font-mono border border-emerald-300 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Single-Use OTP Protected
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-500 uppercase font-bold block">Registered Phone</span>
+                    <strong className="text-slate-900 font-mono text-sm">{currentUser.phone || 'N/A'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 uppercase font-bold block">Account Status</span>
+                    <strong className="text-emerald-700 font-bold">Active & Verified</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 uppercase font-bold block">Session Encryption</span>
+                    <strong className="text-slate-900 font-mono text-[11px]">256-Bit HttpOnly / Strict SameSite</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Sessions List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-slate-500" />
+                    <span>Active Device Sessions ({activeSessions.length})</span>
+                  </h4>
+                  <span className="text-[11px] text-slate-500">
+                    Sessions auto-expire after 24 hours or 2 hours idle
+                  </span>
+                </div>
+
+                {isLoadingSessions ? (
+                  <div className="p-8 text-center text-slate-400 text-xs">
+                    Loading authenticated sessions from backend...
+                  </div>
+                ) : activeSessions.length === 0 ? (
+                  <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500">
+                    Your current active session is maintained securely via HttpOnly cookie.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden">
+                    {activeSessions.map((s, sIdx) => (
+                      <div key={s.id || sIdx} className="p-4 flex flex-wrap items-center justify-between gap-3 bg-white hover:bg-slate-50/80 transition-all">
+                        <div className="space-y-1 min-w-[200px]">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-900">
+                              {s.user_agent ? (s.user_agent.includes('Mobile') ? '📱 Mobile Device' : '💻 Desktop Browser') : '🌐 Web Session'}
+                            </span>
+                            {s.is_current && (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-mono font-bold">
+                                Current Device
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-mono">
+                            IP: {s.ip_address || '127.0.0.1'} • Last active: {new Date(s.last_seen_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            Expires: {(() => {
+                              const idle = s.idle_expires_at ? new Date(s.idle_expires_at) : null;
+                              const abs = s.absolute_expires_at ? new Date(s.absolute_expires_at) : (s.expires_at ? new Date(s.expires_at) : null);
+                              const valid = [idle, abs].filter((d): d is Date => d !== null && !isNaN(d.getTime()));
+                              if (valid.length === 0) return '24h';
+                              const effective = new Date(Math.min(...valid.map(d => d.getTime())));
+                              return effective.toLocaleDateString();
+                            })()}
+                          </span>
+                          {s.is_current ? (
+                            <button
+                              onClick={async () => {
+                                await logout();
+                                navigate('/store');
+                              }}
+                              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-rose-600 border border-slate-200 hover:border-rose-200 text-xs font-bold transition-all"
+                            >
+                              Logout Current
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-400 font-medium">Other Device</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Security Policies Notice */}
+              <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-900 space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Apollo Zero-Password Customer Security Model</span>
+                </div>
+                <p className="text-[11px] text-amber-800/90 leading-relaxed">
+                  Apollo Engineering uses cryptographic single-consumption SMS OTPs. Passwords are never stored or required for customer accounts. All authentication requests are protected with rate-limiting, server-side cooldowns, and tamper-proof session tokens stored in secure HttpOnly cookies.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ───────────────────────────────────────────────────────────── */}
+          {/* SECTION 4: 10-YEAR SS304 RUST-PROOF WARRANTY */}
           {/* ───────────────────────────────────────────────────────────── */}
           {activeSubTab === 'WARRANTY' && (
             <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-xl space-y-8 text-center">

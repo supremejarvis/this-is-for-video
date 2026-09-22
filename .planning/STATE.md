@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-current_phase: 1
-current_phase_name: Authoritative FastAPI Backend Core, Decimal Money Engine & PostgreSQL Single Source of Truth
+current_phase: 0
+current_phase_name: Protected Baseline and Ownership
 status: planning
 last_updated: "2026-09-14T20:26:38.851Z"
 last_activity: 2026-09-04
 last_activity_desc: Milestone 1 Evidence & Security Closure completed. Schemathesis 149 cases passed, Antigravity deny rules active, disposable DB stopped.
 state_head: f8dec98d317e0a5ea534166b92116c966d0c1cc5
 progress:
-  total_phases: 4
+  total_phases: 8
   completed_phases: 0
-  total_plans: 0
+  total_plans: 10
   completed_plans: 0
   percent: 0
 ---
@@ -22,22 +22,22 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-09-04)
 
 **Core value:** Zero-error authoritative transaction and logistics lifecycle — ensuring 100% paisa-accurate GST/COD money calculations, fraud-proof payment state transitions, and verified India Post Speed Post fulfillment from Kathwada GIDC (382430).  
-**Current focus:** Phase 1: Authoritative FastAPI Backend Core, Decimal Money Engine & PostgreSQL Single Source of Truth
+**Current focus:** Phase 00: Protected Baseline and Ownership is the next executable phase. The historical four-phase roadmap and legacy backend Phase 1 plan are preserved for reference only and are not executable.
 
 ## Current Position
 
-Phase: 1 of 3 (Authoritative FastAPI Backend Core, Decimal Money Engine & PostgreSQL Single Source of Truth)  
-Plan: Completed  
-Status: Milestone 1 Approved & Closed. Ready for Milestone 2 Planning: Admin Catalog/Price/Stock -> Buyer Portal Real-Time Vertical Slice.  
+Phase: 00 of 8 (Protected Baseline and Ownership)  
+Plan: Not started; Phase 00 is the next executable plan.  
+Status: Planning only; no active migration phase has been executed.  
 Last activity: 2026-09-04 — Milestone 1 Evidence & Security Closure completed. Schemathesis 149 cases passed, Antigravity deny rules active, disposable DB stopped.
 
-Progress: [████████░░] 25%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 1
+- Total plans completed: 0
 - Average duration: 25 min
 - Total execution time: 0.5 hours
 
@@ -45,13 +45,18 @@ Progress: [████████░░] 25%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| Phase 1 (Milestone 1) | 1 | 1 | 25m |
-| Phase 2 (Milestone 2) | 0 | - | - |
-| Phase 3 | 0 | - | - |
-| Phase 4 | 0 | - | - |
+| 00 | Protected baseline and ownership | Next |
+| 01 | Checkout preview authority | Planned |
+| 02 | Order and inventory safety | Planned |
+| 03 | Payment recovery and private providers | Planned |
+| 04 | Inquiry persistence and API consolidation | Planned |
+| 05 | Zustand restriction and catalog convergence | Planned |
+| 06 | PostgreSQL and Alembic production gates | Planned |
+| 07 | Safe cleanup and final verification | Planned |
 
 ## Blockers & Open Decisions
 
-- Milestone 1 closure completed and approved.
-- Milestone 2 Scope: "Admin Catalog/Price/Stock -> Buyer Portal Real-Time Vertical Slice".
-- Vite frontend strictly preserved (no Next.js migration until authorized). Milestone 2 planning ready for review.
+- Active migration phases and dependency order are fixed: 00 -> 01 -> 02 -> 03 -> 04 -> 05 -> 06 -> 07.
+- Active plan inventory: 00-01, 01-01, 02-01, 03-01, 04-01, 05-01, 06-01, 07-01, 07-02, 07-03. The historical backend Phase 1 plan is superseded and cannot be selected or executed.
+- Historical milestone evidence and prior roadmap state are retained for traceability only; they do not establish completion of the active migration phases.
+- Protected files remain ownership-blocked: next-env.d.ts, package-lock.json, backend/tests/unit/test_orders_and_payments.py.

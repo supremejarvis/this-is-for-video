@@ -1,17 +1,19 @@
 # Roadmap: Apollo Engineering (APE Store)
 
+> **Historical roadmap:** The original four-phase roadmap below is preserved for traceability only. It is superseded by the active source-backed migration roadmap at the end of this file. Executors must not select the historical Phase 1-4 entries.
+
 ## Overview
 
 A phased architectural implementation of the Apollo Engineering B2B & B2C hybrid industrial e-commerce platform. The roadmap establishes the authoritative Python FastAPI backend and PostgreSQL single source of truth first (with exact Decimal money arithmetic, Razorpay webhook validation, and India Post adapter), followed by Next.js App Router storefront alignment, multi-lingual UI, B2B wholesale features, admin verification workflows, and end-to-end Playwright test validation.
 
-## Phases
+## Historical Phases (Superseded)
 
 - [ ] **Phase 1: Authoritative FastAPI Backend Core, Decimal Money Engine & PostgreSQL Single Source of Truth** - Establish Python FastAPI backend, PostgreSQL models with Alembic migrations, authoritative Decimal pricing engine (B2C/B2B GST, COD rounding), Razorpay HMAC SHA256 webhook validation, and India Post CEPT adapter with fallback rates.
 - [ ] **Phase 2: Next.js App Router Storefront Alignment, Visual Sizing Guide & Multi-Lingual UI** - Align presentation layer to Next.js App Router, implement AISI SS304 steel & solar blue visual identity via `frontend-design`, mandatory frame thickness sizing guide, and native Gujarati/Hindi/English localization.
 - [ ] **Phase 3: B2B Wholesale Engine, Admin Central & Thermal Dispatch Manifests** - B2B GSTIN verification, Net-30 credit workflows, manual UPI QR approval dashboard, thermal 4x6" shipping label/manifest generation, and wrong-size replacement verification workflow.
 - [ ] **Phase 4: Playwright End-to-End Validation, Vercel UI Performance Audits & Verification** - Comprehensive headless browser testing of full customer and admin journeys, a11y compliance, sub-50ms TTFB optimization, and GSD verification.
 
-## Phase Details
+## Historical Phase Details
 
 ### Phase 1: Authoritative FastAPI Backend Core, Decimal Money Engine & PostgreSQL Single Source of Truth
 
@@ -68,5 +70,68 @@ A phased architectural implementation of the Apollo Engineering B2B & B2C hybrid
 1. Playwright test suite passes full user journeys: B2C retail checkout, B2B wholesale quotation, UPI admin approval, and India Post tracking.
 2. Vercel React best practices and web design guidelines audit passes with zero critical violations.
 3. All UAT criteria verified via `/gsd-verify-work`.  
+
+## Active Executable Migration Roadmap
+
+The following phases are the only active implementation sequence. Dependencies are phase-level; plan files inside each phase are subordinate execution details.
+
+| Phase | Name | Depends on |
+|---|---|---|
+| 00 | Protected baseline and ownership | None |
+| 01 | Checkout preview authority | Phase 00 |
+| 02 | Order and inventory safety | Phase 01 |
+| 03 | Payment recovery and private providers | Phase 02 |
+| 04 | Inquiry persistence and API consolidation | Phase 03 |
+| 05 | Zustand restriction and catalog convergence | Phase 04 |
+| 06 | PostgreSQL and Alembic production gates | Phase 05 |
+| 07 | Safe cleanup and final verification | Phase 06 |
+
+### Phase 00: Protected Baseline and Ownership
+
+**Depends on:** None  
+**Plans:** `00-01-PLAN.md`  
+**Scope:** Read-only evidence capture only.
+
+### Phase 01: Checkout Preview Authority
+
+**Depends on:** Phase 00  
+**Plans:** `01-01-PLAN.md`  
+**Scope:** Backend preview contract and server-only checkout totals. Discounts are unsupported unless a verified backend rule exists.
+
+### Phase 02: Order and Inventory Safety
+
+**Depends on:** Phase 01  
+**Plans:** `02-01-PLAN.md`  
+**Scope:** Final revalidation, PostgreSQL locking, idempotency, configurable guest access tokens, ownership, replay protection, and reservation audit.
+
+### Phase 03: Payment Recovery and Private Providers
+
+**Depends on:** Phase 02  
+**Plans:** `03-01-PLAN.md`  
+**Scope:** Payment-stock recovery, admin reconciliation, fulfilment blocking, provider adapters, browser provider boundaries, and fail-closed production behavior.
+
+### Phase 04: Inquiry Persistence and API Consolidation
+
+**Depends on:** Phase 03  
+**Plans:** `04-01-PLAN.md`  
+**Scope:** PostgreSQL inquiry import/API and canonical frontend API consolidation.
+
+### Phase 05: Zustand Restriction and Catalog Convergence
+
+**Depends on:** Phase 04  
+**Plans:** `05-01-PLAN.md`; split further if store restriction and catalog convergence cannot remain independently verifiable.  
+**Scope:** UI/draft/cache-only Zustand, canonical DTO/UUID catalog identity, backend-refreshed admin mutations, and runtime mock fixture removal.
+
+### Phase 06: PostgreSQL and Alembic Production Gates
+
+**Depends on:** Phase 05  
+**Plans:** `06-01-PLAN.md`  
+**Scope:** PostgreSQL integration contract, Alembic-only staging/production schema management, fatal migration failures, and startup safeguards.
+
+### Phase 07: Safe Cleanup and Final Verification
+
+**Depends on:** Phase 06  
+**Plans:** `07-01-PLAN.md`, `07-02-PLAN.md`, `07-03-PLAN.md`  
+**Scope:** Non-destructive scan, human deletion approval, approved cleanup only, and separate real browser/backend verification.
 
 **Plans**: TBD

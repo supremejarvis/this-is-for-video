@@ -1,4 +1,10 @@
 ---
+status: superseded
+executable: false
+active: false
+active_dependency_root: false
+superseded_by: active migration phases 00–07
+historical_reference_only: true
 wave: 1
 depends_on: []
 files_modified:
@@ -57,6 +63,8 @@ files_modified:
   - backend/pyproject.toml
 autonomous: true
 ---
+
+> Historical reference only. This legacy backend Phase 1 plan is superseded by the active migration phases 00–07 and must not be selected or executed by GSD. Phase 00 is the only initial executable root.
 
 # Phase 1 Plan: Authoritative FastAPI Backend Core, Decimal Money Engine & PostgreSQL Single Source of Truth
 

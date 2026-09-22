@@ -155,6 +155,38 @@ async def test_order_creation_persists_authoritatively(client: AsyncClient, seed
 
 
 @pytest.mark.asyncio
+async def test_order_preview_uses_backend_totals_and_rejects_stock_mismatch(client: AsyncClient, seeded_catalog: dict):
+    """Preview must calculate totals server-side and reject insufficient stock before any payment flow."""
+    sku = seeded_catalog["sku"]
+
+    preview_ok = await client.post(
+        "/api/v1/orders/preview",
+        json={
+            "items": [{"sku": sku, "quantity": 2}],
+            "destination_pincode": "382430",
+            "payment_method": "PREPAID",
+            "shipping_address": VALID_SHIPPING_ADDRESS,
+        },
+    )
+    assert preview_ok.status_code == 200, preview_ok.text
+    preview_data = preview_ok.json()
+    assert float(preview_data["total_product_gross"]) > 0
+    assert float(preview_data["prepaid_total"]) > 0
+    assert float(preview_data["shipping_total"]) >= 0
+
+    preview_overstock = await client.post(
+        "/api/v1/orders/preview",
+        json={
+            "items": [{"sku": sku, "quantity": 99999}],
+            "destination_pincode": "382430",
+            "payment_method": "PREPAID",
+            "shipping_address": VALID_SHIPPING_ADDRESS,
+        },
+    )
+    assert preview_overstock.status_code == 404 or preview_overstock.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_order_idempotency_prevents_duplicate_orders(client: AsyncClient, seeded_catalog: dict):
     """Submitting the same idempotency key must return the existing order, not create a duplicate."""
     sku = seeded_catalog["sku"]

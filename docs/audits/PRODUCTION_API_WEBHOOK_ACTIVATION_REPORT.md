@@ -1,6 +1,7 @@
 # PRODUCTION API + WEBHOOK ACTIVATION REPORT
 
 ## Production Architecture
+
 - **Frontend**: `https://apollo-web-three.vercel.app` (Vite + React 19 + TypeScript)
 - **Backend**: `https://backend-ten-pi-57.vercel.app` (FastAPI + Python 3.13)
 - **API Prefix**: `/api/v1` (proxied via Vercel rewrites)
@@ -9,6 +10,7 @@
 ---
 
 ## PostgreSQL Status
+
 **LOCAL: CONNECTED & MIGRATED**  
 **PRODUCTION: NOT CONFIGURED (BLOCKED)**
 
@@ -22,6 +24,7 @@
 ---
 
 ## Migration Status
+
 ```
 alembic current  →  008_order_customer (head)
 alembic heads    →  008_order_customer (head)
@@ -91,6 +94,7 @@ All schema objects exist in local PostgreSQL. Production database does not exist
 ---
 
 ## Authentication Status
+
 - **Customer Login**: ❌ FAILED (DB connection)
 - **Admin Login**: ❌ FAILED (DB connection)
 - **Logout**: ⏸️ NOT TESTED (requires auth)
@@ -107,6 +111,7 @@ All schema objects exist in local PostgreSQL. Production database does not exist
 ---
 
 ## MSG91 OTP Status
+
 **FULLY ACTIVE AND VERIFIED** ✅
 
 - `POST /api/v1/auth/otp/send` → 200, OTP dispatched via MSG91
@@ -120,6 +125,7 @@ All schema objects exist in local PostgreSQL. Production database does not exist
 ---
 
 ## Quote API Status
+
 **BLOCKED** — Database connection required
 
 - Server authority: Loads prices from PostgreSQL `PriceVersion` ✅ (code verified)
@@ -135,6 +141,7 @@ All schema objects exist in local PostgreSQL. Production database does not exist
 ---
 
 ## Order API Status
+
 **BLOCKED** — Database connection required
 
 - Quote validation: Expiry + price freshness (`PriceChangedError`) ✅
@@ -150,6 +157,7 @@ All schema objects exist in local PostgreSQL. Production database does not exist
 ---
 
 ## Order Authorization / BOLA Status
+
 **NOT TESTABLE** — Requires database
 
 Code review confirms:
@@ -162,6 +170,7 @@ Code review confirms:
 ---
 
 ## Product API Status
+
 **BLOCKED** — Database connection required
 
 - `GET /products`: Returns catalog with variants, stock, current price ✅ (code)
@@ -174,6 +183,7 @@ Code review confirms:
 ---
 
 ## Pricing API Status
+
 **PARTIALLY ACTIVE**
 
 | Endpoint | Status |
@@ -193,6 +203,7 @@ Code review confirms:
 ---
 
 ## Inventory API Status
+
 **BLOCKED** — Database connection required
 
 - `GET /inventory/items`: 401 auth required ✅
@@ -206,6 +217,7 @@ Code review confirms:
 ---
 
 ## India Post / Shipping API Status
+
 **CONFIGURATION REQUIRED**
 
 - `ShippingService.calculate_shipping()`: Falls back to rate table when CEPT unavailable ✅
@@ -223,6 +235,7 @@ Code review confirms:
 ---
 
 ## Razorpay Create Order Status
+
 **BLOCKED** — Database connection required
 
 - Backend loads order from DB, derives amount from `order.total_payable` ✅
@@ -235,6 +248,7 @@ Code review confirms:
 ---
 
 ## Razorpay Verify Status
+
 **BLOCKED** — Requires order + payment flow
 
 - Server-side HMAC-SHA256 verification: `order_id|payment_id` ✅
@@ -246,6 +260,7 @@ Code review confirms:
 ---
 
 ## Razorpay Webhook URL
+
 **CONFIGURED IN CODE, REACHABLE IN PRODUCTION**
 
 ```
@@ -257,6 +272,7 @@ https://backend-ten-pi-57.vercel.app/api/v1/payments/razorpay/webhook
 ---
 
 ## Webhook Configuration Status
+
 **PARTIALLY CONFIGURED — NEEDS RAZORPAY DASHBOARD SETUP**
 
 - Endpoint implemented: `POST /api/v1/payments/razorpay/webhook` ✅
@@ -275,6 +291,7 @@ https://backend-ten-pi-57.vercel.app/api/v1/payments/razorpay/webhook
 ---
 
 ## Webhook Secret Status
+
 **SET IN LOCAL .env, NOT VERIFIED IN VERCEL**
 
 - Local: `RAZORPAY_WEBHOOK_SECRET=whsec_apollo_webhook_secret_2026` ✅
@@ -284,6 +301,7 @@ https://backend-ten-pi-57.vercel.app/api/v1/payments/razorpay/webhook
 ---
 
 ## Webhook Signature Test
+
 **VERIFIED — INVALID SIGNATURE REJECTED**
 
 ```bash
@@ -297,6 +315,7 @@ curl -X POST https://apollo-web-three.vercel.app/api/v1/payments/razorpay/webhoo
 ---
 
 ## Invalid Signature Test
+
 **VERIFIED — 401 RETURNED**
 
 Same as above. Malformed JSON after valid signature would return 400.
@@ -304,6 +323,7 @@ Same as above. Malformed JSON after valid signature would return 400.
 ---
 
 ## Duplicate Webhook / Idempotency Test
+
 **CODE VERIFIED — NOT RUNTIME TESTED (NEEDS DB)**
 
 - `WebhookEvent` table: unique `event_id` constraint ✅
@@ -315,6 +335,7 @@ Same as above. Malformed JSON after valid signature would return 400.
 ---
 
 ## Webhook Database Persistence Test
+
 **NOT TESTABLE** — Requires production PostgreSQL
 
 Code flow verified:
@@ -327,6 +348,7 @@ Code flow verified:
 ---
 
 ## Payment/Order Transition Result
+
 **NOT TESTABLE** — Requires production PostgreSQL + Razorpay test webhook
 
 Expected flow (code verified):
@@ -342,6 +364,7 @@ payment.captured webhook
 ---
 
 ## CORS Status
+
 **CONFIGURED IN CODE — PRODUCTION VERIFICATION NEEDED**
 
 - `allow_origins`: `["http://localhost:3000", "http://localhost:5173"]` (development only)
@@ -354,6 +377,7 @@ payment.captured webhook
 ---
 
 ## Cookie / CSRF Status
+
 **CODE CONFIGURED — PRODUCTION VERIFICATION NEEDED**
 
 - Session cookie: `HttpOnly=true, Secure=true, SameSite=lax, max_age=86400` ✅
@@ -366,6 +390,7 @@ payment.captured webhook
 ---
 
 ## Security Headers / CSP Review
+
 - **Security Headers Middleware**: Implemented in `main.py` ✅
   - `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`
   - `X-Content-Type-Options: nosniff`
@@ -379,6 +404,7 @@ payment.captured webhook
 ---
 
 ## Rate Limiting
+
 - **Auth endpoints**: `AuthService.check_rate_limit()` — DB-backed sliding window ✅
 - **Admin login**: Separate rate limit + lockout after 5 failures (15 min) ✅
 - **OTP send**: MSG91 cooldown (30s) returned in response ✅
@@ -388,6 +414,7 @@ payment.captured webhook
 ---
 
 ## Observability
+
 - **Logging**: `logging.getLogger("apollo.security")` used for security events ✅
 - **Structured logs**: Endpoint, status, provider error category, webhook event ID, event type, processing result ✅
 - **No secrets logged**: OTP, passwords, JWT, Razorpay secrets, webhook secrets, full payment credentials ✅
@@ -416,6 +443,7 @@ payment.captured webhook
 ---
 
 ## Backend Tests
+
 ```
 Unit tests:      101 passed (24.33s)
 Integration tests: 62 skipped (require live PostgreSQL on localhost:5433)
@@ -425,6 +453,7 @@ Coverage:        68% overall
 ---
 
 ## Frontend Tests
+
 ```
 Typecheck:       ✅ PASS (tsc --noEmit)
 Unit tests:      115 passed (17 test files)

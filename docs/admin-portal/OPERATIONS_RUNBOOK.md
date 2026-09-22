@@ -9,6 +9,7 @@
 ## 1. System Health Telemetry & Readiness Probes
 
 ### Health Check Endpoints
+
 * **FastAPI Application Health**: `GET /api/v1/health`
   * Returns: `{"status": "healthy"}`
 * **System Detailed Telemetry**: `GET /api/v1/system/status`
@@ -23,12 +24,14 @@
 ## 2. Background Workers & Outbox Management
 
 ### Starting Background Workers
+
 The background worker manager runs in-process with FastAPI during standard operation:
 * `OutboxPublisherWorker`: Polls unsent outbox events every 2 seconds.
 * `ExpiredQuoteCleaner`: Releases uncommitted quotes older than 15 minutes.
 * `InvoiceWorker`: Generates PDF and tax records for confirmed dispatches.
 
 ### Inspecting Worker Lag
+
 ```sql
 SELECT count(*) AS pending_outbox_events, min(created_at) AS oldest_pending_event
 FROM outbox_events
@@ -41,6 +44,7 @@ If `oldest_pending_event` is > 60 seconds old, check worker logs for network tim
 ## 3. Incident Playbooks
 
 ### Incident A: Payment Succeeded but Stock Reservation Expired
+
 * **Detection**: Customer payment verified via Razorpay webhook, but order remains in `AWAITING_PAYMENT` or saga state indicates `RESERVATION_EXPIRED`.
 * **Action**:
   1. Open Admin Portal -> Orders -> Final Orders.
@@ -48,6 +52,7 @@ If `oldest_pending_event` is > 60 seconds old, check worker logs for network tim
   3. If stock is depleted, click **Initiate Immediate Refund** to return funds to customer via Razorpay API.
 
 ### Incident B: Unbalanced Journal Entry Attempt
+
 * **Detection**: Error logged: `DB Constraint: sum(debit) != sum(credit)`.
 * **Action**:
   1. Check `docs/admin-portal/ACCOUNTING_RULES.md` for proper double-entry accounting formulas.
@@ -55,6 +60,7 @@ If `oldest_pending_event` is > 60 seconds old, check worker logs for network tim
   3. Correct line items on the draft journal before re-posting.
 
 ### Incident C: Carrier Booking Failure or Unknown Status Timeout
+
 * **Detection**: Consignment booking timed out without AWB assignment.
 * **Action**:
   1. Open Admin Portal -> Shipping -> Dispatch Console.

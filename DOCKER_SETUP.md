@@ -44,6 +44,7 @@ docker compose -f docker-compose.dev.yml up --build
 ## 📦 Container Specifications
 
 ### 🚀 Backend Container (`backend/Dockerfile`)
+
 - **Base Image**: `python:3.12-slim` (Multi-stage build)
 - **Port**: `8000`
 - **Security**: Non-root user `appuser` (UID `1001`)
@@ -54,6 +55,7 @@ docker compose -f docker-compose.dev.yml up --build
   - **Healthcheck**: Real-time probe against `http://localhost:8000/api/v1/health`.
 
 ### 🌐 Frontend Container (`Dockerfile`)
+
 - **Base Image**: `node:22-alpine` (Multi-stage standalone build)
 - **Port**: `3000` (Mapped to `80:3000` and `3000:3000`)
 - **Security**: Non-root user `nextjs` (UID `1001`)
@@ -64,6 +66,7 @@ docker compose -f docker-compose.dev.yml up --build
   - **Healthcheck**: Probes root URL `http://localhost:3000/`.
 
 ### 🗄️ Database Container (`postgres:16-alpine`)
+
 - **Base Image**: `postgres:16-alpine`
 - **Port**: `5432`
 - **Persistence**: Named volume `postgres_data`
@@ -73,13 +76,15 @@ docker compose -f docker-compose.dev.yml up --build
 
 ## 🛠️ Standalone Docker Build Commands
 
-### Build Backend Individually:
+### Build Backend Individually
+
 ```bash
 cd backend
 docker build -t apollo-backend:latest .
 ```
 
-### Run Backend Standalone:
+### Run Backend Standalone
+
 ```bash
 docker run -d \
   --name apollo_backend \
@@ -88,12 +93,14 @@ docker run -d \
   apollo-backend:latest
 ```
 
-### Build Frontend Individually:
+### Build Frontend Individually
+
 ```bash
 docker build -t apollo-frontend:latest .
 ```
 
-### Run Frontend Standalone:
+### Run Frontend Standalone
+
 ```bash
 docker run -d \
   --name apollo_frontend \

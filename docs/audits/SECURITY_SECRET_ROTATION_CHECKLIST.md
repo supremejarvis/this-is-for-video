@@ -3,12 +3,13 @@
 > [!CAUTION]
 > **CRITICAL SECURITY REQUIREMENT**  
 > Source code and configuration fixes cannot invalidate credentials that were already committed to version control or bundled into client distributions. The following production and third-party credentials **MUST be manually rotated immediately** in their respective provider consoles.
-> 
+>
 > *Note: For security reasons, all actual secret values have been masked as `[REDACTED]`.*
 
 ---
 
 ## 1. Payment Gateway (Razorpay)
+
 - [ ] **Rotate Razorpay Live Key Pair**  
   - **Provider**: [Razorpay Dashboard](https://dashboard.razorpay.com/#/app/keys)
   - **Affected Identifier**: `rzp_live_[REDACTED]`
@@ -21,6 +22,7 @@
 ---
 
 ## 2. SMS & WhatsApp Notifications (MSG91)
+
 - [ ] **Rotate MSG91 Auth Keys**  
   - **Provider**: [MSG91 Control Panel](https://control.msg91.com/)
   - **Affected Keys**: `561266ADm[REDACTED]`, `561266TAI[REDACTED]` (committed in `scratch/test_msg91.py` and `.env`)
@@ -32,6 +34,7 @@
 ---
 
 ## 3. Postal Logistics (India Post CEPT)
+
 - [ ] **Change India Post CEPT Customer Password**  
   - **Provider**: [India Post CEPT Business Customer Portal](https://test.cept.gov.in/beextcustomer)
   - **Affected Account**: `1812232688` (Password: `Dop@[REDACTED]` exposed in Git history and `.env`)
@@ -49,6 +52,7 @@
 ---
 
 ## 5. Application Authentication & Cryptographic Keys
+
 - [ ] **Rotate JWT Signing Secret**  
   - **Affected Secret**: `JWT_SECRET` (exposed in `backend/.env`)
   - **Action**: Generate a new 64-character cryptographically random secret (e.g. `openssl rand -hex 32`) and update `JWT_SECRET` in `backend/.env`. (Note: This will safely invalidate all active user sessions).
@@ -62,6 +66,7 @@
 ---
 
 ## 6. External Form Submission (Web3Forms)
+
 - [ ] **Rotate Web3Forms Access Key**  
   - **Provider**: [Web3Forms Console](https://web3forms.com/)
   - **Affected Key**: `aca2959e-[REDACTED]` (hardcoded fallback in `Contact.tsx`, `apiService.ts`, and `backend/.env`)

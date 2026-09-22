@@ -55,7 +55,7 @@ The production Vercel deployment configuration (`vercel.json`) lacked a rewrite 
 
 **Verified Production Backend URL**: `https://backend-ten-pi-57.vercel.app`
 
-**Ownership Verification**: 
+**Ownership Verification**:
 - Deployed via `vercel --prod --yes` from the `backend/` directory
 - Project ID: `nilesh-patels-projects-4aff87bd/backend`
 - Confirmed under the same Vercel account (`patelnilesh5596-7306`) as the frontend project `apollo-web`

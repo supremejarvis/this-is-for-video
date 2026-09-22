@@ -57,4 +57,3 @@ Real-time transport failure must not lose or corrupt the committed business tran
 ## External provider contract
 
 Provider payloads are untrusted inputs. Adapters validate signature, identity, amount, currency, event type and allowed internal transition. Raw provider status is stored for evidence, but internal state changes through domain commands only.
-

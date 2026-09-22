@@ -42,26 +42,31 @@
 ## 3. Standard Journal Postings & Lifecycle
 
 ### Scenario A: Order Dispatch & Invoice Issuance (e.g., ₹1,180 Total, Intra-state)
+
 * **Dr Accounts Receivable (`1110`)**: ₹1,180.00
 * **Cr Sales Revenue (`4010`)**: ₹1,000.00
 * **Cr Output CGST (`2110`)**: ₹90.00
 * **Cr Output SGST (`2120`)**: ₹90.00
 
 ### Scenario B: Inventory Relief on Dispatch (Cost of goods ₹400)
+
 * **Dr Cost of Goods Sold (`5010`)**: ₹400.00
 * **Cr Finished Goods Inventory (`1210`)**: ₹400.00
 
 ### Scenario C: Payment Capture via Razorpay
+
 * **Dr Razorpay Gateway Clearing (`1020`)**: ₹1,180.00
 * **Cr Accounts Receivable (`1110`)**: ₹1,180.00
 
 ### Scenario D: Gateway Settlement to Bank (with ₹20 fee + ₹3.60 GST)
+
 * **Dr HDFC Bank Operating Account (`1010`)**: ₹1,156.40
 * **Dr Payment Gateway Fees (`5030`)**: ₹20.00
 * **Dr Input CGST/SGST on Fees (`1310`)**: ₹3.60
 * **Cr Razorpay Gateway Clearing (`1020`)**: ₹1,180.00
 
 ### Scenario E: COD Collection Handover & Remittance
+
 1. **On Carrier Delivery Confirmation**:
    * **Dr India Post COD Clearing (`1030`)**: ₹1,180.00
    * **Cr Accounts Receivable (`1110`)**: ₹1,180.00

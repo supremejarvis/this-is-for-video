@@ -11,6 +11,7 @@
 This document outlines high-value, evidence-based architectural, performance, accessibility, and reliability enhancements for the Apollo Engineering e-commerce system. Each item is prioritized using the **Impact vs. Effort vs. Dependencies** matrix, ensuring stability, strict compliance with statutory arithmetic (`AGENTS.md`), and zero disruption to active customer flows.
 
 ### Priority Matrix Summary
+
 | Priority Rank | Initiative | Impact | Effort | Dependencies | Target Category |
 | :---: | :--- | :---: | :---: | :--- | :--- |
 | **P1** | Next.js `<Image>` Component Migration & AVIF Delivery | **HIGH** | LOW | None | Core Web Vitals (LCP / CLS) |
@@ -27,6 +28,7 @@ This document outlines high-value, evidence-based architectural, performance, ac
 ---
 
 ### Initiative 1: Next.js `<Image>` Component Migration & Responsive AVIF Delivery
+
 - **Priority**: **P1 (Immediate High Return)**
 - **Impact**: **HIGH** (Improves Largest Contentful Paint [LCP] by ~35%, eliminates layout shift risks, and reduces image payload size by up to 60%).
 - **Effort**: **LOW** (1-2 days).
@@ -44,6 +46,7 @@ This document outlines high-value, evidence-based architectural, performance, ac
 ---
 
 ### Initiative 2: India Post Speed Post Freight Cache & Pincode Prefetch
+
 - **Priority**: **P2 (High Reliability & Checkout Speed)**
 - **Impact**: **HIGH** (Protects checkout flow from third-party CEPT India Post network flakiness, slashes address-to-quote latency from ~450ms to <15ms).
 - **Effort**: **MEDIUM** (2-3 days).
@@ -61,6 +64,7 @@ This document outlines high-value, evidence-based architectural, performance, ac
 ---
 
 ### Initiative 3: Playwright Headless E2E Regression for Dev OTP & Statutory Totals
+
 - **Priority**: **P3 (Quality Assurance & Regression Prevention)**
 - **Impact**: **HIGH** (Automates real-browser checkout verification on every git commit, safeguarding statutory GST line calculations and COD anti-fraud logic).
 - **Effort**: **MEDIUM** (2 days).
@@ -78,6 +82,7 @@ This document outlines high-value, evidence-based architectural, performance, ac
 ---
 
 ### Initiative 4: Catalog Edge Caching with Stale-While-Revalidate Headers
+
 - **Priority**: **P4 (Cost & Scalability)**
 - **Impact**: **MEDIUM** (Eliminates repeated database queries for anonymous storefront browsing; improves Time to First Byte [TTFB] globally).
 - **Effort**: **LOW** (1 day).
@@ -95,6 +100,7 @@ This document outlines high-value, evidence-based architectural, performance, ac
 ---
 
 ### Initiative 5: Domestic Multilingual i18n Localization (English / Gujarati / Hindi)
+
 - **Priority**: **P5 (Strategic Market Alignment)**
 - **Impact**: **MEDIUM** (Fulfills `AGENTS.md` Directive 7 for priority languages: Gujarati ગુજરાતી, Hindi हिन्दी, and English).
 - **Effort**: **HIGH** (4-5 days).
@@ -112,6 +118,7 @@ This document outlines high-value, evidence-based architectural, performance, ac
 ---
 
 ### Initiative 6: Micro-Contrast Enhancements for Industrial AISI SS304 Badges
+
 - **Priority**: **P6 (Visual Polish & Accessibility)**
 - **Impact**: **LOW** (Brings subtle slate badges from WCAG AA to WCAG AAA compliance).
 - **Effort**: **LOW** (0.5 day).
@@ -146,6 +153,7 @@ gantt
 ---
 
 ## 4. Governance & Verification Directives
+
 All subsequent improvements must adhere strictly to the foundational system directives outlined in `AGENTS.md`:
 1. **Authoritative Monetary Calculation**: Never use client-side JavaScript floating point arithmetic for final transaction amounts. Every financial change must originate as a `Decimal` in FastAPI backend.
 2. **Statutory Tax & Surcharge Separation**: Maintain explicit separation between product GST (configurable per HSN) and shipping GST (fixed 18%).

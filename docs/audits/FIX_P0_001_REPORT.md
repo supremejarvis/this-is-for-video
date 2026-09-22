@@ -77,12 +77,13 @@ Only public client variables (`VITE_RAZORPAY_KEY_ID`, `VITE_ORIGIN_PINCODE`, `VI
 
 * **Backup Point Created**: Branch `security/pre-p0-001-backup` at commit `f8dec98d317e0a5ea534166b92116c966d0c1cc5`.
 * **Identified Historical Commits**:
-  - Commit `7839244` (committed `vitest_out.txt` and `vitest_final.txt` with auth keys in URL parameters).
-  - Commit `ec8fbd1` (committed `scratch/test_msg91.py` with hardcoded auth keys).
+  * Commit `7839244` (committed `vitest_out.txt` and `vitest_final.txt` with auth keys in URL parameters).
+  * Commit `ec8fbd1` (committed `scratch/test_msg91.py` with hardcoded auth keys).
 * **Status**: **`MANUAL REMOTE HISTORY REWRITE REQUIRED`**  
   Because rewriting remote history modifies commit SHAs across branches, a forced push must not be performed automatically. The safe scrubbing command sequence is provided below.
 
 ### Safe History Scrubbing Sequence
+
 ```bash
 # 1. Install git-filter-repo in Python environment
 pip install git-filter-repo
@@ -109,7 +110,8 @@ git log --all --full-history -- "scratch/test_msg91.py" "backend/apollo_ecommerc
 An actionable provider checklist has been created in:  
 👉 [`SECURITY_SECRET_ROTATION_CHECKLIST.md`](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/SECURITY_SECRET_ROTATION_CHECKLIST.md)
 
-### Summary of Keys Requiring Manual Rotation:
+### Summary of Keys Requiring Manual Rotation
+
 1. **Razorpay Live API Key Pair** (`rzp_live_[REDACTED]`)
 2. **Razorpay Webhook HMAC Secret** (`whsec_[REDACTED]`)
 3. **MSG91 Auth Keys** (`561266ADm[REDACTED]`, `561266TAI[REDACTED]`)
@@ -149,4 +151,5 @@ An actionable provider checklist has been created in:
 ## 9. Final Status
 
 ### **`CODE FIXED — CREDENTIAL ROTATION REQUIRED`**
+
 All source code vulnerabilities, client bundle leaks, and file tracking issues for `P0-001` are resolved, verified by automated tests, and documented.

@@ -22,6 +22,7 @@ All technically fixable code issues have been resolved. 101 backend unit tests +
 ## Fixes Applied
 
 ### 1. OTP Role Bug (P0 Security)
+
 **File**: `backend/app/api/v1/endpoints/otp.py:74`
 - **Issue**: New OTP customers received `UserRole.SUPPORT` instead of `UserRole.CUSTOMER`
 - **Fix**: Changed to `UserRole.CUSTOMER`
@@ -29,6 +30,7 @@ All technically fixable code issues have been resolved. 101 backend unit tests +
 - **Tests**: OTP tests pass, role verified in regression test
 
 ### 2. CORS Configuration (Production)
+
 **File**: `backend/app/main.py:70-76`
 - **Issue**: Only localhost origins allowed
 - **Fix**: Added production origins:
@@ -37,15 +39,17 @@ All technically fixable code issues have been resolved. 101 backend unit tests +
 - **Impact**: Frontend proxy works in production
 
 ### 3. Webhook Secret Hardening (P0 Security)
+
 **File**: `backend/app/api/v1/endpoints/payments.py:143-180`
 - **Issue**: Fallback to `RAZORPAY_KEY_SECRET` for webhook verification
-- **Fix**: 
+- **Fix**:
   - Requires dedicated `RAZORPAY_WEBHOOK_SECRET`
   - Fails closed (HTTP 500) if not configured in production
   - No fallback to API key secret
 - **Impact**: Meets production security requirements
 
 ### 4. Database Serverless Compatibility
+
 **File**: `backend/app/core/database.py`
 - **Issue**: Used fixed pool (`pool_size=10, max_overflow=20`) unsuitable for serverless
 - **Fix**:
@@ -54,6 +58,7 @@ All technically fixable code issues have been resolved. 101 backend unit tests +
   - Proper SSL handling via connection string
 
 ### 5. Production Fail-Closed Validation
+
 **File**: `backend/app/core/config.py`
 - **Added**: `DATABASE_URL` validator
 - **Behavior**: Raises `ValueError` in production if:
@@ -62,6 +67,7 @@ All technically fixable code issues have been resolved. 101 backend unit tests +
 - **Impact**: Prevents accidental production deployment with invalid DB
 
 ### 6. Backend Vercel Configuration
+
 **File**: `backend/vercel.json` (created)
 - Framework: FastAPI
 - Regions: `bom1` (Mumbai)
@@ -69,11 +75,13 @@ All technically fixable code issues have been resolved. 101 backend unit tests +
 - CORS headers for production origins
 
 ### 7. Requirements.txt
+
 **File**: `backend/requirements.txt` (created)
 - All dependencies for Vercel build
 
 ### 8. Test Infrastructure Fixes
-**Files**: 
+
+**Files**:
 - `backend/tests/conftest.py` - Sets env vars before imports
 - `backend/tests/unit/test_orders_and_payments.py` - Uses `RAZORPAY_WEBHOOK_SECRET` for signatures
 - **Result**: All 3 previously failing webhook tests now pass
@@ -129,6 +137,7 @@ All technically fixable code issues have been resolved. 101 backend unit tests +
 ## Remaining Manual Actions Required
 
 ### 🔴 CRITICAL - Managed PostgreSQL Provisioning
+
 **Owner Action Required**: Provision a managed PostgreSQL database and configure Vercel.
 
 **Options**:
@@ -144,6 +153,7 @@ postgresql+asyncpg://user:password@host:5432/dbname?sslmode=require
 ```
 
 ### 🔴 CRITICAL - Vercel Environment Variables
+
 Set in Vercel Dashboard → Project → Settings → Environment Variables (Production):
 
 | Variable | Required | Example/Notes |
@@ -166,6 +176,7 @@ Set in Vercel Dashboard → Project → Settings → Environment Variables (Prod
 | `DOCS_ENABLED` | No | `false` for production |
 
 ### 🔴 CRITICAL - Run Production Migrations
+
 After Vercel deployment with valid `DATABASE_URL`:
 
 ```bash
@@ -177,12 +188,14 @@ alembic upgrade head
 **Expected Head**: `008_order_customer` (includes `order_addresses` table and customer fields on orders)
 
 ### 🔴 CRITICAL - Configure Razorpay Webhook
+
 **In Razorpay Dashboard** → Settings → Webhooks:
 - **URL**: `https://backend-ten-pi-57.vercel.app/api/v1/payments/razorpay/webhook`
 - **Events**: `payment.captured`, `payment.failed` (minimum)
 - **Secret**: Must match `RAZORPAY_WEBHOOK_SECRET` in Vercel
 
 ### 🟡 HIGH - Secret Rotation
+
 **The `.env` file contains LIVE credentials that MUST be rotated:**
 
 | Credential | Action |
@@ -195,6 +208,7 @@ alembic upgrade head
 | `ADMIN_INIT_PASSWORD` | Change after initial owner provisioned |
 
 ### 🟡 HIGH - Frontend Deploy
+
 Deploy frontend to Vercel (already configured):
 ```bash
 vercel --prod
@@ -252,6 +266,7 @@ vercel --prod
 ## Files Modified
 
 ### Backend Code
+
 - `backend/app/api/v1/endpoints/otp.py` - OTP role fix
 - `backend/app/main.py` - CORS origins
 - `backend/app/api/v1/endpoints/payments.py` - Webhook secret hardening
@@ -259,10 +274,12 @@ vercel --prod
 - `backend/app/core/config.py` - Production DB validator
 
 ### Backend Config
+
 - `backend/vercel.json` (new)
 - `backend/requirements.txt` (new)
 
 ### Tests
+
 - `backend/tests/conftest.py` - Env var setup
 - `backend/tests/unit/test_orders_and_payments.py` - Webhook secret usage
 

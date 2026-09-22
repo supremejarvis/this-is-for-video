@@ -1,4 +1,5 @@
 # 🏛️ APOLLO ENGINEERING — FULL ADMIN AUDIT & BUG REPORT
+
 **Audit Version:** 1.0.0  
 **Audit Execution Date:** 2026-09-12  
 **Target Environment:** Local Workspace / Next.js / Vite SPA & FastAPI Python Backend  
@@ -169,8 +170,8 @@ Every statement in this report is backed by direct command output, test executio
 | **Environment** | Local, Preview, Production |
 | **Role** | All Roles |
 | **Preconditions** | Place a Cash-on-Delivery order with fractional / non-multiple totals |
-| **Steps to Reproduce** | 1. In `CartDrawer.tsx:450`, the UI displays: `Nearest ₹{currentQuote.rounding_multiple || 5}`.<br>2. In `backend/app/services/pricing.py:77-80`, rounding uses `request.rounding_multiple`.<br>3. In unit tests and `quoteService.ts`, `rounding_multiple: 1` is sent.<br>4. Depending on which multiple is passed, the mandatory audit test amounts yield different final customer bills: |
-| **Calculation Comparison** | - **Mandatory Test Value: ₹71.00**<br>&nbsp;&nbsp;* Multiple = ₹1: ₹71.00 (adj: ₹0.00)<br>&nbsp;&nbsp;* Multiple = ₹5: ₹75.00 (adj: +₹4.00)<br>&nbsp;&nbsp;* Multiple = ₹10: ₹80.00 (adj: +₹9.00)<br>- **Mandatory Test Value: ₹72.00**<br>&nbsp;&nbsp;* Multiple = ₹1: ₹72.00 (adj: ₹0.00)<br>&nbsp;&nbsp;* Multiple = ₹5: ₹75.00 (adj: +₹3.00)<br>&nbsp;&nbsp;* Multiple = ₹10: ₹80.00 (adj: +₹8.00)<br>- **Mandatory Test Value: ₹75.80**<br>&nbsp;&nbsp;* Multiple = ₹1: ₹76.00 (adj: +₹0.20)<br>&nbsp;&nbsp;* Multiple = ₹5: ₹80.00 (adj: +₹4.20)<br>&nbsp;&nbsp;* Multiple = ₹10: ₹80.00 (adj: +₹4.20) |
+| **Steps to Reproduce** | 1. In `CartDrawer.tsx:450`, the UI displays: `Nearest ₹{currentQuote.rounding_multiple || 5}`.<br>2. In`backend/app/services/pricing.py:77-80`, rounding uses`request.rounding_multiple`.<br>3. In unit tests and`quoteService.ts`,`rounding_multiple: 1` is sent.<br>4. Depending on which multiple is passed, the mandatory audit test amounts yield different final customer bills: |
+| **Calculation Comparison** | - **Mandatory Test Value: ₹71.00**<br>&nbsp;&nbsp;*Multiple = ₹1: ₹71.00 (adj: ₹0.00)<br>&nbsp;&nbsp;* Multiple = ₹5: ₹75.00 (adj: +₹4.00)<br>&nbsp;&nbsp;*Multiple = ₹10: ₹80.00 (adj: +₹9.00)<br>- **Mandatory Test Value: ₹72.00**<br>&nbsp;&nbsp;* Multiple = ₹1: ₹72.00 (adj: ₹0.00)<br>&nbsp;&nbsp;*Multiple = ₹5: ₹75.00 (adj: +₹3.00)<br>&nbsp;&nbsp;* Multiple = ₹10: ₹80.00 (adj: +₹8.00)<br>- **Mandatory Test Value: ₹75.80**<br>&nbsp;&nbsp;*Multiple = ₹1: ₹76.00 (adj: +₹0.20)<br>&nbsp;&nbsp;* Multiple = ₹5: ₹80.00 (adj: +₹4.20)<br>&nbsp;&nbsp;* Multiple = ₹10: ₹80.00 (adj: +₹4.20) |
 | **Expected Result** | Single authoritative business rule approved by leadership and codified identically across frontend preview and backend order validation. |
 | **Actual Result** | Discrepancy between UI default (₹5) and test/service default (₹1). Customer could be quoted ₹75 in cart preview but billed ₹71 or vice-versa. |
 | **Evidence** | [src/components/cart/CartDrawer.tsx:450](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/src/components/cart/CartDrawer.tsx#L450)<br>[backend/app/services/pricing.py:77-80](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/services/pricing.py#L77-L80) |
@@ -446,6 +447,7 @@ Prior to shipping any approved fixes, the following test matrix must be executed
 The audit of the Apollo Engineering Admin and Super Admin system is complete. All findings, discrepancies, security risks, and calculation formulas have been verified and documented with evidence.
 
 Current Operating State:
+
 # **READY FOR FIXING**
 
 *(In accordance with project directives, no code modifications will be initiated until explicit user confirmation is received)*.

@@ -1,11 +1,13 @@
 # P0-004 Remediation Report: Customer Contact & Delivery Address Persistence
 
 ## Root Cause
+
 In `backend/app/api/v1/endpoints/orders.py`, the `create_order` endpoint accepted customer details (`payload.customer`) and shipping address (`payload.shipping_address`), but delegated order creation to `QuoteService.create_order_from_quote(session=db, quote_id=quote_id, payment_method=payload.payment_method)`. `QuoteService` dropped both customer and address objects completely. Furthermore, neither the `Order` model nor the database schema had columns or relationships for customer names, phone numbers, emails, or structured street addresses. The only shipping-related data persisted was `Shipment.destination_pincode`.
 
 ---
 
 ## Previous Broken Data Flow
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -25,6 +27,7 @@ sequenceDiagram
 ---
 
 ## New Persistent Data Flow
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -49,6 +52,7 @@ sequenceDiagram
 ---
 
 ## Database Schema Changes
+
 1. **`orders` table**:
    - `user_id`: `UUID`, nullable, foreign key to `users.id` with `ondelete="SET NULL"`, indexed via `ix_orders_user_id`.
    - `customer_name`: `VARCHAR(100)`, nullable.
@@ -78,6 +82,7 @@ sequenceDiagram
 ---
 
 ## Migration Created
+
 - **File**: `backend/alembic/versions/008_order_address_and_customer_persistence.py`
 - **Revision ID**: `008_order_address_and_customer_persistence`
 - **Revises**: `007_webhook_events`
@@ -87,6 +92,7 @@ sequenceDiagram
 ---
 
 ## Order Model Changes
+
 In `backend/app/models/order.py`:
 - Added `user_id`, `customer_name`, `customer_phone`, `customer_email`, `company_name`, and `gstin` columns to `Order`.
 - Added relationship `address: Mapped["OrderAddress | None"] = relationship("OrderAddress", back_populates="order", uselist=False, cascade="all, delete-orphan")`.
@@ -94,6 +100,7 @@ In `backend/app/models/order.py`:
 ---
 
 ## Address Model
+
 In `backend/app/models/order.py`:
 - Created `OrderAddress(Base)` mapping to `order_addresses`.
 - Exported `OrderAddress` in `backend/app/models/__init__.py`.
@@ -102,6 +109,7 @@ In `backend/app/models/order.py`:
 ---
 
 ## Validation Changes
+
 In `backend/app/schemas/order.py`:
 - **`CustomerInfoInput`**: Removed dummy default strings (`"Valued Customer"`, `"9825012345"`). Enforced `name` (stripped, min 2 chars), `phone` (validated 10-digit Indian mobile number starting with 6–9), and optional `email` (format check).
 - **`AddressInput`**: Removed empty defaults. Enforced non-empty `address_line1` (min 3 chars), `city` (min 2 chars), `state` (min 2 chars), and exact 6-digit Indian PIN code regex `^[1-9][0-9]{5}$`.
@@ -110,6 +118,7 @@ In `backend/app/schemas/order.py`:
 ---
 
 ## Quote PIN Consistency
+
 - In `backend/app/api/v1/endpoints/orders.py`:
   - If `quote_id` is supplied: Query existing quote from database. Verify `existing_quote.destination_pincode == payload.shipping_address.pincode`. On mismatch, immediately reject with HTTP 400 Bad Request:
     `"Shipping address PIN code '{shipping_pin}' does not match quote destination PIN code '{existing_quote.destination_pincode}'. Please request a new quote."`
@@ -119,11 +128,13 @@ In `backend/app/schemas/order.py`:
 ---
 
 ## Transaction / Rollback Behavior
+
 Order creation, item reservations, `Shipment` creation, `Payment` intent, and `OrderAddress` insertion are executed within a single transactional boundary (`db: AsyncSession`). Any database failure or validation exception triggers an explicit `await db.rollback()`, ensuring zero orphan orders, zero orphan shipments, and zero dangling addresses.
 
 ---
 
 ## Files Changed
+
 1. `backend/alembic/versions/008_order_address_and_customer_persistence.py` (New migration)
 2. `backend/app/models/order.py` (Added `OrderAddress` model, updated `Order` model)
 3. `backend/app/models/__init__.py` (Exported `OrderAddress`)
@@ -136,6 +147,7 @@ Order creation, item reservations, `Shipment` creation, `Payment` intent, and `O
 ---
 
 ## Tests Added
+
 In `backend/tests/unit/test_order_address_persistence.py`:
 - `test_p0_004_a_valid_order_persists_customer_name`: Valid order request -> customer name stored in DB.
 - `test_p0_004_b_valid_order_persists_canonical_phone`: Valid order request -> canonical 10-digit phone stored in DB.
@@ -151,6 +163,7 @@ In `backend/tests/unit/test_order_address_persistence.py`:
 ---
 
 ## Tests Results
+
 - **Dedicated P0-004 Suite**: 10 passed, 0 failed in 8.98s.
 - **Full Backend Unit Suite**: 101 passed, 0 failed in 57.44s.
 - **Full Frontend Vitest Suite**: 115 passed across 17 test files in 32.91s.
@@ -160,6 +173,7 @@ In `backend/tests/unit/test_order_address_persistence.py`:
 ---
 
 ## Migration Verification
+
 - `alembic heads`: Verified head at `008_order_address_and_customer_persistence`.
 - `alembic history`: Verified clean sequence `<base> -> 001 -> 002 -> 003 -> 004 -> 005 -> 006 -> 007 -> 008 (head)`.
 - Live test execution verified with SQLite and PostgreSQL schema compatibility.
@@ -167,6 +181,7 @@ In `backend/tests/unit/test_order_address_persistence.py`:
 ---
 
 ## Legacy Order Handling
+
 - Added columns on `Order` (`user_id`, `customer_name`, `customer_phone`, etc.) and the `address` relationship are nullable.
 - Historical orders created prior to migration 008 have `address = None` and null customer columns.
 - No fabricated customer details or placeholder fake addresses are injected into historical records.
@@ -175,6 +190,7 @@ In `backend/tests/unit/test_order_address_persistence.py`:
 ---
 
 ## Security Regression Status
+
 - **P0-001 (Secret Leakage)**: Verified intact. Zero hardcoded secrets, test suite passes.
 - **P0-002 (Hardcoded Backdoor & Universal MFA Bypass)**: Verified intact (`test_admin_login_denies_universal_bypass_and_old_backdoor` passes).
 - **P0-003 (OWNER Auto-Provisioning)**: Verified intact (`test_auth_endpoints.py` 25 passed, zero auto-provisioning).
@@ -183,6 +199,7 @@ In `backend/tests/unit/test_order_address_persistence.py`:
 ---
 
 ## Remaining Related Findings
+
 - **P1-001 (BOLA in Guest Order Retrieval)**: Documented dependency. Unauthenticated access to guest orders now masks customer phone and omits structured addresses. Full public order tracking hardening belongs to P1-001.
 - **P1-002 (Order User Ownership Linking)**: Addressed at schema level with `Order.user_id` foreign key and authenticated order binding. Full customer order history UI/UX belongs to P1-002.
 - **P0-005**: Not started (as mandated by user scope boundaries).
@@ -190,4 +207,5 @@ In `backend/tests/unit/test_order_address_persistence.py`:
 ---
 
 ## Final Status
+
 **`FIXED AND VERIFIED`**

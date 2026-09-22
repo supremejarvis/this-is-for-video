@@ -193,7 +193,8 @@ classDiagram
     Account "1" -- "*" JournalLine : references
 ```
 
-### Invariant Rules:
+### Invariant Rules
+
 1. **Balance Check**: Every posted journal entry must satisfy $\sum \text{Debit} = \sum \text{Credit}$ rounded to 2 decimal places (`NUMERIC(14,2)`). Enforced via database triggers.
 2. **One-Sided Line Rule**: Each line has either `debit > 0` and `credit = 0`, or `debit = 0` and `credit > 0`. Zero or dual-sided amounts are rejected.
 3. **Period Lock**: No transaction can be posted into a `LOCKED` fiscal period without explicit Super Admin unlock authorization.

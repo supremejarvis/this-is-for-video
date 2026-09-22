@@ -1,6 +1,6 @@
 # 📋 Apollo Engineering E-Commerce — Audit Remediation Checklist
 
-This checklist tracks the implementation of fixes for all 23 confirmed findings identified during the system-wide audit. 
+This checklist tracks the implementation of fixes for all 23 confirmed findings identified during the system-wide audit.
 
 ---
 

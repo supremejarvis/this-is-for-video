@@ -1,9 +1,11 @@
 # 🏛️ ULTIMATE APE STORE B2B & B2C HYBRID E-COMMERCE ECOSYSTEM
+
 ## Master Technical Architecture, Operational Logic, Security, Logistics & Engineering Blueprint
 
 ---
 
 ## 📑 TABLE OF CONTENTS
+
 1. [Executive Platform Vision & Zero-Lag Core](#1-executive-platform-vision--zero-lag-core)
 2. [World-Class Tech Stack Selection & Deep Performance Benchmark](#2-world-class-tech-stack-selection--deep-performance-benchmark)
 3. [Zero-Trust Security, Data Safety & Privacy Compliance](#3-zero-trust-security-data-safety--privacy-compliance)
@@ -73,7 +75,8 @@ This blueprint defines the architecture for a **world-record-class, zero-lag, hi
                                         └─────────────────────────────┘
 ```
 
-### 🎯 Key Performance Service Level Objectives (SLOs):
+### 🎯 Key Performance Service Level Objectives (SLOs)
+
 - **Time to First Byte (TTFB)**: `< 50ms` globally via Cloudflare Edge Caching.
 - **Search Response Time**: `< 15ms` for typeahead across 1,000,000+ SKUs using indexed vector/inverted indexing.
 - **Add-to-Cart Latency**: `0ms` perceived latency via Optimistic UI state updates with background reconciliation.
@@ -118,6 +121,7 @@ This blueprint defines the architecture for a **world-record-class, zero-lag, hi
 ```
 
 ### 3.1 Customer Data Safety & PII Protection Rules
+
 1. **Field-Level Encryption**: All sensitive data (Phone numbers, GSTIN, PAN, Bank Account, National ID) are encrypted at rest using AES-256-GCM keys managed via AWS KMS / HashiCorp Vault.
 2. **Payment Card & UPI Tokenization**: Zero card data is stored on platform servers. Full PCI-DSS Level 1 compliance via secure tokenization bridges (Razorpay / Cashfree / Stripe).
 3. **Session Hijacking Defense**: IP-binding and user-agent fingerprint validation on refresh tokens. Any token replay from an untrusted origin instantly invalidates all user active sessions.
@@ -150,11 +154,13 @@ This blueprint defines the architecture for a **world-record-class, zero-lag, hi
 ```
 
 ### 4.1 B2C Onboarding Logic
+
 - **Speed-First Auth**: 4-digit OTP via high-priority SMS gateway (<3s delivery) or WhatsApp Business API.
 - **Cart & History Migration**: When a guest user adds 5 items to their cart and then logs in, the guest session is atomically merged with their account without item duplication or price desynchronization.
 - **Saved Payment & Express Checkout**: Quick selection of saved UPI IDs and Tokenized cards for instant purchase.
 
 ### 4.2 B2B Enterprise Account Architecture (APE Store B2B Level)
+
 - **Instant Tax Validation**: Real-time integration with the GST Portal API. When the user enters their 15-character GSTIN:
   - System automatically retrieves Legal Business Name, Trade Name, Registered Address, and Active GST Status.
   - Automatically maps to appropriate state code (`01` to `38`) for exact IGST vs CGST+SGST tax determination.
@@ -200,6 +206,7 @@ This blueprint defines the architecture for a **world-record-class, zero-lag, hi
 ```
 
 ### 5.1 The India Post Speed Post Core Booking Rules
+
 1. **Fixed Origin Hub Pincode**: The company fulfillment center origin pincode is hardcoded and locked to `382430` (Gujarat Hub).
 2. **Pincode to Multiple Post Office Resolution**:
    - In India Post, a single 6-digit destination pincode maps to multiple Sub Post Offices (SO) and Branch Post Offices (BO).
@@ -255,10 +262,12 @@ This blueprint defines the architecture for a **world-record-class, zero-lag, hi
 ```
 
 ### 6.1 Multi-Dimensional Variant Logic
+
 - Supports all variant axes: **Size**, **Color**, **Pack Size (Single, Pack of 5, Carton of 50)**, **Material**, **Style**, **Flavour**, **Technical Rating (Watts, Volts, Capacity)**.
 - Switching variants on PDP instantaneously updates images, URL slug (without full page reload via `history.pushState`), price, stock status, delivery date promise, and winning seller.
 
 ### 6.2 The APE Store Buy Box Engine (Multi-Seller per SKU)
+
 When multiple sellers list the exact same Child ASIN, the system computes the **Buy Box Score ($S_{bb}$)** in real time:
 
 $$S_{bb} = (w_1 \cdot \text{PriceScore}) + (w_2 \cdot \text{ShippingSpeedScore}) + (w_3 \cdot \text{SellerRating}) + (w_4 \cdot \text{FulfillmentType})$$
@@ -276,6 +285,7 @@ $$S_{bb} = (w_1 \cdot \text{PriceScore}) + (w_2 \cdot \text{ShippingSpeedScore})
 ## 🛍️ 7. STOREFRONT DISPLAY, A+ CONTENT & LIVE STOCK SYNC
 
 ### 7.1 High-Conversion Product Detail Page (PDP)
+
 - **Ultra-Fast Media Gallery**: High-resolution zoom lens with mouse cursor tracking, 360-degree interactive product spinner, embedded 4K product video player.
 - **Dynamic Delivery Promise**:
   - "Order within **2 hrs 40 mins** to get delivery by **Tomorrow, 2 PM** at `380001 (Ahmedabad G.P.O.)`".
@@ -284,6 +294,7 @@ $$S_{bb} = (w_1 \cdot \text{PriceScore}) + (w_2 \cdot \text{ShippingSpeedScore})
   - Includes instant "Input Tax Credit (ITC) savings" calculator showing effective net price after GST claim.
 
 ### 7.2 APE Store A+ Enhanced Brand Content Builder
+
 - Standardized modular components:
   1. Full-width Brand Story Hero Banner.
   2. Technical Specification Comparison Table against other models.
@@ -292,6 +303,7 @@ $$S_{bb} = (w_1 \cdot \text{PriceScore}) + (w_2 \cdot \text{ShippingSpeedScore})
   5. Verified Customer Reviews with photo/video uploads and keyword filter chips (e.g., *"Comfort", "Build Quality", "Value for money"*).
 
 ### 7.3 Real-Time Stock Synchronization
+
 - **WebSocket & SSE Channels**: As soon as inventory changes at the warehouse, all connected PDP visitors receive a lightweight JSON patch.
 - If stock falls below 5 units, badge dynamically changes to *"Only 3 left in stock - order soon"*.
 - If out of stock, Add to Cart instantly disables and displays *"Notify Me When Available"* button.
@@ -326,15 +338,18 @@ $$S_{bb} = (w_1 \cdot \text{PriceScore}) + (w_2 \cdot \text{ShippingSpeedScore})
 ```
 
 ### 8.1 Multi-Vendor Split Cart Engine
+
 - When a customer adds items from multiple sellers or different fulfillment centers:
   - Cart automatically groups items into **Shipment 1 of 2** and **Shipment 2 of 2**.
   - Displays distinct delivery dates and individual tracking streams.
   - Combines payments into a single unified customer transaction while splitting vendor ledger payouts on the backend.
 
 ### 8.2 B2B Wholesale Quick-Order Matrix
+
 - Bulk purchase grid allowing enterprise buyers to enter SKU quantities across multiple sizes and colors in a spreadsheet-style table with a single **"Add All 500 Units to Cart"** button.
 
 ### 8.3 Payment Orchestration & Tax Engine
+
 - **Payment Modes**:
   - UPI (Instant QR generation, Intent flow on mobile).
   - Credit/Debit Cards (3D Secure 2.0).
@@ -365,6 +380,7 @@ $$S_{bb} = (w_1 \cdot \text{PriceScore}) + (w_2 \cdot \text{ShippingSpeedScore})
 ```
 
 ### 9.1 Seller Financial Escrow & Automated Settlements
+
 - **Escrow Holding**: Customer funds are securely held in platform escrow account until the order return/replacement window expires (e.g. 7 days post-delivery).
 - **Automated Payout Engine (T+7 Cycle)**:
   - Landed Sale Price
@@ -396,6 +412,7 @@ $$S_{bb} = (w_1 \cdot \text{PriceScore}) + (w_2 \cdot \text{ShippingSpeedScore})
 ```
 
 ### 10.1 Order State Machine
+
 1. `ORDER_PENDING`: Payment initiated, inventory reserved in Redis.
 2. `ORDER_CONFIRMED`: Payment captured, invoice number generated (`INV-2026-XXXXX`).
 3. `PROCESSING_PICK_PACK`: Item scanned via barcode scanner at warehouse.
@@ -432,6 +449,7 @@ $$S_{bb} = (w_1 \cdot \text{PriceScore}) + (w_2 \cdot \text{ShippingSpeedScore})
 ```
 
 ### 10.3 GST Tax Invoice Template (Compliant with Indian GST Rules)
+
 - Header with Platform & Seller Legal Name, Registered Address, GSTIN, State Code.
 - Buyer Details (B2C Name & Address or B2B Company Legal Name, GSTIN, Place of Supply).
 - Itemized Table: Description, HSN/SAC Code, Quantity, Unit Rate, Discount, Taxable Value, CGST Rate & Amount, SGST Rate & Amount (or IGST), Total Amount.
@@ -457,6 +475,7 @@ $$S_{bb} = (w_1 \cdot \text{PriceScore}) + (w_2 \cdot \text{ShippingSpeedScore})
 ```
 
 ### 11.1 Key Analytics Dimensions
+
 1. **GST Compliance Reports**: One-click download of GSTR-1 compatible filing data, categorized by B2B (with GSTIN), B2C Large, B2C Small, Credit Notes, and HSN Summary.
 2. **COD vs Prepaid Reconciliation**: Real-time tracking of COD amounts held by India Post / courier partners, remittance cycles, and disputed deliveries.
 3. **Customer-Wise Shipping Cost Analysis**: Exact breakdown of freight expenditure vs shipping revenue collected per user and organization.

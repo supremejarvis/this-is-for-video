@@ -9,15 +9,16 @@
 ## 1. Project Architecture & Tech Stack
 
 ### High-Level Architecture
+
 A decoupled dual-tier architecture combining a modern React/Next.js client interface with a high-performance asynchronous Python backend service, alongside a secondary direct API handler inside Next.js.
 
 * **Frontend:** Next.js 14+ (App Router architecture under `src/app/`) with TypeScript.
 * **UI & Styling:** Tailwind CSS (`src/index.css`), custom accessible design primitives (`src/components/ui/`).
 * **Client State Management:** Zustand (`src/store/useStore.ts`) paired with domain hooks (`useCart`, `useAuth`, `useDebounce`).
 * **Backend Framework:** Python (FastAPI / ASGI) located at `backend/app/main.py`.
-* **Database & ORM:** 
-  - Primary Relational DB: SQLAlchemy + Alembic Migrations (`backend/alembic/`).
-  - Secondary/Direct Inquiries DB: MongoDB via Mongoose (`src/lib/mongoose.ts` & `src/models/Inquiry.ts`).
+* **Database & ORM:**
+  * Primary Relational DB: SQLAlchemy + Alembic Migrations (`backend/alembic/`).
+  * Secondary/Direct Inquiries DB: MongoDB via Mongoose (`src/lib/mongoose.ts` & `src/models/Inquiry.ts`).
 * **Caching & Queue:** Redis integration (`backend/app/cache/redis...`), background async tasks (`backend/app/workers/`).
 * **Third-Party Integrations:** Razorpay (Payments), MSG91 (OTP Auth), CEPT/India Post (Logistics calculation), GST/GSTR-1 engine.
 
@@ -64,6 +65,7 @@ web/
 ## 3. Active vs. Dead / Unused Files
 
 ### Active (Production-Critical)
+
 * `src/app/layout.tsx`, `src/app/page.tsx`
 * `src/app/(auth)/*`, `src/app/(shop)/*`, `src/app/admin/*`, `src/app/b2b/*`
 * `src/components/cart/CartDrawer.tsx`, `src/components/checkout/CheckoutModal.tsx`
@@ -73,6 +75,7 @@ web/
 * `backend/app/models/*`, `backend/app/schemas/*`, `backend/app/services/*`
 
 ### Dead, Orphan, or Potentially Redundant Files
+
 1. **`src/data/mockData.ts`**: Likely an early development stub. If storefront pulls from API, this file is dead weight.
 2. **`src/lib/mongoose.ts` & `src/models/Inquiry.ts`**: Redundant dual-ORM architecture if MongoDB is only used for one contact endpoint while PostgreSQL/SQLAlchemy handles the rest.
 3. **`web/reports/*.png` & `web/reports/report.json`**: Static local screenshots and devtools runs that shouldn't live in code control.
@@ -83,25 +86,27 @@ web/
 ## 4. Duplicate & Testing Files
 
 ### Test Files (Non-production code)
+
 * **Backend Pytest Suites:**
-  - `backend/tests/contract/*`
-  - `backend/tests/integration/*`
-  - `backend/tests/unit/test_*.py`
+  * `backend/tests/contract/*`
+  * `backend/tests/integration/*`
+  * `backend/tests/unit/test_*.py`
 * **Frontend Component & Logic Tests:**
-  - `src/lib/ecommerce/__tests__/*`
-  - `src/lib/seo/__tests__/*`
-  - `src/models/__tests__/*`
-  - `src/services/__tests__/*`
-  - `src/utils/__tests__/*`
+  * `src/lib/ecommerce/__tests__/*`
+  * `src/lib/seo/__tests__/*`
+  * `src/models/__tests__/*`
+  * `src/services/__tests__/*`
+  * `src/utils/__tests__/*`
 * **System Verification:**
-  - `tests/e2e/a11y.spec.ts`
-  - `tests/e2e/admin_audit.spec.ts`
-  - `tests/e2e/buyer_catalog.spec.ts`
-  - `tests/e2e/responsive.spec.ts`
-  - `tests/load/k6-staging.js`
-  - `tests/security/zap-staging.conf`
+  * `tests/e2e/a11y.spec.ts`
+  * `tests/e2e/admin_audit.spec.ts`
+  * `tests/e2e/buyer_catalog.spec.ts`
+  * `tests/e2e/responsive.spec.ts`
+  * `tests/load/k6-staging.js`
+  * `tests/security/zap-staging.conf`
 
 ### Identified Structural Duplications
+
 * **Dual Coverage Reports:** `web/htmlcov/` and `backend/htmlcov/` both exist and duplicate test coverage records.
 * **Dual API Layers:** Service calls split between `src/services/*.service.ts` (e.g., `cart.service.ts`, `order.service.ts`) and `src/services/api/*` (e.g., `api/orders.ts`, `api/pricing.ts`). They must be consolidated into a single unified client service library.
 
@@ -128,6 +133,7 @@ web/
 ## 6. Cleanup & Optimization Recommendations
 
 ### Phase 1: Immediate Space Reclamation (Zero Code Risk)
+
 Execute cleanup of all generated and ephemeral testing files. These can be removed safely without impacting codebase functionality:
 ```powershell
 Remove-Item -Recurse -Force .\htmlcov, .\backend\htmlcov, .\playwright-report, .\test-results, .\reports\*.png
@@ -145,6 +151,7 @@ __pycache__/
 ```
 
 ### Phase 2: Consolidation & Code Hygiene
+
 1. **Unify the API Client:** Consolidate `src/services/*.service.ts` into `src/services/api/` to establish a single source of truth for endpoints and response types.
 2. **Standardize the Persistence Layer:** Decide on the database strategy:
    * If PostgreSQL/SQLAlchemy is the enterprise database, migrate the inquiry logic away from `Mongoose` (`src/lib/mongoose.ts`) into a FastAPI endpoint (`/inquiries`) backed by SQLAlchemy.

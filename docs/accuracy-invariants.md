@@ -49,4 +49,3 @@ These invariants are release-blocking and must be enforced by code, database con
 ## Required property tests
 
 Generate boundary values for quantity, unit price, tax rate, shipping charge, discounts, COD rate and rounding multiple. Test deterministic replay, monotonic charges, non-negative components, maximum supported totals, half-paise boundaries and concurrent duplicate submissions.
-

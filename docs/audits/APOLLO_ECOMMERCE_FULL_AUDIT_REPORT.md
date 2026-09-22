@@ -1,4 +1,5 @@
 # 🏛️ APOLLO ENGINEERING — COMPLETE E-COMMERCE FULL SYSTEM AUDIT REPORT
+
 **Authoritative Architectural, Security, Code Quality, Statutory Business Logic & Production Readiness Assessment**
 
 **Audit Execution Date:** 2026-09-12  
@@ -176,6 +177,7 @@ apollo-engineering/
 ## 6. CRITICAL FINDINGS (P0)
 
 ### FINDING P0-001: Production Secrets Committed in Git History and Exposed Client-Side
+
 * **Category:** Security / Secrets Exposure (OWASP A02: Cryptographic Failures / A05: Security Misconfiguration)
 * **Severity:** **P0 — Critical**
 * **Status:** **CONFIRMED BUG**
@@ -184,13 +186,13 @@ apollo-engineering/
 * **Evidence:**
   1. Git commit history contains full plaintext `.env` files committed in commits `ec8fbd1d6ffdfe2f8f1e796448ea4fd744db328a` and `7839244d14a18cf669aef12dac209c55315149dc`.
   2. Root `.env` lines 6–32 expose:
-     - `VITE_INDIA_POST_PASSWORD="[REDACTED]"` (Exposed to public browser bundle via `VITE_` prefix)
-     - `VITE_MSG91_AUTH_KEY="[REDACTED]"` (Exposed to public browser bundle via `VITE_` prefix)
-     - `RAZORPAY_KEY_ID="rzp_live_TPhyOgY7jM1yqR"` (Live production key)
-     - `RAZORPAY_KEY_SECRET="[REDACTED]"` (Live production secret)
-     - `RAZORPAY_WEBHOOK_SECRET="[REDACTED]"`
+     * `VITE_INDIA_POST_PASSWORD="[REDACTED]"` (Exposed to public browser bundle via `VITE_` prefix)
+     * `VITE_MSG91_AUTH_KEY="[REDACTED]"` (Exposed to public browser bundle via `VITE_` prefix)
+     * `RAZORPAY_KEY_ID="rzp_live_TPhyOgY7jM1yqR"` (Live production key)
+     * `RAZORPAY_KEY_SECRET="[REDACTED]"` (Live production secret)
+     * `RAZORPAY_WEBHOOK_SECRET="[REDACTED]"`
   3. `backend/.env` line 15 exposes:
-     - `MONGODB_URI="mongodb+srv://apollo_user:[REDACTED]@cluster0.mongodb.net/..."`
+     * `MONGODB_URI="mongodb+srv://apollo_user:[REDACTED]@cluster0.mongodb.net/..."`
 * **How to Reproduce:** Run `git log --all --full-history -- "**.env*"` to view committed production secrets. Inspect Vite bundle build output to observe `VITE_` variables in client assets.
 * **Impact:** Immediate compromise of live Razorpay payment gateway, MSG91 SMS balance, MongoDB Atlas database, and official India Post account credentials.
 * **Recommended Fix:**
@@ -202,13 +204,14 @@ apollo-engineering/
 ---
 
 ### FINDING P0-002: Hardcoded Plaintext Admin Password and Client-Side Emergency Backdoor
+
 * **Category:** Authentication / Backdoor (OWASP A07: Identification and Authentication Failures)
 * **Severity:** **P0 — Critical**
 * **Status:** **CONFIRMED BUG**
 * **Affected Files:**
-  - [src/components/admin/SuperAdminDashboard.tsx:426-436](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/src/components/admin/SuperAdminDashboard.tsx#L426-L436)
-  - [backend/app/main.py:27-31](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/main.py#L27-L31)
-  - [backend/app/core/config.py:35-46](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/core/config.py#L35-L46)
+  * [src/components/admin/SuperAdminDashboard.tsx:426-436](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/src/components/admin/SuperAdminDashboard.tsx#L426-L436)
+  * [backend/app/main.py:27-31](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/main.py#L27-L31)
+  * [backend/app/core/config.py:35-46](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/core/config.py#L35-L46)
 * **Evidence:**
   1. In `SuperAdminDashboard.tsx` lines 426–436:
      ```tsx
@@ -243,6 +246,7 @@ apollo-engineering/
 ---
 
 ### FINDING P0-003: Unauthenticated Privilege Escalation in `POST /api/v1/auth/admin-login`
+
 * **Category:** Authorization / Privilege Escalation (OWASP A01: Broken Access Control)
 * **Severity:** **P0 — Critical**
 * **Status:** **CONFIRMED BUG**
@@ -277,13 +281,14 @@ apollo-engineering/
 ---
 
 ### FINDING P0-004: Customer Contact & Delivery Address Dropped in Backend Order Creation
+
 * **Category:** Database / Data Integrity (Ecommerce Order Architecture)
 * **Severity:** **P0 — Critical**
 * **Status:** **CONFIRMED BUG**
 * **Affected Files:**
-  - [backend/app/api/v1/endpoints/orders.py:86-228](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/api/v1/endpoints/orders.py#L86-L228)
-  - [backend/app/models/order.py:60-98](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/models/order.py#L60-L98)
-  - [backend/app/services/quote_service.py:280-358](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/services/quote_service.py#L280-L358)
+  * [backend/app/api/v1/endpoints/orders.py:86-228](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/api/v1/endpoints/orders.py#L86-L228)
+  * [backend/app/models/order.py:60-98](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/models/order.py#L60-L98)
+  * [backend/app/services/quote_service.py:280-358](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/services/quote_service.py#L280-L358)
 * **Evidence:**
   `CreateOrderRequest` accepts `customer: CustomerInfoInput`, `shipping_address: AddressInput`, `claim_gst`, and `company_name`. In `orders.py:create_order`, `order = await QuoteService.create_order_from_quote(session=db, quote_id=quote_id, payment_method=payload.payment_method)`.
   The `Order` and `Shipment` models in `models/order.py` lack columns for customer name, phone, email, address line, city, state, or GSTIN. Only `destination_pincode` is stored on `Shipment`.
@@ -295,6 +300,7 @@ apollo-engineering/
 ---
 
 ### FINDING P0-005: Missing Production Routing & Reverse Proxy for `/api/v1` on Vercel
+
 * **Category:** Deployment / Vercel Configuration (DevOps / Network)
 * **Severity:** **P0 — Critical**
 * **Status:** **CONFIRMED BUG**
@@ -325,6 +331,7 @@ apollo-engineering/
 ## 7. HIGH FINDINGS (P1)
 
 ### FINDING P1-001: Broken Object Level Authorization (BOLA) on Guest Orders
+
 * **Category:** API Security (OWASP A01: Broken Access Control)
 * **Severity:** **P1 — High**
 * **Status:** **CONFIRMED BUG**
@@ -347,6 +354,7 @@ apollo-engineering/
 ---
 
 ### FINDING P1-002: Backend Crash on Order Listing Due to Non-Existent `Order.user_id` Attribute
+
 * **Category:** Backend / FastAPI Error Handling
 * **Severity:** **P1 — High**
 * **Status:** **CONFIRMED BUG**
@@ -366,12 +374,13 @@ apollo-engineering/
 ---
 
 ### FINDING P1-003: Admin Panel Decoupled from Authoritative PostgreSQL Backend
+
 * **Category:** Architecture / State Synchronization
 * **Severity:** **P1 — High**
 * **Status:** **CONFIRMED BUG**
 * **Affected Files:**
-  - [src/components/admin/SuperAdminDashboard.tsx](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/src/components/admin/SuperAdminDashboard.tsx)
-  - [src/store/useStore.ts:809-810, 1593-1650](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/src/store/useStore.ts#L809-L810)
+  * [src/components/admin/SuperAdminDashboard.tsx](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/src/components/admin/SuperAdminDashboard.tsx)
+  * [src/store/useStore.ts:809-810, 1593-1650](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/src/store/useStore.ts#L809-L810)
 * **Evidence:**
   `SuperAdminDashboard.tsx` loads products and orders from Zustand store (`useStore.ts`), which in turn initializes state from `localStorage.getItem('apollo_products')` and `localStorage.getItem('apollo_orders')`. When an admin adjusts stock or adds an ASIN, only `localStorage` is updated. No HTTP requests are made to `/api/v1/products` or `/api/v1/inventory`.
 * **Impact:** Catalog and inventory adjustments made in the Admin panel are local to the administrator's individual browser. Real customers and backend quote calculations continue using stale or initial database records.
@@ -381,12 +390,13 @@ apollo-engineering/
 ---
 
 ### FINDING P1-004: Customer Role Inversion — OTP Registrations Assigned Staff Role `SUPPORT`
+
 * **Category:** RBAC / Identity Management
 * **Severity:** **P1 — High**
 * **Status:** **CONFIRMED BUG**
 * **Affected Files:**
-  - [backend/app/api/v1/endpoints/otp.py:74](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/api/v1/endpoints/otp.py#L74)
-  - [backend/app/models/auth.py:19-26](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/models/auth.py#L19-L26)
+  * [backend/app/api/v1/endpoints/otp.py:74](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/api/v1/endpoints/otp.py#L74)
+  * [backend/app/models/auth.py:19-26](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/backend/app/models/auth.py#L19-L26)
 * **Evidence:**
   `UserRole` in `models/auth.py` contains only: `OWNER`, `CATALOG_MANAGER`, `INVENTORY_MANAGER`, `ORDER_OPERATIONS`, `FINANCE`, `SUPPORT`, `AUDITOR`. There is no customer role. In `otp.py` line 74:
   `role=UserRole.SUPPORT`
@@ -397,6 +407,7 @@ apollo-engineering/
 ---
 
 ### FINDING P1-005: Simulated Razorpay Order Creation and Swallowed Webhook Failures
+
 * **Category:** Payment Security & Verification
 * **Severity:** **P1 — High**
 * **Status:** **CONFIRMED BUG**
@@ -411,6 +422,7 @@ apollo-engineering/
 ---
 
 ### FINDING P1-006: Silent Fallback to Wrong Product in `ProductCard.tsx`
+
 * **Category:** E-Commerce Flow / Catalog Integrity
 * **Severity:** **P1 — High**
 * **Status:** **CONFIRMED BUG**
@@ -429,6 +441,7 @@ apollo-engineering/
 ---
 
 ### FINDING P1-007: Product Detail Page Unrouted in React Router
+
 * **Category:** Frontend Navigation / Architecture
 * **Severity:** **P1 — High**
 * **Status:** **CONFIRMED BUG**
@@ -444,6 +457,7 @@ apollo-engineering/
 ## 8. MEDIUM FINDINGS (P2)
 
 ### FINDING P2-001: 50+ Backend Integration Tests Skipped Due to Offline PostgreSQL
+
 * **Category:** Testing / Database
 * **Severity:** **P2 — Medium**
 * **Status:** **CONFIRMED BUG**
@@ -455,6 +469,7 @@ apollo-engineering/
 ---
 
 ### FINDING P2-002: Internal Exception Leakage in HTTP 500 Handlers
+
 * **Category:** API Security (OWASP A05: Security Misconfiguration)
 * **Severity:** **P2 — Medium**
 * **Status:** **CONFIRMED BUG**
@@ -467,22 +482,24 @@ apollo-engineering/
 ---
 
 ### FINDING P2-003: Excessive Uncompressed Bundle Size (>3.1 MB)
+
 * **Category:** Performance / Bundle Optimization
 * **Severity:** **P2 — Medium**
 * **Status:** **CONFIRMED BUG**
 * **Affected File:** [vite.config.ts:52-65](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/vite.config.ts#L52-L65)
 * **Evidence:**
   `npm run build` generates:
-  - `dist/assets/excel-vendor-DToW-h95.js`: 939.77 kB
-  - `dist/assets/index-HC1oz5X9.js`: 602.46 kB
-  - `dist/assets/SuperAdminDashboard-rsSvDVpC.js`: 425.18 kB
-  - `dist/assets/pdf-vendor-Al-Z6QKN.js`: 404.41 kB
+  * `dist/assets/excel-vendor-DToW-h95.js`: 939.77 kB
+  * `dist/assets/index-HC1oz5X9.js`: 602.46 kB
+  * `dist/assets/SuperAdminDashboard-rsSvDVpC.js`: 425.18 kB
+  * `dist/assets/pdf-vendor-Al-Z6QKN.js`: 404.41 kB
 * **Impact:** Degraded First Contentful Paint (FCP) and Largest Contentful Paint (LCP) on mobile 3G/4G networks.
 * **Recommended Fix:** Dynamically import `exceljs` only when GSTR-1 export is clicked; lazy-load PDF generation libraries.
 
 ---
 
 ### FINDING P2-004: WCAG Color Contrast Rules Explicitly Disabled in E2E Tests
+
 * **Category:** Accessibility (WCAG 2.1 AA)
 * **Severity:** **P2 — Medium**
 * **Status:** **CONFIRMED BUG**
@@ -495,6 +512,7 @@ apollo-engineering/
 ---
 
 ### FINDING P2-005: Robots.txt Allows Indexing of Admin and Account Portals
+
 * **Category:** SEO / Information Disclosure
 * **Severity:** **P2 — Medium**
 * **Status:** **CONFIRMED BUG**
@@ -507,21 +525,23 @@ apollo-engineering/
 ---
 
 ### FINDING P2-006: Seven Vulnerable NPM Dependencies (High Severity in `sharp`)
+
 * **Category:** Dependency Security (OWASP A06: Vulnerable Components)
 * **Severity:** **P2 — Medium**
 * **Status:** **CONFIRMED BUG**
 * **Affected File:** [package.json](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/package.json)
 * **Evidence:**
   `npm audit` reports:
-  - `sharp <= 0.35.4-rc.0`: High severity (GHSA-f88m-g3jw-g9cj, GHSA-rgj7-g3m4-5g8c)
-  - `esbuild 0.27.3 - 0.28.0`: Arbitrary file read on Windows dev server (GHSA-g7r4-m6w7-qqqr)
-  - `@vitest/mocker`: Path traversal (GHSA-82fw-gwwq-j7x9)
-  - `uuid < 11.1.1` (via `exceljs`): Buffer bounds check flaw (GHSA-w5hq-g745-h8pq)
+  * `sharp <= 0.35.4-rc.0`: High severity (GHSA-f88m-g3jw-g9cj, GHSA-rgj7-g3m4-5g8c)
+  * `esbuild 0.27.3 - 0.28.0`: Arbitrary file read on Windows dev server (GHSA-g7r4-m6w7-qqqr)
+  * `@vitest/mocker`: Path traversal (GHSA-82fw-gwwq-j7x9)
+  * `uuid < 11.1.1` (via `exceljs`): Buffer bounds check flaw (GHSA-w5hq-g745-h8pq)
 * **Recommended Fix:** Upgrade `sharp` to `>=0.35.4`, update `esbuild` and `vitest`.
 
 ---
 
 ### FINDING P2-007: Broken Backend Requirements and Suppressed CI Quality Gates
+
 * **Category:** CI/CD & DevSecOps
 * **Severity:** **P2 — Medium**
 * **Status:** **CONFIRMED BUG**
@@ -536,6 +556,7 @@ apollo-engineering/
 ## 9. LOW FINDINGS (P3)
 
 ### FINDING P3-001: Double-Click Backdoor and Tooltip in Header & Footer
+
 * **Category:** UX / Security Hygiene
 * **Severity:** **P3 — Low**
 * **Status:** **CONFIRMED BUG**
@@ -547,6 +568,7 @@ apollo-engineering/
 ---
 
 ### FINDING P3-002: 50 Ruff Linter Warnings in Python Backend
+
 * **Category:** Code Quality / Formatting
 * **Severity:** **P3 — Low**
 * **Status:** **CONFIRMED BUG**
@@ -555,6 +577,7 @@ apollo-engineering/
 ---
 
 ### FINDING P3-003: 17 Mypy Static Type Checking Errors in Backend
+
 * **Category:** Code Quality / Static Typing
 * **Severity:** **P3 — Low**
 * **Status:** **CONFIRMED BUG**
@@ -563,6 +586,7 @@ apollo-engineering/
 ---
 
 ### FINDING P3-004: Invalid CSS Properties in Tailwind Build
+
 * **Category:** Frontend Build
 * **Severity:** **P3 — Low**
 * **Status:** **CONFIRMED BUG**
@@ -589,82 +613,82 @@ apollo-engineering/
 
 ## 11. FRONTEND AUDIT
 
-- **Aesthetics & UI**: Premium industrial aesthetics utilizing AISI SS304 stainless steel color tones and solar blue (`#0054A6`). Micro-animations with Framer Motion and Lucide icons are visually impressive.
-- **Component Sizing & Maintainability**: Serious god-component anti-pattern. `SuperAdminDashboard.tsx` is 3,729 lines (199 KB). `ApeProductListingWizard.tsx` is 193 KB. `useStore.ts` is 2,827 lines (108 KB). These violate clean architecture and cause significant memory pressure during development.
-- **Navigation Invariant**: Navigating to a product detail view does not push a route to browser history (`/product/:asin`). Refreshing the browser resets the view to the store catalog.
+* **Aesthetics & UI**: Premium industrial aesthetics utilizing AISI SS304 stainless steel color tones and solar blue (`#0054A6`). Micro-animations with Framer Motion and Lucide icons are visually impressive.
+* **Component Sizing & Maintainability**: Serious god-component anti-pattern. `SuperAdminDashboard.tsx` is 3,729 lines (199 KB). `ApeProductListingWizard.tsx` is 193 KB. `useStore.ts` is 2,827 lines (108 KB). These violate clean architecture and cause significant memory pressure during development.
+* **Navigation Invariant**: Navigating to a product detail view does not push a route to browser history (`/product/:asin`). Refreshing the browser resets the view to the store catalog.
 
 ---
 
 ## 12. BACKEND AUDIT
 
-- **Architecture**: Modular FastAPI application with clean separation between routers, services, schemas, and models.
-- **Transactions & Concurrency**: Good use of row-level locking (`with_for_update()`) in inventory reservations to prevent race conditions.
-- **Critical Flaw**: Database models do not store customer contact or address details on orders.
+* **Architecture**: Modular FastAPI application with clean separation between routers, services, schemas, and models.
+* **Transactions & Concurrency**: Good use of row-level locking (`with_for_update()`) in inventory reservations to prevent race conditions.
+* **Critical Flaw**: Database models do not store customer contact or address details on orders.
 
 ---
 
 ## 13. FASTAPI AUDIT
 
-- **Dependency Injection**: Well-structured dependencies in `app/api/deps.py` for DB session handling (`get_db`), session cookie authentication (`get_current_user`), and role checking (`require_roles`).
-- **CSRF Defense**: Double-submit CSRF cookie pattern with constant-time HMAC comparison implemented on state-modifying endpoints.
-- **Error Reflection**: Unhandled exception handler leaks internal Python error classes to callers.
+* **Dependency Injection**: Well-structured dependencies in `app/api/deps.py` for DB session handling (`get_db`), session cookie authentication (`get_current_user`), and role checking (`require_roles`).
+* **CSRF Defense**: Double-submit CSRF cookie pattern with constant-time HMAC comparison implemented on state-modifying endpoints.
+* **Error Reflection**: Unhandled exception handler leaks internal Python error classes to callers.
 
 ---
 
 ## 14. DATABASE AUDIT
 
-- **Schema Design**: PostgreSQL with SQLAlchemy 2.0 async and Alembic migrations (001 to 007).
-- **Positive Design**: `inventory_movements` table is an immutable append-only ledger. `price_versions` supports temporal pricing without overwriting historical data.
-- **Fatal Gap**: Missing `user_id` on `orders` table; missing `addresses` table or delivery address columns on `orders`.
-- **Committed DB**: `backend/apollo_ecommerce.db` (binary SQLite database) is tracked in Git.
+* **Schema Design**: PostgreSQL with SQLAlchemy 2.0 async and Alembic migrations (001 to 007).
+* **Positive Design**: `inventory_movements` table is an immutable append-only ledger. `price_versions` supports temporal pricing without overwriting historical data.
+* **Fatal Gap**: Missing `user_id` on `orders` table; missing `addresses` table or delivery address columns on `orders`.
+* **Committed DB**: `backend/apollo_ecommerce.db` (binary SQLite database) is tracked in Git.
 
 ---
 
 ## 15. AUTHENTICATION & AUTHORIZATION
 
-- **Admin Authentication**: Password verified against Argon2id hash; 6-digit TOTP (RFC 6238). Compromised by client-side emergency bypass and backend auto-provisioning.
-- **Customer Authentication**: Mobile 4-digit OTP via MSG91. Creates user with `role=UserRole.SUPPORT` due to missing `CUSTOMER` enum.
+* **Admin Authentication**: Password verified against Argon2id hash; 6-digit TOTP (RFC 6238). Compromised by client-side emergency bypass and backend auto-provisioning.
+* **Customer Authentication**: Mobile 4-digit OTP via MSG91. Creates user with `role=UserRole.SUPPORT` due to missing `CUSTOMER` enum.
 
 ---
 
 ## 16. PRODUCT & CART AUDIT
 
-- **Catalog Persistence**: Products loaded from PostgreSQL when API is online, but falls back to `mockData.ts` and `localStorage`.
-- **Wrong Product Bug**: `ProductCard.tsx:173` falls back to `products[0]` when ASIN lookup fails, causing wrong items to be added to cart.
+* **Catalog Persistence**: Products loaded from PostgreSQL when API is online, but falls back to `mockData.ts` and `localStorage`.
+* **Wrong Product Bug**: `ProductCard.tsx:173` falls back to `products[0]` when ASIN lookup fails, causing wrong items to be added to cart.
 
 ---
 
 ## 17. CHECKOUT AUDIT
 
-- **Gate 2C Verification**: Proceeds to checkout only when an authoritative quote is validated.
-- **Client Fallback**: If backend is offline, `calculateStatutoryQuoteFallback` generates estimates using JS floating-point arithmetic.
+* **Gate 2C Verification**: Proceeds to checkout only when an authoritative quote is validated.
+* **Client Fallback**: If backend is offline, `calculateStatutoryQuoteFallback` generates estimates using JS floating-point arithmetic.
 
 ---
 
 ## 18. PAYMENT & COD AUDIT
 
-- **COD Surcharge**: Backend `PricingEngine` accurately applies 2.5% surcharge with upward rounding to the nearest ₹5 multiple.
-- **Razorpay Order Creation**: Mocks order ID (`order_xxxx`) instead of invoking live Razorpay API.
+* **COD Surcharge**: Backend `PricingEngine` accurately applies 2.5% surcharge with upward rounding to the nearest ₹5 multiple.
+* **Razorpay Order Creation**: Mocks order ID (`order_xxxx`) instead of invoking live Razorpay API.
 
 ---
 
 ## 19. SHIPPING AUDIT
 
-- **Carrier**: Official India Post Speed Post tariffs locked to Origin Hub Kathwada GIDC, Ahmedabad (382430).
-- **Weight Slabs**: Correctly calculated by `ShippingService` in backend with statutory 18% shipping GST.
+* **Carrier**: Official India Post Speed Post tariffs locked to Origin Hub Kathwada GIDC, Ahmedabad (382430).
+* **Weight Slabs**: Correctly calculated by `ShippingService` in backend with statutory 18% shipping GST.
 
 ---
 
 ## 20. ADMIN PANEL AUDIT
 
-- **Tabs**: Products, Orders, Customers, Inquiries, Coupons, Returns, Reports (GSTR-1, Reconciliation).
-- **Decoupling**: All mutations write to browser `localStorage` instead of FastAPI endpoints.
+* **Tabs**: Products, Orders, Customers, Inquiries, Coupons, Returns, Reports (GSTR-1, Reconciliation).
+* **Decoupling**: All mutations write to browser `localStorage` instead of FastAPI endpoints.
 
 ---
 
 ## 21. SUPER ADMIN AUDIT
 
-- **Privilege Escalation Risk**: Plaintext password `NIL@apl321` in frontend bundle allows unauthenticated access when backend is offline.
+* **Privilege Escalation Risk**: Plaintext password `NIL@apl321` in frontend bundle allows unauthenticated access when backend is offline.
 
 ---
 
@@ -710,44 +734,44 @@ apollo-engineering/
 
 ## 23. PERFORMANCE AUDIT
 
-- **Bundle Size**: Total production JavaScript bundle exceeds 3.1 MB uncompressed (`exceljs` alone is 940 kB).
-- **Optimization Strategy**: Split `exceljs` into an on-demand dynamic chunk.
+* **Bundle Size**: Total production JavaScript bundle exceeds 3.1 MB uncompressed (`exceljs` alone is 940 kB).
+* **Optimization Strategy**: Split `exceljs` into an on-demand dynamic chunk.
 
 ---
 
 ## 24. SEO AUDIT
 
-- **Meta & OpenGraph**: All pages include dynamic OpenGraph titles, descriptions, and canonical URLs.
-- **Product Structured Data**: `ProductSchema` microdata embedded on product cards.
-- **Robots.txt Defect**: Fails to disallow `/admin` and `/account`.
+* **Meta & OpenGraph**: All pages include dynamic OpenGraph titles, descriptions, and canonical URLs.
+* **Product Structured Data**: `ProductSchema` microdata embedded on product cards.
+* **Robots.txt Defect**: Fails to disallow `/admin` and `/account`.
 
 ---
 
 ## 25. ACCESSIBILITY AUDIT
 
-- **A11y Violations**: Bypassed color contrast check in `a11y.spec.ts`.
-- **Keyboard Navigation**: Modals implement Escape-key handling, but focus trapping is incomplete in `ApeProductListingWizard`.
+* **A11y Violations**: Bypassed color contrast check in `a11y.spec.ts`.
+* **Keyboard Navigation**: Modals implement Escape-key handling, but focus trapping is incomplete in `ApeProductListingWizard`.
 
 ---
 
 ## 26. DEPENDENCY AUDIT
 
-- **Frontend (`package.json`)**: 7 CVEs identified by `npm audit` (High in `sharp <=0.35.4-rc.0`).
-- **Backend (`pyproject.toml`)**: Missing `requirements.txt` causing broken CI build step.
+* **Frontend (`package.json`)**: 7 CVEs identified by `npm audit` (High in `sharp <=0.35.4-rc.0`).
+* **Backend (`pyproject.toml`)**: Missing `requirements.txt` causing broken CI build step.
 
 ---
 
 ## 27. GITHUB & CI/CD AUDIT
 
-- **Workflows**: `.github/workflows/ci.yml` has 7 jobs, but suppresses Gitleaks and NPM audit failures with `continue-on-error: true`.
-- **Backend Quality Gate**: Does not install backend dependencies because `requirements.txt` is missing.
+* **Workflows**: `.github/workflows/ci.yml` has 7 jobs, but suppresses Gitleaks and NPM audit failures with `continue-on-error: true`.
+* **Backend Quality Gate**: Does not install backend dependencies because `requirements.txt` is missing.
 
 ---
 
 ## 28. TEST COVERAGE AUDIT
 
-- **Frontend**: 16 test files, 112 passed tests (Vitest).
-- **Backend**: 68 passed unit tests, but 50+ integration tests skipped due to missing PostgreSQL container. Total backend coverage is 66%.
+* **Frontend**: 16 test files, 112 passed tests (Vitest).
+* **Backend**: 68 passed unit tests, but 50+ integration tests skipped due to missing PostgreSQL container. Total backend coverage is 66%.
 
 ---
 
@@ -778,36 +802,36 @@ apollo-engineering/
 ## 32. REMEDIATION ROADMAP
 
 ### PHASE 1 — Security & P0 (Mandatory Immediate Hotfixes)
-- Rotate compromised Razorpay, MSG91, MongoDB, and India Post credentials.
-- Purge `.env` from Git history with `git-filter-repo`.
-- Delete client-side admin password backdoor from `SuperAdminDashboard.tsx`.
-- Fix `POST /api/v1/auth/admin-login` to reject non-existent users.
-- Add Alembic migration 008 to persist customer and delivery address fields on `orders`.
-- Update `vercel.json` with `/api/v1` rewrite proxy and backend CSP header.
+* Rotate compromised Razorpay, MSG91, MongoDB, and India Post credentials.
+* Purge `.env` from Git history with `git-filter-repo`.
+* Delete client-side admin password backdoor from `SuperAdminDashboard.tsx`.
+* Fix `POST /api/v1/auth/admin-login` to reject non-existent users.
+* Add Alembic migration 008 to persist customer and delivery address fields on `orders`.
+* Update `vercel.json` with `/api/v1` rewrite proxy and backend CSP header.
 
 ### PHASE 2 — P1 Business Bugs
-- Implement BOLA token or OTP verification on guest order endpoint (`/api/v1/orders/{id}`).
-- Add `user_id` to `Order` model to fix crashing `GET /api/v1/orders`.
-- Connect `SuperAdminDashboard` to live backend `/api/v1/orders` and `/api/v1/products`.
-- Add `CUSTOMER` role to `UserRole` enum.
-- Remove `|| products[0]` fallback bug in `ProductCard.tsx`.
-- Create `/product/:asin` route in React Router.
+* Implement BOLA token or OTP verification on guest order endpoint (`/api/v1/orders/{id}`).
+* Add `user_id` to `Order` model to fix crashing `GET /api/v1/orders`.
+* Connect `SuperAdminDashboard` to live backend `/api/v1/orders` and `/api/v1/products`.
+* Add `CUSTOMER` role to `UserRole` enum.
+* Remove `|| products[0]` fallback bug in `ProductCard.tsx`.
+* Create `/product/:asin` route in React Router.
 
 ### PHASE 3 — P2 Reliability & Testing
-- Spin up PostgreSQL 16 test container in CI and local dev so all 50+ integration tests pass.
-- Sanitize HTTP 500 error responses in `orders.py`.
-- Update `sharp` and fix 7 npm audit vulnerabilities.
-- Add `requirements.txt` to `backend/` and remove `continue-on-error` from CI.
+* Spin up PostgreSQL 16 test container in CI and local dev so all 50+ integration tests pass.
+* Sanitize HTTP 500 error responses in `orders.py`.
+* Update `sharp` and fix 7 npm audit vulnerabilities.
+* Add `requirements.txt` to `backend/` and remove `continue-on-error` from CI.
 
 ### PHASE 4 — Performance & UX
-- Code-split `exceljs` and `jspdf` to reduce initial bundle size below 1 MB.
-- Disallow `/admin` in `public/robots.txt`.
-- Re-enable and fix Axe color contrast rules in `a11y.spec.ts`.
+* Code-split `exceljs` and `jspdf` to reduce initial bundle size below 1 MB.
+* Disallow `/admin` in `public/robots.txt`.
+* Re-enable and fix Axe color contrast rules in `a11y.spec.ts`.
 
 ### PHASE 5 — Technical Debt & Cleanup
-- Remove double-click backdoor from Header and Footer logos.
-- Untrack `apollo_ecommerce.db` from Git.
-- Fix 50 Ruff formatting errors and 17 Mypy type annotations in backend.
+* Remove double-click backdoor from Header and Footer logos.
+* Untrack `apollo_ecommerce.db` from Git.
+* Fix 50 Ruff formatting errors and 17 Mypy type annotations in backend.
 
 ---
 
@@ -866,7 +890,8 @@ apollo-engineering/
 ╚═══════════════════════════════════════════════════════════════════════╝
 ```
 
-### Justification:
+### Justification
+
 The Apollo Engineering E-Commerce platform possesses high-quality UI design, rich animations, robust mathematical calculation models (`PricingEngine`), and an append-only inventory ledger. However, it cannot be deployed to production in its current state due to:
 1. **Critical Security Vulnerabilities**: Plaintext admin credentials in the frontend bundle, live production keys committed in Git history, and arbitrary admin auto-provisioning.
 2. **Severe Data Loss Defect**: Orders created on the backend completely discard the customer name, phone, email, and delivery address.

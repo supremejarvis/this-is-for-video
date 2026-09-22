@@ -1,6 +1,7 @@
 # 🏛️ Apollo Engineering E-Commerce System Directives
 
 ## 1. Orchestration & Pipeline Hierarchy
+
 - **Main Controller**: GSD Core is the only project orchestrator.
   - Existing codebase command: `/gsd-onboard`
   - Lifecycle: `/gsd-plan-phase` → `frontend-design` → `/gsd-execute-phase` → `Playwright Testing` → `/gsd-verify-work` → Shipping.
@@ -13,6 +14,7 @@
 ---
 
 ## 2. Core Architecture & Technology Stack
+
 - **Frontend**: Next.js App Router, React 19, TypeScript, Tailwind CSS.
 - **Backend**: **Python FastAPI ONLY**. Do not create a second Node.js backend.
 - **Database**: PostgreSQL with SQLAlchemy and Alembic migrations.
@@ -23,6 +25,7 @@
 ## 3. Money Calculation Rules & Product GST Clarity
 
 ### A. Strict Monetary Arithmetic & Statutory Rules
+
 - **Never** use JavaScript floating-point arithmetic for money.
 - Calculate authoritative totals in FastAPI backend using `Decimal`.
 - Shipping GST rate is fixed at the approved 18%.
@@ -37,6 +40,7 @@
 - Unit and boundary tests must cover every pricing and tax formula.
 
 ### B. Product Price & GST Configuration (Explicit Line-Total Rule)
+
 - **Configured Unit Price Mode**:
   1. **GST-Inclusive Mode (Default B2C)**: E.g., for unit price ₹20 (with configured GST rate $r$, e.g. 18%):
      - Line Gross = $\text{Qty} \times ₹20$
@@ -50,6 +54,7 @@
 - The system must explicitly declare and support both modes based on customer type (B2C retail vs. B2B GST registered).
 
 ### C. Shipping GST, Prepaid & COD Total Formulas
+
 - **Shipping GST**: Shipping rate is calculated **before GST**. Add **18% GST** to shipping:
   $$\text{Shipping GST} = \text{Base Shipping} \times 0.18$$
   $$\text{Shipping Total} = \text{Base Shipping} + \text{Shipping GST}$$
@@ -63,6 +68,7 @@
 ---
 
 ## 4. Payment Safety & Dual-Stage Verification
+
 - **Dual Verification Architecture**:
   1. **Checkout Confirmation**: Verify `order_id` + `payment_id` signature on FastAPI server.
   2. **Razorpay Webhook**: Verify webhook signature HMAC SHA256 against the untouched raw request body.
@@ -73,6 +79,7 @@
 ---
 
 ## 5. India Post Speed Post Integration
+
 - Do not invent CEPT API endpoints or response fields.
 - Build a standardized shipping-provider adapter.
 - Use official supplied API documentation and credentials.
@@ -82,6 +89,7 @@
 ---
 
 ## 6. Sizing & Replacement Policy
+
 - **Visual Sizing Guide**: Mandatory frame thickness measurement guide on PDP before order confirmation.
 - **Wrong-Size Replacement Workflow**:
   1. Customer must upload a clear photo verifying the actual solar-panel frame thickness with a vernier calliper/ruler.
@@ -91,6 +99,7 @@
 ---
 
 ## 7. Multi-Lingual Architecture
+
 - Detect customer language and respond in that exact language.
 - Priority languages: **Gujarati (ગુજરાતી)**, **Hindi (हिन्दी)**, and **English**.
 - AI customer support and storefront architecture must support all scheduled Indian languages without mixing languages unless the customer does so.
@@ -98,6 +107,7 @@
 ---
 
 ## 8. Apollo E-Commerce Agent Governance Addendum
+
 - **Main Controller**: GSD Core remains the only project orchestrator.
 - **Agent Hierarchy**:
   - `apollo-project-manager` owns scope, delegation, acceptance criteria and phase gates.
@@ -129,6 +139,7 @@
 ---
 
 ## 9. Autonomous System Health, Audits & Extensibility Directive
+
 - **Automated Health Telemetry**:
   - The AI Agent reads health status directly from [`.audit/latest-health-report.json`](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/.audit/latest-health-report.json), [`.audit/latest-health-report.md`](file:///c:/Users/patel/OneDrive/Desktop/PRAVIN/web/.audit/latest-health-report.md), and Playwright `test-results/**/trace.zip`.
 - **Auto-Remediation & Score Guardian**:

@@ -14,6 +14,7 @@ A comprehensive, real-browser audit was conducted across the Apollo Engineering 
 All root-cause defects identified during the audit were repaired locally and verified through automated test suites, TypeScript typechecking, and browser re-inspection.
 
 ### Key Metrics & Audit Health
+
 | Metric | Baseline | Post-Fix | Status |
 | :--- | :---: | :---: | :---: |
 | **Lighthouse Best Practices** | 100 / 100 | **100 / 100** | 🟢 PERFECT |
@@ -31,6 +32,7 @@ All root-cause defects identified during the audit were repaired locally and ver
 ## 2. Project & Environment Discovery
 
 ### System Ports & Endpoints
+
 - **Storefront Web Portal**: `http://localhost:3000` (Next.js 16.3.5 App Router with Turbopack, React 19, TypeScript ~5.8.2, Zustand v5, Tailwind CSS v4)
 - **Authoritative Backend**: `http://127.0.0.1:8000` (Python FastAPI, Uvicorn, SQLAlchemy ORM, PostgreSQL on port 5432)
 - **Origin Hub Locked Pincode**: `382430` (Kathwada GIDC, Ahmedabad, Gujarat)
@@ -41,17 +43,20 @@ All root-cause defects identified during the audit were repaired locally and ver
 ## 3. End-to-End Browser Flow Audit & Evidence
 
 ### Flow 1: Home & Product Listing
+
 - **Inspection**: Evaluated homepage hero, USP badges ("Shadowless Design", "Water Efficient", "Anti-Blocking SS304"), and primary product catalog.
 - **Network Observation**: Initial page load initiated `GET /api/v1/products/?include_archived=false` which returned `HTTP 308 Permanent Redirect` with `location: /api/v1/products?include_archived=false`, incurring an unnecessary roundtrip latency hop (~340ms).
 - **Resolution**: Removed trailing slash in `catalogApi.ts`. DevTools network inspection confirmed subsequent requests returned `HTTP 200 OK` directly (`reqid=981`).
 - **Visual Evidence**: Saved screenshot `reports/homepage.png`.
 
 ### Flow 2: Search, Filters, & Product Sizing
+
 - **Search Engine**: Searched for "Sprinkler"; catalog instantly filtered live to matching SS304 Sprinkler products with zero lag.
 - **Category Filter**: Selected "SS304 GRADE", "POWER SERIES", "CONTROL SERIES". Grid dynamically updated active models.
 - **Frame Sizing Selection**: Solar Auto Drain Clips and Clamps correctly enforced solar panel frame size selection (28mm, 30mm, 33mm, 35mm, 40mm) before allowing cart insertion.
 
 ### Flow 3: Registration, Login, & Mobile OTP
+
 - **Inspection**: Clicked "Sign In / Register". Modal opened with clean branding and 10-digit mobile number input.
 - **Test Mobile Number**: `9876543210`
 - **Gateway Dispatch**: `POST /api/v1/auth/otp/send` dispatched MSG91 OTP. Non-production sandbox logger captured dev code `5848`.
@@ -60,6 +65,7 @@ All root-cause defects identified during the audit were repaired locally and ver
 - **Visual Evidence**: Saved screenshots `reports/auth_modal.png`, `reports/otp_screen.png`, and `reports/authenticated_header.png`.
 
 ### Flow 4: Cart & Quantity Updates
+
 - **Adding Items**: Added "SS304 Solar Panel Sprinkler (AetherWash Tech · SS304 Grade)" (SKU: `AE-SPRINKLER-SS304`) at unit price ₹220.00.
 - **Cart Counter**: Header badge incremented to `Cart (1 items)`.
 - **Cart Drawer Inspection**:
@@ -72,6 +78,7 @@ All root-cause defects identified during the audit were repaired locally and ver
 - **Visual Evidence**: Saved screenshot `reports/cart_drawer.png`.
 
 ### Flow 5: Checkout & Order Confirmation
+
 - **Checkout Modal**: Proceeded to secure checkout (`CheckoutModal.tsx`).
 - **Delivery Address Binding**: Created new test delivery address for destination Pincode `380001` (Ahmedabad G.P.O.). Bound delivery hub successfully.
 - **Payment Method Toggle**:
@@ -84,6 +91,7 @@ All root-cause defects identified during the audit were repaired locally and ver
 - **Visual Evidence**: Saved screenshot `reports/checkout_modal.png`.
 
 ### Flow 6: Account & Order History
+
 - **Customer Portal**: Clicked `Hello, Pravin · Account & KYC`. Navigated to `/account`.
 - **Profile Desk**: Customer profile, verified mobile number `9876543210`, and saved tax addresses loaded correctly.
 - **Orders & Tracking**: Switched to "Orders & Tracking" tab. Order count increased from 5 to 6 orders. New confirmed order was logged with live AWB tracking and GST Invoice generation ready.
@@ -108,6 +116,7 @@ All root-cause defects identified during the audit were repaired locally and ver
 ## 5. Performance & Quality Measurement
 
 ### Baseline vs Post-Fix Comparison
+
 - **Category Scores (Lighthouse Snapshot Audit)**:
   - Accessibility: **96** (Target: ≥90)
   - Best Practices: **100** (Target: ≥90)
@@ -117,12 +126,14 @@ All root-cause defects identified during the audit were repaired locally and ver
 - **Network Efficiency**: Eliminated redundant HTTP 308 redirect on catalog load, saving 1 round-trip HTTP request on every store visit.
 
 ### Full Test Suite Results
+
 - **Vitest Unit Suite**: 22 test files passed, 141 tests passed (100% pass rate).
 - **TypeScript Typecheck (`tsc --noEmit`)**: 0 errors.
 
 ---
 
 ## 6. Audit Artifacts & Deliverables
+
 - Machine-readable issues log: [`reports/devtools-issues.json`](file:///c:/Users/patel/OneDrive/Desktop/apolllo%20web%20-%20Copy/web/reports/devtools-issues.json)
 - Full Audit Report: [`reports/devtools-audit.md`](file:///c:/Users/patel/OneDrive/Desktop/apolllo%20web%20-%20Copy/web/reports/devtools-audit.md)
 - Evidence-based next improvements: [`reports/next-improvements.md`](file:///c:/Users/patel/OneDrive/Desktop/apolllo%20web%20-%20Copy/web/reports/next-improvements.md)

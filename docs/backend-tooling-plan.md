@@ -1,6 +1,7 @@
 # 🏛️ Apollo Engineering — Python FastAPI Backend Tooling Plan
 
 ## Executive Summary
+
 This document specifies the authoritative, production-grade quality, testing, and security toolchain for the forthcoming Python FastAPI backend. Per system directives, **FastAPI is the sole authoritative backend** and the single source of truth for pricing, statutory GST calculation, inventory, and order transitions.
 
 ---
@@ -23,6 +24,7 @@ This document specifies the authoritative, production-grade quality, testing, an
 ## 2. Tooling Configuration Templates
 
 ### A. `pyproject.toml`
+
 ```toml
 [tool.pytest.ini_options]
 minversion = "8.0"
@@ -56,44 +58,54 @@ plugins = ["pydantic.mypy"]
 Every statutory and e-commerce rule defined in [`AGENTS.md`](../AGENTS.md) must be strictly verified by backend unit and integration tests:
 
 ### 1. Negative & Zero Quantities
+
 - **Test:** Submit checkout payload with `quantity = 0`, `quantity = -5`, or non-integer floating values.
 - **Assertion:** HTTP 422 Unprocessable Entity with Pydantic validation error (`Input should be greater than 0`).
 
 ### 2. Invalid Product Sizes
+
 - **Test:** Submit variant order with non-standard frame thickness (e.g. `25mm` or `45mm`).
 - **Assertion:** HTTP 422 Unprocessable Entity (`Invalid size. Must be one of: 28mm, 30mm, 33mm, 35mm, 40mm`).
 
 ### 3. Invalid Delivery PIN Code
+
 - **Test:** Submit delivery PIN code outside Indian Post numbering (e.g. `000000`, `999999`, `ABCD12`, `12345`).
 - **Assertion:** HTTP 422 with regex pattern validation (`^\d{6}$`) and service check verifying speed post serviceability.
 
 ### 4. Duplicate Order Submission & Idempotency
+
 - **Test:** Send identical `idempotency_key` twice within 10 minutes.
 - **Assertion:** Second request returns the exact cached order response without re-charging or creating redundant database rows.
 
 ### 5. Price Manipulation from Frontend
+
 - **Test:** Send checkout payload where client injects unit price `₹1.00` instead of catalog price `₹220.00`.
 - **Assertion:** FastAPI backend completely ignores frontend client price, re-fetching authoritative price from PostgreSQL via SKU.
 
 ### 6. Invalid Payment Signatures
+
 - **Test:** Send mismatched Razorpay signature HMAC SHA256 against `order_id|payment_id`.
 - **Assertion:** HTTP 400 Bad Request (`Invalid payment signature`). Order remains `PAYMENT_PENDING`.
 
 ### 7. Duplicate Webhook Delivery
+
 - **Test:** Deliver the same Razorpay webhook payload twice (`event_id` replay).
 - **Assertion:** System returns HTTP 200 OK immediately upon detecting existing `event_id` in database idempotency ledger.
 
 ### 8. Unauthorized Admin Access
+
 - **Test:** Invoke `/api/v1/admin/*` endpoints without bearer token or with customer JWT.
 - **Assertion:** HTTP 401 Unauthorized or HTTP 403 Forbidden.
 
 ### 9. Invalid Order State Transitions
+
 - **Test:** Attempt to transition order directly from `DRAFT` $\to$ `DISPATCHED` or `DELIVERED` $\to$ `PAYMENT_PENDING`.
 - **Assertion:** State machine raises `InvalidStateTransitionError` with HTTP 409 Conflict.
 
 ---
 
 ## 4. Schemathesis OpenAPI Contract Testing Execution
+
 FastAPI exposes the OpenAPI JSON contract automatically at `/openapi.json`. Schemathesis will run fuzz tests to ensure strict conformity:
 
 ```bash

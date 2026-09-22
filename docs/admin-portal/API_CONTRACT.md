@@ -33,21 +33,25 @@ Every client error (4xx) and server error (5xx) adheres to this standard respons
 ### 2.1 Catalog & Taxonomy Endpoints
 
 #### `GET /api/v1/admin/categories`
+
 * **Permission**: `catalog:category:read`
 * **Response**: `200 OK` -> List of categories with nested children or parent references.
 
 #### `POST /api/v1/admin/categories`
+
 * **Permission**: `catalog:category:create`
 * **Request**: `{"name": "Fasteners", "slug": "fasteners", "parent_id": null}`
 * **Validation**: Cycle check prevents cyclic DAG parent-child loops.
 * **Response**: `201 Created`
 
 #### `GET /api/v1/admin/products/{id}/variants/preview`
+
 * **Permission**: `catalog:variant:read`
 * **Query**: `axes=frame_thickness,pack_size`
 * **Response**: `200 OK` -> Cartesian combination preview with existing/missing variant status.
 
 #### `POST /api/v1/admin/products/{id}/variants/generate`
+
 * **Permission**: `catalog:variant:generate`
 * **Request**: `{"combinations": [{"sku": "APE-DC-30-P1", "options": {"frame_thickness": "30mm", "pack_size": 1}}]}`
 * **Response**: `201 Created` -> Generated variant records with canonical `combination_key`.
@@ -57,10 +61,12 @@ Every client error (4xx) and server error (5xx) adheres to this standard respons
 ### 2.2 Pricing & Tax Rules Endpoints
 
 #### `GET /api/v1/admin/price-lists`
+
 * **Permission**: `pricing:list:read`
 * **Response**: `200 OK` -> Array of price lists with customer group linkages and status.
 
 #### `POST /api/v1/admin/price-rules`
+
 * **Permission**: `pricing:rule:create`
 * **Request**:
   ```json
@@ -80,11 +86,13 @@ Every client error (4xx) and server error (5xx) adheres to this standard respons
 ### 2.3 Warehouses & Inventory Endpoints
 
 #### `GET /api/v1/admin/inventory/balances`
+
 * **Permission**: `inventory:balance:read`
 * **Query**: `warehouse_id`, `sku`, `status`
 * **Response**: `200 OK` -> Paginated inventory balances with `on_hand`, `reserved`, `quarantined`, and `available`.
 
 #### `POST /api/v1/admin/inventory/adjustments`
+
 * **Permission**: `inventory:stock:adjust`
 * **Request**:
   ```json
@@ -98,6 +106,7 @@ Every client error (4xx) and server error (5xx) adheres to this standard respons
 * **Response**: `200 OK` or `202 Accepted` (Pending approval).
 
 #### `POST /api/v1/admin/inventory/transfers`
+
 * **Permission**: `inventory:transfer:create`
 * **Request**: `{"from_warehouse_id": "...", "to_warehouse_id": "...", "items": [{"variant_id": "...", "quantity": 100}]}`
 * **Response**: `201 Created`
@@ -107,12 +116,14 @@ Every client error (4xx) and server error (5xx) adheres to this standard respons
 ### 2.4 Orders & Fulfillment Saga Endpoints
 
 #### `POST /api/v1/admin/orders/{id}/confirm`
+
 * **Permission**: `order:confirm`
 * **Preconditions**: Verified payment captured or approved COD policy.
 * **Emitted Event**: `order.confirmed.v1`
 * **Response**: `200 OK`
 
 #### `POST /api/v1/admin/orders/{id}/cancel`
+
 * **Permission**: `order:cancel`
 * **Preconditions**: Order not yet dispatched.
 * **Compensation**: Triggers stock release and refund workflow.
@@ -124,11 +135,13 @@ Every client error (4xx) and server error (5xx) adheres to this standard respons
 ### 2.5 Shipping & Logistics Endpoints
 
 #### `POST /api/v1/admin/shipping/quotes`
+
 * **Permission**: `shipping:quote:read`
 * **Request**: `{"order_id": "...", "destination_pincode": "380015", "weight_g": 250, "service_code": "SPEED_POST"}`
 * **Response**: `200 OK` -> Carrier breakdown: base freight, packaging overhead, and statutory 18% shipping GST.
 
 #### `POST /api/v1/admin/shipments/{id}/book`
+
 * **Permission**: `shipping:book`
 * **Header**: `Idempotency-Key: uuid`
 * **Preconditions**: Order status `CONFIRMED`.
@@ -140,6 +153,7 @@ Every client error (4xx) and server error (5xx) adheres to this standard respons
 ### 2.6 Returns & Inspection Endpoints
 
 #### `POST /api/v1/admin/returns/{id}/inspect`
+
 * **Permission**: `returns:caliper:inspect`
 * **Request**:
   ```json
@@ -157,6 +171,7 @@ Every client error (4xx) and server error (5xx) adheres to this standard respons
 ### 2.7 Statutory Accounting & General Ledger Endpoints
 
 #### `POST /api/v1/admin/accounting/journals`
+
 * **Permission**: `accounting:journal:post`
 * **Request**:
   ```json
@@ -179,10 +194,12 @@ Every client error (4xx) and server error (5xx) adheres to this standard respons
 * **Response**: `201 Created`
 
 #### `POST /api/v1/admin/accounting/periods/{id}/lock`
+
 * **Permission**: `accounting:period:lock` (Requires `OWNER` role)
 * **Response**: `200 OK` -> Fiscal period marked `LOCKED`; subsequent postings rejected.
 
 #### `GET /api/v1/admin/reports/{report_name}`
+
 * **Permission**: `reports:view`
 * **Supported Reports**: `trial_balance`, `profit_and_loss`, `balance_sheet`, `gstr1`, `inventory_valuation`.
 * **Response**: `200 OK` -> Authoritative balanced ledger report with data freshness disclosure.

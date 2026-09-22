@@ -1,6 +1,7 @@
 # Apollo Engineering — Security Remediation Report: P0-002
 
 ## 1. Executive Summary & Final Status
+
 - **Finding ID**: `P0-002`
 - **Vulnerability**: Super Admin Client-Side Backdoor, Hardcoded Credentials & Universal MFA Bypass
 - **Severity**: Critical (CVSS 10.0)
@@ -11,6 +12,7 @@
 ---
 
 ## 2. Root Cause Analysis
+
 Prior to remediation, several critical vulnerabilities allowed client-side elevation of privilege and offline administration access:
 1. **Client-Side Offline Backdoor**: In `src/components/admin/SuperAdminDashboard.tsx`, network failures caught during admin login checked if the submitted password was equal to a hardcoded string (`NIL@apl321`). If matched with any 6-digit input, the frontend locally manufactured an authenticated admin session (`completeAdminLogin`) with role `SUPER_ADMIN` and `is_superuser: true`.
 2. **Browser Storage as Security Authority**: On mount, `SuperAdminDashboard.tsx` checked `sessionStorage.getItem('apollo_admin_session') === 'active'`. If present, it bypassed backend authentication completely and granted full Super Admin capabilities.
@@ -23,6 +25,7 @@ Prior to remediation, several critical vulnerabilities allowed client-side eleva
 ---
 
 ## 3. Backdoor Code Removed
+
 - **Deleted Offline Fallback**: Removed lines 418–428 in `SuperAdminDashboard.tsx` that checked `cleanPass === 'NIL@apl321' && cleanCode.length === 6` in the `catch` block. Network failure now strictly fails closed, displaying a safe error message and denying access.
 - **Deleted Client-Side Privilege Manufacturing**: Removed fallback logic in `completeAdminLogin` that synthesized `{ id: 'u_apollo_admin_master', role: 'SUPER_ADMIN', is_superuser: true }`. The dashboard now strictly requires a verified user object returned by the server.
 - **Removed Storage Privilege Bypass**: Removed `sessionStorage.getItem('apollo_admin_session') === 'active'` verification on component mount. Admin access is now strictly determined by calling the FastAPI endpoint `/api/v1/auth/me` with `credentials: 'include'`.
@@ -31,6 +34,7 @@ Prior to remediation, several critical vulnerabilities allowed client-side eleva
 ---
 
 ## 4. Hardcoded Credentials Removed
+
 - **Frontend Code**: Cleaned all occurrences of hardcoded passwords and secrets from active frontend source code.
 - **Backend Configuration**:
   - `ADMIN_PASSWORD_HASH` in `backend/app/core/config.py` now defaults to `None`.
@@ -43,12 +47,14 @@ Prior to remediation, several critical vulnerabilities allowed client-side eleva
 ---
 
 ## 5. MFA / TOTP Changes
+
 - **Universal Bypass Eradication**: Completely removed `ADMIN_DEV_BYPASS_TOTP` from `backend/app/core/config.py` and `backend/app/api/v1/endpoints/auth.py`.
 - **Strict RFC 6238 TOTP**: The server verifies the 6-digit TOTP against either `settings.ADMIN_TOTP_SECRET` or the user's database-stored `mfa_secret`. Universal codes (`123456`, `000000`) now fail closed with HTTP 401 Unauthorized.
 
 ---
 
 ## 6. Session Security Changes
+
 - **Server-Authoritative Sessions**: Authentication authority is owned exclusively by FastAPI via secure, HttpOnly, SameSite cookies (`ape_session`, `ape_csrf`).
 - **Zero Browser Authority**: `localStorage` and `sessionStorage` are never used to authorize administrative capabilities or bypass MFA.
 - **Fail Closed Architecture**:
@@ -60,6 +66,7 @@ Prior to remediation, several critical vulnerabilities allowed client-side eleva
 ---
 
 ## 7. Files Changed
+
 1. `src/components/admin/SuperAdminDashboard.tsx`: Removed offline login fallback, removed client-side session creation, enforced `/api/v1/auth/me` session check, purged legacy storage keys.
 2. `backend/app/core/config.py`: Removed hardcoded default Argon2id password hash, removed hardcoded TOTP secret default, removed `ADMIN_DEV_BYPASS_TOTP`.
 3. `backend/app/main.py`: Replaced startup seeding with safe one-time bootstrap check (never overwrites existing owners).
@@ -71,6 +78,7 @@ Prior to remediation, several critical vulnerabilities allowed client-side eleva
 ---
 
 ## 8. Regression Tests Added
+
 - **Frontend Regression Suite** (`src/components/admin/__tests__/SuperAdminDashboardSecurity.test.tsx`):
   - `fails closed on mount: sessionStorage alone cannot manufacture authenticated admin state`: Confirms forged storage key does not bypass login.
   - `fails closed on login: network error does not grant offline Super Admin access even with former backdoor password`: Confirms network failure fails closed and old password cannot log in.
@@ -84,6 +92,7 @@ Prior to remediation, several critical vulnerabilities allowed client-side eleva
 ---
 
 ## 9. Verification & Test Results
+
 | Suite | Command | Result |
 | :--- | :--- | :--- |
 | **Frontend Unit Tests** | `npm run test:unit` | **17 passed / 17 test files (115 passed)** |
@@ -95,6 +104,7 @@ Prior to remediation, several critical vulnerabilities allowed client-side eleva
 ---
 
 ## 10. Legitimate Admin Provisioning & Login Method
+
 To access the Apollo Admin Desk after backdoor eradication:
 1. **Initial Environment Configuration**:
    Configure the production environment with secure secrets:
@@ -117,6 +127,7 @@ To access the Apollo Admin Desk after backdoor eradication:
 ---
 
 ## 11. Remaining Risks & P0-003 Boundary
+
 - **P0-003 Scope Boundary**:
   - `P0-003` concerns the backend admin-login endpoint auto-provisioning `UserRole.OWNER` accounts when a non-existent email is submitted with valid credentials matching `ADMIN_PASSWORD_HASH`.
   - While `ADMIN_DEV_BYPASS_TOTP` and hardcoded config defaults were removed in P0-002, the remaining auto-provisioning logic in `backend/app/api/v1/endpoints/auth.py` lines 180–233 is slated for dedicated remediation in **P0-003**.

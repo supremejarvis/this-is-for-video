@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         async with AsyncSessionLocal() as session:
             stmt = select(User).where(User.role == UserRole.OWNER)
             res = await session.execute(stmt)
-            existing_owner = res.scalar_one_or_none()
+            existing_owner = res.scalars().first()
             if not existing_owner and settings.ADMIN_INIT_PASSWORD:
                 from app.cli.seed_owner import async_seed_owner
                 await async_seed_owner(

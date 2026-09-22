@@ -22,7 +22,7 @@ always_on: true
   - No database passwords, PATs, or secrets in `mcp_config.json`. No production database MCP access.
 
 ## 2. Core Architecture
-- **Frontend**: Vite SPA (active stable runtime), Next.js App Router (future target subject to explicit approval), React 19, TypeScript, Tailwind CSS v4.
+- **Frontend**: Next.js App Router, React 19, TypeScript, Tailwind CSS.
 - **Backend**: **Python FastAPI ONLY** (authoritative single truth; do not create a second Node.js backend).
 - **Database**: PostgreSQL with SQLAlchemy and Alembic migrations (Single source of truth).
 

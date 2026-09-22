@@ -38,20 +38,20 @@ export interface ReturnReceiveItemSpec {
 export const adminReturnsApi = {
   getReturns: async (statusFilter?: string): Promise<ReturnCase[]> => {
     const url = statusFilter
-      ? `/api/v1/admin/returns?status=${encodeURIComponent(statusFilter)}`
-      : '/api/v1/admin/returns';
+      ? `/admin/returns?status=${encodeURIComponent(statusFilter)}`
+      : '/admin/returns';
     return apiClient.get<ReturnCase[]>(url);
   },
 
   getReturnDetail: async (returnId: string): Promise<ReturnCase> => {
-    return apiClient.get<ReturnCase>(`/api/v1/admin/returns/${returnId}`);
+    return apiClient.get<ReturnCase>(`/admin/returns/${returnId}`);
   },
 
   inspectCaliper: async (
     returnId: string,
     req: { verified_frame_thickness_mm: string; approval: boolean; notes?: string }
   ): Promise<ReturnCase> => {
-    return apiClient.post<ReturnCase>(`/api/v1/admin/returns/${returnId}/inspect-caliper`, req);
+    return apiClient.post<ReturnCase>(`/admin/returns/${returnId}/inspect-caliper`, req);
   },
 
   receiveAndRestock: async (
@@ -62,6 +62,6 @@ export const adminReturnsApi = {
       inspector_notes?: string;
     }
   ): Promise<ReturnCase> => {
-    return apiClient.post<ReturnCase>(`/api/v1/admin/returns/${returnId}/receive`, req);
+    return apiClient.post<ReturnCase>(`/admin/returns/${returnId}/receive`, req);
   },
 };

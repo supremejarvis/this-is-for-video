@@ -1,5 +1,6 @@
 """Shipping Logistics, Rate Calculator, Carrier Adapters, Idempotent Booking, and Tracking."""
 import hashlib
+import re
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal, ROUND_HALF_UP
@@ -10,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
+from app.core.load_optimizer import pincode_cache
 from app.models.order import FulfilmentStatus, Order, OrderItem, Shipment
 from app.models.outbox import OutboxEvent
 from app.models.shipping_advanced import Carrier, Package, ShipmentItem, ShippingRateCard, ShippingRateSlab, TrackingEvent
@@ -98,6 +100,147 @@ class ShippingService:
         elif "COMBO" in sku_upper or "KIT" in sku_upper:
             return 350
         return 50
+
+    @classmethod
+    async def lookup_pincode(cls, pincode: str) -> dict[str, Any]:
+        """Resolves 6-digit Indian PIN code to City, District, State, GST Code and Speed Post delivery zone."""
+        pin = str(pincode).strip()
+        if not re.match(r"^[1-9][0-9]{5}$", pin):
+            raise ValueError(f"Invalid PIN code '{pincode}'. Must be a valid 6-digit Indian Postal PIN code.")
+
+        cached = await pincode_cache.get(pin)
+        if cached:
+            return cached
+
+        zone = determine_zone(pin)
+        prefix2 = pin[:2]
+        prefix3 = pin[:3]
+
+        gujarat_districts: dict[str, tuple[str, str]] = {
+            "380": ("Ahmedabad", "Ahmedabad"),
+            "382": ("Gandhinagar / Ahmedabad Rural", "Gandhinagar"),
+            "383": ("Himatnagar", "Sabarkantha"),
+            "384": ("Mehsana", "Mehsana"),
+            "385": ("Palanpur", "Banaskantha"),
+            "387": ("Nadiad", "Kheda"),
+            "388": ("Anand", "Anand"),
+            "389": ("Godhra", "Panchmahal"),
+            "390": ("Vadodara", "Vadodara"),
+            "391": ("Vadodara Rural", "Vadodara"),
+            "392": ("Bharuch", "Bharuch"),
+            "393": ("Ankleshwar", "Narmada"),
+            "394": ("Surat Rural", "Surat"),
+            "395": ("Surat", "Surat"),
+            "396": ("Valsad / Vapi", "Valsad"),
+            "360": ("Rajkot", "Rajkot"),
+            "361": ("Jamnagar", "Jamnagar"),
+            "362": ("Junagadh", "Junagadh"),
+            "363": ("Surendranagar", "Surendranagar"),
+            "364": ("Bhavnagar", "Bhavnagar"),
+            "365": ("Amreli", "Amreli"),
+            "370": ("Bhuj / Gandhidham", "Kutch"),
+        }
+
+        state_mapping: dict[str, tuple[str, str, str]] = {
+            "11": ("New Delhi", "Delhi", "07"),
+            "12": ("Gurugram / Faridabad", "Haryana", "06"),
+            "13": ("Ambala / Panipat", "Haryana", "06"),
+            "14": ("Ludhiana / Jalandhar", "Punjab", "03"),
+            "15": ("Bathinda / Firozpur", "Punjab", "03"),
+            "16": ("Chandigarh", "Chandigarh", "04"),
+            "17": ("Shimla", "Himachal Pradesh", "02"),
+            "18": ("Jammu", "Jammu and Kashmir", "01"),
+            "19": ("Srinagar", "Jammu and Kashmir", "01"),
+            "20": ("Aligarh", "Uttar Pradesh", "09"),
+            "21": ("Allahabad", "Uttar Pradesh", "09"),
+            "22": ("Lucknow / Varanasi", "Uttar Pradesh", "09"),
+            "23": ("Varanasi", "Uttar Pradesh", "09"),
+            "24": ("Dehradun / Bareilly", "Uttarakhand", "05"),
+            "25": ("Meerut", "Uttar Pradesh", "09"),
+            "26": ("Pithoragarh", "Uttarakhand", "05"),
+            "27": ("Gorakhpur", "Uttar Pradesh", "09"),
+            "28": ("Agra / Jhansi", "Uttar Pradesh", "09"),
+            "30": ("Jaipur", "Rajasthan", "08"),
+            "31": ("Udaipur", "Rajasthan", "08"),
+            "32": ("Kota", "Rajasthan", "08"),
+            "33": ("Bikaner", "Rajasthan", "08"),
+            "34": ("Jodhpur", "Rajasthan", "08"),
+            "40": ("Mumbai", "Maharashtra", "27"),
+            "41": ("Pune", "Maharashtra", "27"),
+            "42": ("Nashik", "Maharashtra", "27"),
+            "43": ("Aurangabad", "Maharashtra", "27"),
+            "44": ("Nagpur", "Maharashtra", "27"),
+            "45": ("Indore", "Madhya Pradesh", "23"),
+            "46": ("Bhopal", "Madhya Pradesh", "23"),
+            "47": ("Gwalior", "Madhya Pradesh", "23"),
+            "48": ("Jabalpur", "Madhya Pradesh", "23"),
+            "49": ("Raipur", "Chhattisgarh", "22"),
+            "50": ("Hyderabad", "Telangana", "36"),
+            "51": ("Tirupati / Kadapa", "Andhra Pradesh", "37"),
+            "52": ("Vijayawada", "Andhra Pradesh", "37"),
+            "53": ("Visakhapatnam", "Andhra Pradesh", "37"),
+            "56": ("Bengaluru", "Karnataka", "29"),
+            "57": ("Mangaluru", "Karnataka", "29"),
+            "58": ("Hubballi / Belagavi", "Karnataka", "29"),
+            "59": ("Kalaburagi", "Karnataka", "29"),
+            "60": ("Chennai", "Tamil Nadu", "33"),
+            "61": ("Tiruchirappalli", "Tamil Nadu", "33"),
+            "62": ("Madurai", "Tamil Nadu", "33"),
+            "63": ("Coimbatore / Salem", "Tamil Nadu", "33"),
+            "64": ("Coimbatore", "Tamil Nadu", "33"),
+            "67": ("Kozhikode", "Kerala", "32"),
+            "68": ("Kochi", "Kerala", "32"),
+            "69": ("Thiruvananthapuram", "Kerala", "32"),
+            "70": ("Kolkata", "West Bengal", "19"),
+            "71": ("Howrah", "West Bengal", "19"),
+            "72": ("Medinipur", "West Bengal", "19"),
+            "73": ("Siliguri", "West Bengal", "19"),
+            "74": ("Murshidabad", "West Bengal", "19"),
+            "75": ("Bhubaneswar", "Odisha", "21"),
+            "76": ("Cuttack", "Odisha", "21"),
+            "77": ("Sambalpur", "Odisha", "21"),
+            "78": ("Guwahati", "Assam", "18"),
+            "79": ("Shillong / Imphal / Agartala", "North East", "17"),
+            "80": ("Patna", "Bihar", "10"),
+            "81": ("Bhagalpur", "Bihar", "10"),
+            "82": ("Gaya", "Bihar", "10"),
+            "83": ("Ranchi", "Jharkhand", "20"),
+            "84": ("Muzaffarpur", "Bihar", "10"),
+            "85": ("Dhanbad / Purnia", "Jharkhand", "20"),
+        }
+
+        if prefix3 in gujarat_districts:
+            city, district = gujarat_districts[prefix3]
+            state = "Gujarat"
+            state_code = "24"
+        elif prefix2 in ("36", "37", "38", "39"):
+            city = "Gujarat Region"
+            district = "Gujarat"
+            state = "Gujarat"
+            state_code = "24"
+        elif prefix2 in state_mapping:
+            city, state, state_code = state_mapping[prefix2]
+            district = city
+        else:
+            city = "India Post Service Area"
+            district = "General"
+            state = "India"
+            state_code = "99"
+
+        result = {
+            "pincode": pin,
+            "city": city,
+            "district": district,
+            "state": state,
+            "state_code": state_code,
+            "zone": zone,
+            "is_serviceable": True,
+            "delivery_carrier": "India Post Speed Post",
+            "cod_available": True,
+            "estimated_delivery_days": "1-2 business days" if zone == "LOCAL" else ("2-3 business days" if zone == "GUJARAT" else "3-5 business days"),
+        }
+        await pincode_cache.set(pin, result, ttl=86400)
+        return result
 
     @staticmethod
     def calculate_shipping(destination_pincode: str, total_weight_grams: int):

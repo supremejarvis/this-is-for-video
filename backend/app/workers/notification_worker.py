@@ -61,7 +61,7 @@ class NotificationWorker:
             await asyncio.sleep(0.02)
 
         try:
-            await msg91_circuit_breaker.execute_async(_call_gateway)
+            await msg91_circuit_breaker.call_async(_call_gateway)
             self.dispatched_count += 1
             self.last_run = datetime.now()
         except Exception as exc:

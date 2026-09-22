@@ -37,6 +37,26 @@ class Settings(BaseSettings):
     # Security & Documentation
     ENVIRONMENT: str = Field(default="development", description="Runtime environment: development, staging, production")
     DOCS_ENABLED: bool = Field(default=True, description="Enable Swagger UI & ReDoc docs (disable in production)")
+
+    # Distributed Cache & Message Broker (Optional)
+    REDIS_URL: str | None = Field(
+        default=None,
+        description="Redis connection URL for distributed caching and rate limiting"
+    )
+
+    # Allowed CORS Origins
+    CORS_ORIGINS: list[str] = Field(
+        default=[
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:5173",
+            "https://apollo-web-three.vercel.app",
+            "https://apolloengineering.co.in",
+        ],
+        description="Allowed origins for Cross-Origin Resource Sharing (CORS)"
+    )
+
+    # Razorpay Payment Gateway
     RAZORPAY_KEY_ID: str = Field(default="rzp_test_placeholder", description="Razorpay Key ID")
     RAZORPAY_KEY_SECRET: str = Field(default="rzp_test_secret_placeholder", description="Razorpay Key Secret")
     RAZORPAY_WEBHOOK_SECRET: str | None = Field(default=None, description="Razorpay Webhook Secret")
@@ -48,7 +68,7 @@ class Settings(BaseSettings):
     )
 
     # MSG91 Official OTP, SMS & WhatsApp Integration (Server-Side Only)
-    MSG91_AUTH_KEY: str = Field(default="561266ADmXXclWZ6a81f661P1", description="MSG91 Private Auth Key")
+    MSG91_AUTH_KEY: str = Field(default="", description="MSG91 Private Auth Key")
     MSG91_TEMPLATE_ID: str = Field(default="6a986d4effc61fd8910a4952", description="MSG91 SMS Template ID")
     MSG91_WHATSAPP_NUMBER: str = Field(default="919714710854", description="MSG91 Integrated WhatsApp Number")
     MSG91_WHATSAPP_TEMPLATE_NAME: str = Field(default="apollo_engineering", description="MSG91 WhatsApp Template Name")

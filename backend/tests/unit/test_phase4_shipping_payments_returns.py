@@ -118,3 +118,99 @@ def test_returns_restock_invariant_classification():
     disposition = ItemDisposition.RESTOCK_INVENTORY
     is_eligible_for_inventory = (disposition == ItemDisposition.RESTOCK_INVENTORY)
     assert is_eligible_for_inventory is True
+
+
+@pytest.mark.asyncio
+async def test_pincode_lookup_serviceability_accuracy():
+    """Verify pincode autocomplete resolves city, district, state, GST code and zone."""
+    from app.services.shipping_service import ShippingService
+
+    # 1. Kathwada / Gandhinagar Local Zone
+    res_local = await ShippingService.lookup_pincode("382430")
+    assert res_local["pincode"] == "382430"
+    assert res_local["state"] == "Gujarat"
+    assert res_local["state_code"] == "24"
+    assert res_local["zone"] == "LOCAL"
+    assert res_local["is_serviceable"] is True
+    assert "Speed Post" in res_local["delivery_carrier"]
+
+    # 2. Surat Gujarat Zone
+    res_surat = await ShippingService.lookup_pincode("395001")
+    assert res_surat["city"] == "Surat"
+    assert res_surat["state"] == "Gujarat"
+    assert res_surat["zone"] == "GUJARAT"
+
+    # 3. Mumbai Maharashtra Rest of India
+    res_mumbai = await ShippingService.lookup_pincode("400001")
+    assert res_mumbai["city"] == "Mumbai"
+    assert res_mumbai["state"] == "Maharashtra"
+    assert res_mumbai["state_code"] == "27"
+    assert res_mumbai["zone"] == "REST_OF_INDIA"
+
+    # 4. Delhi
+    res_delhi = await ShippingService.lookup_pincode("110001")
+    assert res_delhi["state"] == "Delhi"
+    assert res_delhi["state_code"] == "07"
+
+    # 5. Invalid format raises ValueError
+    with pytest.raises(ValueError, match="Must be a valid 6-digit"):
+        await ShippingService.lookup_pincode("0123")
+    with pytest.raises(ValueError, match="Must be a valid 6-digit"):
+        await ShippingService.lookup_pincode("ABCDEF")
+
+
+def test_invoice_pdf_generator_binary_structure():
+    """Verify statutory GST tax invoice PDF generator produces valid PDF binary."""
+    from app.api.v1.endpoints.orders import generate_order_invoice_pdf
+    from app.models.order import Order, OrderAddress, OrderItem, PaymentStatus
+
+    item = OrderItem(
+        id=uuid.uuid4(),
+        order_id=uuid.uuid4(),
+        sku="APE-SC-35MM",
+        quantity=50,
+        unit_price=Decimal("20.00"),
+        taxable_base=Decimal("847.46"),
+        product_gst=Decimal("152.54"),
+        line_gross=Decimal("1000.00"),
+        gst_rate=Decimal("0.18"),
+    )
+
+    address = OrderAddress(
+        id=uuid.uuid4(),
+        order_id=uuid.uuid4(),
+        full_name="Gujarat Solar Infra Ltd",
+        company_name="Gujarat Solar Infra",
+        address_line1="Plot 10, Kathwada Industrial Zone",
+        city="Ahmedabad",
+        state="Gujarat",
+        pincode="382430",
+        phone="9876543210",
+        gstin="24AAACG1234F1Z9",
+    )
+
+    order = Order(
+        id=uuid.uuid4(),
+        order_number="ORD-2026-TEST",
+        quote_id=uuid.uuid4(),
+        created_at=datetime.now(UTC),
+        customer_name="Gujarat Solar Infra",
+        customer_phone="9876543210",
+        company_name="Gujarat Solar Infra",
+        gstin="24AAACG1234F1Z9",
+        payment_status=PaymentStatus.CAPTURED,
+        items=[item],
+        address=address,
+        subtotal_taxable=Decimal("847.46"),
+        product_gst=Decimal("152.54"),
+        shipping_base=Decimal("50.00"),
+        shipping_gst=Decimal("9.00"),
+        cod_surcharge=Decimal("0.00"),
+        total_payable=Decimal("1059.00"),
+        currency="INR",
+    )
+
+    pdf_bytes = generate_order_invoice_pdf(order)
+    assert len(pdf_bytes) > 1000
+    assert pdf_bytes.startswith(b"%PDF-")
+    assert b"%%EOF" in pdf_bytes

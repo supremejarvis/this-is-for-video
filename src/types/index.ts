@@ -731,6 +731,8 @@ export interface ReturnRequest {
   status: ReturnStatus;
   refundAmount: number;
   refundMethod: 'ORIGINAL_PAYMENT' | 'STORE_CREDIT' | 'BANK_TRANSFER';
+  caliperPhotoUrl?: string;
+  verifiedFrameThickness?: string;
   createdAt: string;
   updatedAt: string;
   adminNotes?: string;

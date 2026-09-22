@@ -29,6 +29,27 @@ from app.schemas.shipping import (
 from app.services.shipping_service import ShippingService
 
 router = APIRouter(prefix="/admin/shipping", tags=["Admin Shipping"])
+public_router = APIRouter(prefix="/shipping", tags=["Shipping"])
+
+
+@public_router.get(
+    "/pincode/{pincode}",
+    summary="Lookup Indian PIN Code City, District, State and Delivery Zone",
+    description="Resolves 6-digit Indian PIN code to city, district, state, GST code and Speed Post delivery metrics.",
+)
+@router.get(
+    "/pincode/{pincode}",
+    include_in_schema=False,
+)
+async def lookup_pincode_info(pincode: str) -> dict[str, Any]:
+    """Resolve Indian PIN code for storefront checkout autofill and zone verification."""
+    try:
+        return await ShippingService.lookup_pincode(pincode)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
 
 
 @router.get("/rates", response_model=list[ShippingRateCardOut])

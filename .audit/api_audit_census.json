@@ -1,18 +1,19 @@
 {
-  "total_apis": 125,
-  "working_ok": 21,
-  "handled_client_error": 30,
-  "security_guarded": 74,
+  "total_apis": 133,
+  "working_ok": 24,
+  "handled_client_error": 32,
+  "security_guarded": 77,
   "failed_500": 0,
   "wrong_answers": 0,
   "domain_breakdown": {
     "Health": 1,
+    "WebSocket": 2,
     "System Diagnostics": 1,
     "Auth": 2,
     "Admin Catalog": 7,
     "Admin Pricing": 3,
     "Quotes": 1,
-    "Orders": 1,
+    "Orders": 2,
     "products": 1,
     "pricing": 1,
     "Root": 1,
@@ -26,6 +27,20 @@
         "tag": "Health",
         "status": 200,
         "summary": "Health check"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/ws/stats",
+        "tag": "WebSocket",
+        "status": 200,
+        "summary": "Get Websocket Stats"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/ws/broadcast",
+        "tag": "WebSocket",
+        "status": 200,
+        "summary": "Trigger Broadcast"
       },
       {
         "method": "GET",
@@ -131,6 +146,13 @@
         "tag": "Orders",
         "status": 201,
         "summary": "Create Order"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/orders/preview",
+        "tag": "Orders",
+        "status": 200,
+        "summary": "Preview Order"
       },
       {
         "method": "GET",
@@ -304,6 +326,13 @@
       },
       {
         "method": "GET",
+        "path": "/api/v1/shipping/pincode/{pincode}",
+        "tag": "Shipping",
+        "status": 400,
+        "summary": "Lookup Indian PIN Code City, District, State and Delivery Zone"
+      },
+      {
+        "method": "GET",
         "path": "/api/v1/quotes/{quote_id}",
         "tag": "Quotes",
         "status": 404,
@@ -315,6 +344,13 @@
         "tag": "Orders",
         "status": 404,
         "summary": "Get Order"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/orders/{order_id}/invoice.pdf",
+        "tag": "Orders",
+        "status": 404,
+        "summary": "Download Official Statutory GST Tax Invoice (PDF)"
       },
       {
         "method": "POST",
@@ -788,6 +824,13 @@
       },
       {
         "method": "GET",
+        "path": "/api/v1/admin/accounting/export/gst-gstr1",
+        "tag": "Admin Accounting",
+        "status": 401,
+        "summary": "Export Authoritative GSTR-1 Sales Return Register"
+      },
+      {
+        "method": "GET",
         "path": "/api/v1/orders",
         "tag": "Orders",
         "status": 401,
@@ -890,6 +933,20 @@
         "tag": "inventory",
         "status": 401,
         "summary": "List Movements"
+      },
+      {
+        "method": "GET",
+        "path": "/ws/stats",
+        "tag": "WebSocket",
+        "status": 401,
+        "summary": "Get Websocket Stats"
+      },
+      {
+        "method": "POST",
+        "path": "/ws/broadcast",
+        "tag": "WebSocket",
+        "status": 401,
+        "summary": "Trigger Broadcast"
       }
     ],
     "failed_500_crash": [],

@@ -1757,9 +1757,9 @@ export const ProductDetail: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex items-start gap-2.5">
-                  <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <span>
-                    <strong>Sizing Policy:</strong> Wrong-size orders are not eligible for return or replacement.
+                    <strong>Sizing Policy:</strong> Wrong-size replacements require mandatory vernier calliper photo verification. Customer is responsible for return &amp; replacement delivery charges + 18% GST.
                   </span>
                 </div>
               </div>
@@ -1787,7 +1787,7 @@ export const ProductDetail: React.FC = () => {
                   className="w-4 h-4 mt-0.5 text-[#0054A6] rounded border-slate-300 focus:ring-[#0054A6] focus:ring-offset-0 cursor-pointer"
                 />
                 <span className="text-slate-800 leading-snug">
-                  I confirm that I measured my solar panel frame thickness and selected <strong>{currentVariant.attributes?.size?.replace(/[^0-9.]/g, '') || '35'}</strong> mm. Wrong-size orders are not eligible for return or replacement.
+                  I confirm that I measured my solar panel frame thickness and selected <strong>{currentVariant.attributes?.size?.replace(/[^0-9.]/g, '') || '35'}</strong> mm. I understand wrong-size replacement requires vernier calliper verification.
                 </span>
               </label>
             </div>

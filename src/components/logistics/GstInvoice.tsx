@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Printer, X, FileText, CheckCircle2, ShieldCheck, 
-  Truck, CreditCard, Clock, MapPin, Building2 
+  Truck, CreditCard, Clock, MapPin, Building2, Download
 } from 'lucide-react';
 import { Order } from '../../types';
 import { numberToIndianWords } from '../../utils/numberToWords';
+import { orderApi } from '../../services/api/orderApi';
 
 interface GstInvoiceProps {
   order: Order;
@@ -26,6 +27,7 @@ const InvoiceAddressLines: React.FC<{ address?: Order['deliveryAddress'] }> = ({
 };
 
 export const GstInvoice: React.FC<GstInvoiceProps> = ({ order, onClose }) => {
+  const [isDownloading, setIsDownloading] = useState(false);
   const stateCode = order.deliveryAddress?.stateCode || '24';
   const isIntrastate = stateCode === '24' || (order.deliveryAddress?.state || '').toLowerCase().includes('gujarat');
 
@@ -60,6 +62,29 @@ export const GstInvoice: React.FC<GstInvoiceProps> = ({ order, onClose }) => {
     window.print();
   };
 
+  const handleDownloadPdf = async () => {
+    setIsDownloading(true);
+    try {
+      const blob = await orderApi.downloadInvoicePdf(order.id);
+      if (blob && (blob as any).size > 0) {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Invoice_${order.invoiceNumber || order.orderNumber || order.id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        window.print();
+      }
+    } catch {
+      window.print();
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 bg-slate-900/25 backdrop-blur-xs animate-fadeIn overflow-y-auto print:p-0 print:bg-white print:fixed-none">
       <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[96vh] print:max-h-none print:border-none print:shadow-none print:bg-white">
@@ -71,11 +96,19 @@ export const GstInvoice: React.FC<GstInvoiceProps> = ({ order, onClose }) => {
           </div>
           <div className="flex items-center gap-2.5">
             <button
+              onClick={handleDownloadPdf}
+              disabled={isDownloading}
+              className="px-4 py-2 bg-[#0054A6] hover:bg-[#003d7a] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md transition-all cursor-pointer disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              <span>{isDownloading ? 'Generating...' : 'Download PDF'}</span>
+            </button>
+            <button
               onClick={handlePrint}
               className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
             >
               <Printer className="w-4 h-4" />
-              <span>Print Tax Invoice</span>
+              <span>Print</span>
             </button>
             <button
               onClick={onClose}

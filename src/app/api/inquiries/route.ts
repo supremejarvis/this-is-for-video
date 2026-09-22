@@ -56,28 +56,41 @@ export async function GET() {
   });
 }
 
+export function validateInquiryInput(body: any): { valid: boolean; error?: string } {
+  const name = String(body?.name || '').trim();
+  const phone = String(body?.phone || '').replace(/\D/g, '');
+  const pincode = String(body?.pincode || '').trim();
+
+  if (!name || name.length < 2) {
+    return { valid: false, error: 'Full name must be at least 2 characters.' };
+  }
+
+  if (phone.length < 10) {
+    return { valid: false, error: 'Please enter a valid 10-digit Indian mobile number.' };
+  }
+
+  if (pincode && !/^\d{6}$/.test(pincode)) {
+    return { valid: false, error: 'Please enter a valid 6-digit postal pincode.' };
+  }
+
+  return { valid: true };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Validation
+    const validation = validateInquiryInput(body);
+    if (!validation.valid) {
+      return NextResponse.json(
+        { success: false, error: validation.error },
+        { status: 400 }
+      );
+    }
+
     const name = String(body.name || '').trim();
     const phone = String(body.phone || '').replace(/\D/g, '');
     const pincode = String(body.pincode || '').trim();
-
-    if (!name || name.length < 2) {
-      return NextResponse.json(
-        { success: false, error: 'Full name must be at least 2 characters.' },
-        { status: 400 }
-      );
-    }
-
-    if (phone.length < 10) {
-      return NextResponse.json(
-        { success: false, error: 'Please enter a valid 10-digit Indian mobile number.' },
-        { status: 400 }
-      );
-    }
 
     const newInquiry: InquiryRecord = {
       id: `INQ-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,

@@ -149,36 +149,40 @@ export interface DispatchManifestResponse {
 
 export const adminShippingApi = {
   getRates: async (): Promise<ShippingRateCard[]> => {
-    return apiClient.get<ShippingRateCard[]>('/api/v1/admin/shipping/rates');
+    return apiClient.get<ShippingRateCard[]>('/admin/shipping/rates');
   },
 
   calculateQuote: async (req: ShippingQuoteRequest): Promise<ShippingQuoteResponse> => {
-    return apiClient.post<ShippingQuoteResponse>('/api/v1/admin/shipping/quotes', req);
+    return apiClient.post<ShippingQuoteResponse>('/admin/shipping/quotes', req);
   },
 
   getShipments: async (statusFilter?: string): Promise<ShipmentDetail[]> => {
     const url = statusFilter
-      ? `/api/v1/admin/shipping/shipments?status=${encodeURIComponent(statusFilter)}`
-      : '/api/v1/admin/shipping/shipments';
+      ? `/admin/shipping/shipments?status=${encodeURIComponent(statusFilter)}`
+      : '/admin/shipping/shipments';
     return apiClient.get<ShipmentDetail[]>(url);
   },
 
   bookShipment: async (req: ShipmentBookingRequest): Promise<ShipmentBookingResponse> => {
-    return apiClient.post<ShipmentBookingResponse>('/api/v1/admin/shipping/shipments/book', req);
+    return apiClient.post<ShipmentBookingResponse>('/admin/shipping/shipments/book', req);
   },
 
   dispatchShipment: async (shipmentId: string, warehouseId: string): Promise<any> => {
-    return apiClient.post(`/api/v1/admin/shipping/shipments/${shipmentId}/dispatch?warehouse_id=${warehouseId}`, {});
+    return apiClient.post(`/admin/shipping/shipments/${shipmentId}/dispatch?warehouse_id=${warehouseId}`, {});
   },
 
   recordTrackingEvent: async (
     shipmentId: string,
     event: { provider_event_id: string; status: string; location?: string; description?: string; provider_occurred_at: string }
   ): Promise<TrackingEvent> => {
-    return apiClient.post<TrackingEvent>(`/api/v1/admin/shipping/shipments/${shipmentId}/events`, event);
+    return apiClient.post<TrackingEvent>(`/admin/shipping/shipments/${shipmentId}/events`, event);
   },
 
   getManifest: async (carrier: string = 'INDIA_POST'): Promise<DispatchManifestResponse> => {
-    return apiClient.get<DispatchManifestResponse>(`/api/v1/admin/shipping/manifest?carrier=${encodeURIComponent(carrier)}`);
+    return apiClient.get<DispatchManifestResponse>(`/admin/shipping/manifest?carrier=${encodeURIComponent(carrier)}`);
+  },
+
+  lookupPincode: async (pincode: string): Promise<any> => {
+    return apiClient.get<any>(`/shipping/pincode/${encodeURIComponent(pincode)}`);
   },
 };

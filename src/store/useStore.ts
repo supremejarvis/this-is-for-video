@@ -214,7 +214,14 @@ export interface AppStore {
 
   // Return / Refund Management
   returnRequests: ReturnRequest[];
-  createReturnRequest: (orderId: string, items: ReturnRequest['items'], reason: ReturnReason, reasonDetails?: string) => ReturnRequest | null;
+  createReturnRequest: (
+    orderId: string, 
+    items: ReturnRequest['items'], 
+    reason: ReturnReason, 
+    reasonDetails?: string,
+    caliperPhotoUrl?: string,
+    verifiedFrameThickness?: string
+  ) => ReturnRequest | null;
   updateReturnStatus: (returnId: string, status: ReturnStatus, adminNotes?: string) => void;
   getOrderReturns: (orderId: string) => ReturnRequest[];
 
@@ -1252,27 +1259,7 @@ export const useStore = create<AppStore>((set, get) => ({
     try {
       await authApi.logoutAll();
     } catch {}
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.removeItem('apollo_session_24h');
-      localStorage.removeItem('apollo_current_user');
-      localStorage.removeItem('apollo_org');
-      localStorage.setItem('apollo_app_mode', 'B2C');
-    }
-    set({ 
-      authStatus: 'GUEST',
-      currentUser: GUEST_USER, 
-      customerProfile: null,
-      currentOrg: EMPTY_B2B_ORG,
-      activeAddress: null, 
-      billingAddress: null, 
-      shippingAddress: null, 
-      orders: [],
-      appMode: 'B2C', 
-      isAccountModalOpen: false, 
-      isAuthModalOpen: false,
-      isCheckoutOpen: false,
-      activeTab: 'store'
-    });
+    await get().logout();
     get().showToast('Logged out of all sessions across all devices.', 'info');
   },
 
@@ -2777,7 +2764,7 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
 
   // ── Return / Refund Management ──────────────────────────────
   returnRequests: initialReturns,
-  createReturnRequest: (orderId, items, reason, reasonDetails) => {
+  createReturnRequest: (orderId, items, reason, reasonDetails, caliperPhotoUrl, verifiedFrameThickness) => {
     const order = get().orders.find(o => o.id === orderId);
     if (!order) {
       get().showToast('Order not found for return request', 'error');
@@ -2792,6 +2779,8 @@ updateBuyBoxScore: (asin: string, sellerId: string, price: number, deliveryDays:
       items,
       reason,
       reasonDetails,
+      caliperPhotoUrl,
+      verifiedFrameThickness,
       status: 'REQUESTED',
       refundAmount,
       refundMethod: 'ORIGINAL_PAYMENT',

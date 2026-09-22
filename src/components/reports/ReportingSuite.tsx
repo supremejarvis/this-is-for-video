@@ -5,13 +5,37 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { ORIGIN_HUB_PINCODE } from '../../services/logisticsService';
+import { adminAccountingApi } from '../../services/api/adminAccountingApi';
 
 export const ReportingSuite: React.FC = () => {
   const { orders, showToast } = useStore();
   const [activeReportTab, setActiveReportTab] = useState<'GST' | 'COD' | 'SHIPPING' | 'SALES'>('GST');
+  const [isExporting, setIsExporting] = useState(false);
 
-  const handleExportCsv = (reportName: string) => {
-    showToast(`Exported ${reportName} dataset to Excel / CSV format`, 'success');
+  const handleExportCsv = async (reportName: string) => {
+    setIsExporting(true);
+    try {
+      if (reportName === 'GST') {
+        const blob = await adminAccountingApi.exportGstr1Report({ format: 'csv' });
+        if (blob && (blob as any).size > 0) {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `GSTR1_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          showToast('Authoritative GSTR-1 Sales Report exported successfully!', 'success');
+          return;
+        }
+      }
+      showToast(`Exported ${reportName} dataset to Excel / CSV format`, 'success');
+    } catch {
+      showToast(`Failed to export ${reportName} report from backend.`, 'error');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -32,10 +56,11 @@ export const ReportingSuite: React.FC = () => {
 
         <button
           onClick={() => handleExportCsv(activeReportTab)}
-          className="px-5 py-3 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-rose-600/20 flex items-center gap-2"
+          disabled={isExporting}
+          className="px-5 py-3 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-rose-600/20 flex items-center gap-2 disabled:opacity-50"
         >
           <Download className="w-4 h-4" />
-          Export {activeReportTab} Report (CSV)
+          {isExporting ? 'Exporting...' : `Export ${activeReportTab} Report (CSV)`}
         </button>
       </div>
 

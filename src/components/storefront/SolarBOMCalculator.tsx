@@ -143,24 +143,33 @@ export const SolarBOMCalculator: React.FC = () => {
   const motorHp = matchedComboVariant?.solarKitConfig?.motorHp || 
     (totalPanels <= 8 ? '0.5 HP' : totalPanels <= 15 ? '1.0 HP' : '2.0 HP');
   const electricalPhase = matchedComboVariant?.solarKitConfig?.electricalPhase || 'Single Phase 220V/230V AC (50Hz)';
-  const motorPrice = totalPanels <= 8 ? 1700 : totalPanels <= 15 ? 2400 : 4200;
-  const timerPrice = 850;
+
+  // Dynamically derive component pricing from live store catalog products
+  const drainClipProduct = useMemo(() => products.find(p => p.asin === 'AP-DRAINCLIPS-02' || p.asin.includes('DRAIN')), [products]);
+  const sprinklerProduct = useMemo(() => products.find(p => p.asin === 'AP-SPRINKLER-01' || p.asin.includes('SPRINKLER')), [products]);
+  const clampProduct = useMemo(() => products.find(p => p.asin === 'AP-GICLAMP-03' || p.asin.includes('CLAMP')), [products]);
+  const teeProduct = useMemo(() => products.find(p => p.asin === 'AP-FITTINGTEE-04' || p.asin.includes('TEE')), [products]);
+  const pumpProduct = useMemo(() => products.find(p => p.asin === 'AP-PUMP-06' || p.asin.includes('PUMP')), [products]);
+  const timerProduct = useMemo(() => products.find(p => p.asin === 'AP-TIMER-07' || p.asin.includes('TIMER')), [products]);
+
+  const motorPrice = pumpProduct?.variants?.[0]?.b2cPrice || (totalPanels <= 8 ? 1700 : totalPanels <= 15 ? 2400 : 4200);
+  const timerPrice = timerProduct?.variants?.[0]?.b2cPrice || 850;
 
   // Pricing calculations for individual components
   const clipKitRate = 20;
-  const clipRetailRate = 20;
+  const clipRetailRate = drainClipProduct?.variants?.[0]?.b2cPrice || 20;
   const clipB2bRate = clipsNeeded >= 2500 ? 10 : (clipsNeeded >= 1000 ? 15 : 17);
 
   const sprinklerKitRate = 60;
-  const sprinklerRetailRate = 220;
-  const sprinklerB2bRate = 185;
+  const sprinklerRetailRate = sprinklerProduct?.variants?.[0]?.b2cPrice || 220;
+  const sprinklerB2bRate = sprinklerProduct?.variants?.[0]?.b2bTierPricing?.[0]?.pricePerUnit || 185;
 
   const clampKitRate = 25;
-  const clampRetailRate = 45;
-  const clampB2bRate = 32;
+  const clampRetailRate = clampProduct?.variants?.[0]?.b2cPrice || 45;
+  const clampB2bRate = clampProduct?.variants?.[0]?.b2bTierPricing?.[0]?.pricePerUnit || 32;
 
   const teeKitRate = 33;
-  const teeRetailRate = 55;
+  const teeRetailRate = teeProduct?.variants?.[0]?.b2cPrice || 55;
 
   // Effective price adjustments for optional motor and timer
   const effectiveMotorPrice = includeMotor ? motorPrice : 0;

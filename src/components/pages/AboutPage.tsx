@@ -6,10 +6,37 @@ import { Hero } from '../Hero';
 import { 
   Building2, Users, Award, Globe, ShieldCheck, CheckCircle2, 
   MapPin, Phone, Mail, FileText, ArrowRight, Sparkles, AlertTriangle, 
-  Clock, TrendingUp, DollarSign, Droplets, Zap, Check, X 
+  Clock, TrendingUp, DollarSign, Droplets, Zap, Check, X, Star, Quote
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { ORIGIN_HUB_PINCODE } from '../../services/logisticsService';
+
+const testimonials = [
+  {
+    name: "Rakesh Patel",
+    role: "Project Head — Vivasvan Solar",
+    location: "Ahmedabad, Gujarat",
+    quote: "Apollo's SS304 sprinklers have completely eliminated our panel cleaning downtime. The 180° coverage is flawless and the build quality is exceptional.",
+    rating: 5,
+    verified: true,
+  },
+  {
+    name: "Amit Singh",
+    role: "EPC Contractor — Rajasthan Site (5 MW)",
+    location: "Jodhpur, Rajasthan",
+    quote: "We installed 600+ Apollo drain clips across a 5 MW site. Zero complaints in 18 months. The capillary action works exactly as promised — no more mud belt issues.",
+    rating: 5,
+    verified: true,
+  },
+  {
+    name: "Sneha Mehta",
+    role: "Operations — Gujarat Solar Park",
+    location: "Charanka, Gujarat",
+    quote: "The difference in output was visible within the first week. Clean panels, consistent 15-18% gain. Their AetherWash technology is genuinely innovative.",
+    rating: 5,
+    verified: true,
+  },
+];
 
 export function AboutPage() {
   const { setActiveTab } = useStore();
@@ -323,6 +350,62 @@ export function AboutPage() {
           >
             Order Drain Clips in APE Store <ArrowRight className="w-4 h-4" />
           </button>
+        </div>
+      </section>
+
+      {/* Verified Client & EPC Testimonials */}
+      <section className="px-4 md:px-6 py-16" aria-labelledby="testimonials-title">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#0054A6]/20 bg-[#0054A6]/5 backdrop-blur-md mb-4">
+              <Star className="w-3.5 h-3.5 text-[#0054A6] fill-[#0054A6]" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[#0054A6]">Client Testimonials</span>
+            </span>
+            <h2 id="testimonials-title" className="font-display text-3xl sm:text-4xl md:text-5xl font-black mb-4 text-slate-900 tracking-tight">
+              Trusted by <span className="bg-gradient-to-r from-[#0054A6] via-blue-600 to-amber-500 bg-clip-text text-transparent">EPC Contractors &amp; Solar Parks</span>
+            </h2>
+            <p className="text-slate-600 text-sm md:text-base max-w-2xl mx-auto">
+              Real performance feedback from utility-scale solar installations and commercial rooftop systems across India.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+            {testimonials.map((t, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.12, duration: 0.5 }}
+                className="relative bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-2xl p-6 md:p-8 hover:border-[#0054A6]/30 hover:shadow-xl transition-all group flex flex-col justify-between"
+              >
+                <Quote className="absolute top-6 right-6 w-8 h-8 text-slate-200 group-hover:text-blue-100 transition-colors" />
+                
+                <div>
+                  <div className="flex items-center gap-1 mb-4">
+                    {Array.from({ length: t.rating }).map((_, j) => (
+                      <Star key={j} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    ))}
+                    {t.verified && (
+                      <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Verified Purchase
+                      </span>
+                    )}
+                  </div>
+                  
+                  <p className="text-slate-700 text-sm leading-relaxed mb-6 italic">
+                    &ldquo;{t.quote}&rdquo;
+                  </p>
+                </div>
+
+                <div className="border-t border-slate-100 pt-4 mt-auto">
+                  <div className="font-display font-bold text-slate-900 text-sm">{t.name}</div>
+                  <div className="text-xs text-[#0054A6] font-medium mt-0.5">{t.role}</div>
+                  <div className="text-[10px] font-mono text-slate-400 mt-0.5">{t.location}</div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
     </div>

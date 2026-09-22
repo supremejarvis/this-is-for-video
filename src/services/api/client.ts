@@ -60,13 +60,18 @@ export class ApiClient {
     endpoint: string,
     options: RequestOptions = {}
   ): Promise<T> {
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    let cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    // Defensive normalization: strip redundant /api/v1 if baseUrl already includes /api/v1
+    if (this.baseUrl.endsWith('/api/v1') && cleanEndpoint.startsWith('/api/v1/')) {
+      cleanEndpoint = cleanEndpoint.substring(7);
+    }
     let url = `${this.baseUrl}${cleanEndpoint}`;
 
-    // If executing server-side in Next.js and URL is relative, prepend backend origin
-    if (typeof window === 'undefined' && url.startsWith('/')) {
-      const serverOrigin = process.env.FASTAPI_BACKEND_URL || 'http://127.0.0.1:8000';
-      url = `${serverOrigin}${url}`;
+    // Resolve relative URLs in Node/SSR where undici fetch requires absolute URLs
+    if (url.startsWith('/') && typeof window === 'undefined') {
+      const serverOrigin = process.env.FASTAPI_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+      const cleanOrigin = serverOrigin.startsWith('http') ? serverOrigin : 'http://127.0.0.1:8000';
+      url = `${cleanOrigin.endsWith('/') ? cleanOrigin.slice(0, -1) : cleanOrigin}${url}`;
     }
 
     const method = (options.method || 'GET').toUpperCase();
@@ -82,18 +87,20 @@ export class ApiClient {
 
     const mergedHeaders: Record<string, string> = {
       'Accept': 'application/json',
-      ...(headers as Record<string, string>),
+      ...((headers as Record<string, string>) || {}),
     };
 
-    if (fetchOptions.body && typeof fetchOptions.body === 'string') {
-      mergedHeaders['Content-Type'] = mergedHeaders['Content-Type'] || 'application/json';
+    // Inject CSRF header on mutating requests if present in browser cookies
+    if (isMutating && typeof document !== 'undefined') {
+      const csrf = getCsrfToken();
+      if (csrf && !mergedHeaders['X-CSRF-Token']) {
+        mergedHeaders['X-CSRF-Token'] = csrf;
+      }
     }
 
-    if (isMutating) {
-      const csrfToken = getCsrfToken();
-      if (csrfToken && !mergedHeaders['X-CSRF-Token'] && !mergedHeaders['x-csrf-token']) {
-        mergedHeaders['X-CSRF-Token'] = csrfToken;
-      }
+    // Default Content-Type to application/json for non-FormData bodies
+    if (fetchOptions.body && !(fetchOptions.body instanceof FormData) && !mergedHeaders['Content-Type']) {
+      mergedHeaders['Content-Type'] = 'application/json';
     }
 
     const executeFetch = async (): Promise<T> => {
@@ -110,13 +117,37 @@ export class ApiClient {
       const shouldAttachSignal = !isTestEnv && controller?.signal && (typeof AbortSignal !== 'undefined' && controller.signal instanceof AbortSignal);
 
       try {
-        const response = await fetch(url, {
-          ...fetchOptions,
-          method,
-          headers: mergedHeaders,
-          credentials: fetchOptions.credentials || 'include',
-          ...(shouldAttachSignal && controller ? { signal: controller.signal } : {}),
-        });
+        let response: Response;
+        try {
+          response = await fetch(url, {
+            ...fetchOptions,
+            method,
+            headers: mergedHeaders,
+            credentials: fetchOptions.credentials || 'include',
+            ...(shouldAttachSignal && controller ? { signal: controller.signal } : {}),
+          });
+        } catch (fetchErr: any) {
+          const isInvalidUrl = fetchErr instanceof TypeError && (
+            fetchErr.message?.includes('Invalid URL') || 
+            fetchErr.message?.includes('Failed to parse URL')
+          );
+          if (isInvalidUrl && url.startsWith('/')) {
+            const fallbackOrigin = (typeof window !== 'undefined' && window.location?.origin?.startsWith('http'))
+              ? window.location.origin
+              : (process.env.FASTAPI_BACKEND_URL || 'http://127.0.0.1:8000');
+            const cleanOrigin = fallbackOrigin.startsWith('http') ? fallbackOrigin : 'http://127.0.0.1:8000';
+            const fullUrl = `${cleanOrigin.replace(/\/$/, '')}${url}`;
+            response = await fetch(fullUrl, {
+              ...fetchOptions,
+              method,
+              headers: mergedHeaders,
+              credentials: fetchOptions.credentials || 'include',
+              ...(shouldAttachSignal && controller ? { signal: controller.signal } : {}),
+            });
+          } else {
+            throw fetchErr;
+          }
+        }
 
         if (timer) clearTimeout(timer);
 
@@ -142,6 +173,12 @@ export class ApiClient {
 
         if (response.status === 204) {
           return {} as T;
+        }
+
+        const contentType = response.headers?.get?.('content-type') || '';
+        if (typeof response.blob === 'function' && (contentType.includes('application/pdf') || contentType.includes('text/csv') || contentType.includes('application/octet-stream'))) {
+          const blob = await response.blob();
+          return blob as unknown as T;
         }
 
         const data = await response.json();

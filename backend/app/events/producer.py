@@ -1,5 +1,6 @@
 """Event Producer for Transactional Outbox & External Message Brokers (Kafka/RabbitMQ)."""
 import logging
+import uuid
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +19,7 @@ class EventProducer:
         session: AsyncSession,
         event_type: str,
         aggregate_type: str,
-        aggregate_id: str,
+        aggregate_id: str | uuid.UUID,
         payload: dict[str, Any],
         idempotency_key: str | None = None,
     ) -> OutboxEvent:
@@ -29,13 +30,21 @@ class EventProducer:
             aggregate_type,
             aggregate_id,
         )
-        return await OutboxService.create_event(
+        agg_uuid: uuid.UUID
+        if isinstance(aggregate_id, uuid.UUID):
+            agg_uuid = aggregate_id
+        else:
+            try:
+                agg_uuid = uuid.UUID(str(aggregate_id))
+            except ValueError:
+                agg_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, str(aggregate_id))
+
+        return OutboxService.emit_event(
             session=session,
             event_type=event_type,
             aggregate_type=aggregate_type,
-            aggregate_id=aggregate_id,
+            aggregate_id=agg_uuid,
             payload=payload,
-            idempotency_key=idempotency_key,
         )
 
 

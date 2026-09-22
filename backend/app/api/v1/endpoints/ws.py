@@ -8,12 +8,14 @@ from __future__ import annotations
 from datetime import UTC, datetime
 import json
 import logging
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel
 
+from app.api.deps import require_roles
 from app.core.websocket import ws_manager
+from app.models.auth import User, UserRole
 
 logger = logging.getLogger("apollo.api.websocket")
 
@@ -132,7 +134,9 @@ async def websocket_endpoint(
 
 
 @router.get("/ws/stats")
-async def get_websocket_stats() -> dict[str, Any]:
+async def get_websocket_stats(
+    _current_user: Annotated[User, Depends(require_roles([UserRole.OWNER, UserRole.AUDITOR]))],
+) -> dict[str, Any]:
     """Health & Telemetry endpoint for active WebSocket channels."""
     return {
         "status": "healthy",
@@ -142,7 +146,10 @@ async def get_websocket_stats() -> dict[str, Any]:
 
 
 @router.post("/ws/broadcast")
-async def trigger_broadcast(req: BroadcastRequest) -> dict[str, Any]:
+async def trigger_broadcast(
+    req: BroadcastRequest,
+    _current_user: Annotated[User, Depends(require_roles([UserRole.OWNER, UserRole.ORDER_OPERATIONS]))],
+) -> dict[str, Any]:
     """Admin / Internal webhook helper to broadcast messages to subscribers."""
     recipients = await ws_manager.broadcast(
         channel=req.channel,

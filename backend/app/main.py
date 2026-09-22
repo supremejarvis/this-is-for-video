@@ -98,12 +98,7 @@ async def add_security_headers(request: Request, call_next: Callable[[Request], 
 # CORS configuration for Frontend SPA
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "https://apollo-web-three.vercel.app",
-        "https://apolloengineering.co.in",
-    ],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

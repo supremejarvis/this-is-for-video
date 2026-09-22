@@ -223,4 +223,13 @@ export const adminAccountingApi = {
     const qs = params.toString() ? `?${params.toString()}` : '';
     return apiClient.get<GstSubledgerReport>(`/admin/accounting/reports/gst-subledger${qs}`);
   },
+
+  exportGstr1Report: async (options?: { fromDate?: string; toDate?: string; format?: 'csv' | 'json' }): Promise<Blob | any> => {
+    const params = new URLSearchParams();
+    if (options?.fromDate) params.set('from_date', options.fromDate);
+    if (options?.toDate) params.set('to_date', options.toDate);
+    if (options?.format) params.set('format', options.format);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return apiClient.get<Blob | any>(`/admin/accounting/export/gst-gstr1${qs}`);
+  },
 };

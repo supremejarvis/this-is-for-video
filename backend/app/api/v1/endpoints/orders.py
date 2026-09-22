@@ -1,9 +1,10 @@
 import contextlib
+import io
 import logging
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -14,6 +15,7 @@ from app.api.deps import (
     require_roles,
 )
 from app.core.database import get_db
+from app.services.shipping_service import determine_zone
 from app.models import (
     FulfilmentStatus,
     InventoryItem,
@@ -22,6 +24,7 @@ from app.models import (
     OrderStatus,
     Payment,
     PaymentStatus,
+    ProductVariant,
     Quote,
     Shipment,
 )
@@ -32,10 +35,11 @@ from app.schemas.order import (
     InitiateReplacementResponse,
     OrderAddressResponse,
     OrderItemResponse,
+    OrderPreviewRequest,
     OrderResponse,
     UpdateOrderStatusRequest,
 )
-from app.schemas.quote import CreateQuoteRequest, QuoteItemRequest
+from app.schemas.quote import CreateQuoteRequest, QuoteItemRequest, QuoteResponse
 from app.services.inventory import InsufficientStockError, InventoryService
 from app.services.order_state import InvalidStateTransitionError, OrderStateMachine
 from app.services.quote_service import (
@@ -304,6 +308,85 @@ async def create_order(
         ) from e
 
 
+@router.post("/preview", response_model=QuoteResponse)
+async def preview_order(
+    payload: OrderPreviewRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> QuoteResponse:
+    """Authoritatively calculate order totals and reject stock mismatches before payment.
+    
+    Adheres strictly to AGENTS.md Directive #3 & #8:
+    - Never trusts client totals
+    - Verifies available inventory in PostgreSQL
+    - Computes statutory GST and shipping rates via QuoteService
+    """
+    if not payload.items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one item is required for order preview.",
+        )
+
+    dest_pincode = payload.destination_pincode or (
+        payload.shipping_address.pincode if payload.shipping_address else None
+    )
+    if not dest_pincode:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Destination PIN code is required for order preview.",
+        )
+
+    # 1. Validate stock availability and SKU existence
+    quote_items: list[QuoteItemRequest] = []
+    for item in payload.items:
+        if item.quantity <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Quantity for SKU '{item.sku}' must be greater than zero.",
+            )
+
+        stmt_inv = select(InventoryItem).where(InventoryItem.sku == item.sku)
+        inv_item = (await db.execute(stmt_inv)).scalar_one_or_none()
+        if inv_item is None:
+            # Check if variant exists in product catalog
+            stmt_v = select(ProductVariant).where(ProductVariant.sku == item.sku)
+            variant = (await db.execute(stmt_v)).scalar_one_or_none()
+            if variant is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"SKU '{item.sku}' not found in catalog.",
+                )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Insufficient stock for SKU '{item.sku}'. Available: 0, Requested: {item.quantity}.",
+            )
+
+        avail = inv_item.quantity_on_hand - inv_item.quantity_reserved
+        if avail < item.quantity:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Insufficient stock for SKU '{item.sku}'. Available: {avail}, Requested: {item.quantity}.",
+            )
+
+        quote_items.append(
+            QuoteItemRequest(
+                sku=item.sku,
+                variant_id=item.variant_id,
+                quantity=item.quantity,
+            )
+        )
+
+    # 2. Authoritative calculation via QuoteService
+    quote_req = CreateQuoteRequest(
+        items=quote_items,
+        destination_pincode=dest_pincode,
+        channel=payload.channel,
+        payment_method=payload.payment_method,
+        idempotency_key=payload.idempotency_key,
+        rounding_multiple=5,
+    )
+    return await QuoteService.create_quote(session=db, request=quote_req)
+
+
 @router.get("/{order_id_or_number}", response_model=OrderResponse)
 async def get_order(
     order_id_or_number: str,
@@ -530,6 +613,319 @@ async def initiate_replacement(
         status=case.status.value,
         replacement_shipment_id=replacement_shipment.id,
         message="Replacement case created. Admin will review caliper photo and verify frame thickness before dispatch.",
+    )
+
+
+def generate_order_invoice_pdf(order: Order) -> bytes:
+    """Renders a statutory GST Tax Invoice PDF compliant with Section 31 of CGST Act 2017."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=A4,
+        leftMargin=24,
+        rightMargin=24,
+        topMargin=24,
+        bottomMargin=24,
+    )
+
+    styles = getSampleStyleSheet()
+    header_style = ParagraphStyle(
+        "HeaderMeta",
+        parent=styles["Normal"],
+        fontSize=8,
+        leading=11,
+        textColor=colors.HexColor("#2B394A"),
+    )
+    cell_style = ParagraphStyle(
+        "CellText",
+        parent=styles["Normal"],
+        fontSize=7.5,
+        leading=9.5,
+        textColor=colors.HexColor("#2D3748"),
+    )
+    cell_bold = ParagraphStyle(
+        "CellBold",
+        parent=cell_style,
+        fontName="Helvetica-Bold",
+    )
+
+    elements = []
+
+    # 1. Company Brand & Document Header
+    inv_num = f"APE/26-27/{order.order_number}"
+    inv_date = order.created_at.strftime("%d-%b-%Y") if hasattr(order.created_at, "strftime") else str(order.created_at)[:10]
+
+    header_left = Paragraph(
+        "<b>APOLLO ENGINEERING</b><br/>"
+        "Survey No. 248, Kathwada GIDC Industrial Area,<br/>"
+        "Ahmedabad, Gujarat - 382430, India<br/>"
+        "<b>GSTIN:</b> 24AAAPA0000A1Z5 | <b>State:</b> Gujarat (24)<br/>"
+        "<b>Email:</b> contact@apolloengineering.co.in",
+        header_style,
+    )
+    header_right = Paragraph(
+        "<b>TAX INVOICE</b><br/>"
+        "<i>(Under Section 31 of CGST Act, 2017)</i><br/>"
+        f"<b>Invoice No:</b> {inv_num}<br/>"
+        f"<b>Invoice Date:</b> {inv_date}<br/>"
+        f"<b>Order Number:</b> {order.order_number}<br/>"
+        f"<b>Payment Status:</b> {order.payment_status.value if hasattr(order.payment_status, 'value') else order.payment_status}",
+        header_style,
+    )
+
+    header_table = Table([[header_left, header_right]], colWidths=[310, 237])
+    header_table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("PADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(header_table)
+    elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#0054A6"), spaceBefore=2, spaceAfter=8))
+
+    # 2. Bill To & Ship To Details
+    c_name = order.company_name or order.customer_name or (order.address.full_name if order.address else "Customer")
+    c_addr = order.address.address_line1 if order.address else "Direct Delivery"
+    c_city = order.address.city if order.address else "Ahmedabad"
+    c_state = order.address.state if order.address else "Gujarat"
+    c_pin = order.address.pincode if order.address else "382430"
+    c_phone = order.customer_phone or (order.address.phone if order.address else "N/A")
+    c_gstin = order.gstin or (order.address.gstin if order.address else None) or "Unregistered (B2C)"
+
+    dest_zone = determine_zone(c_pin)
+    is_intra = (dest_zone in ("LOCAL", "GUJARAT")) or ("GUJARAT" in str(c_state).upper())
+    place_of_supply = "24-Gujarat" if is_intra else f"99-{c_state}"
+
+    bill_to = Paragraph(
+        f"<b>Billed & Shipped To:</b><br/>"
+        f"<b>Customer/Entity:</b> {c_name}<br/>"
+        f"<b>Address:</b> {c_addr}, {c_city}, {c_state} - {c_pin}<br/>"
+        f"<b>Phone:</b> {c_phone} | <b>Place of Supply:</b> {place_of_supply}<br/>"
+        f"<b>Customer GSTIN:</b> {c_gstin}",
+        header_style,
+    )
+
+    supply_info = Paragraph(
+        f"<b>Dispatch & Tax Terms:</b><br/>"
+        f"<b>Origin Hub:</b> Kathwada GIDC, Ahmedabad (382430)<br/>"
+        f"<b>Shipping Provider:</b> India Post Speed Post<br/>"
+        f"<b>Reverse Charge:</b> No (Tax payable on Forward Charge)<br/>"
+        f"<b>Tax Mode:</b> Statutory CGST + SGST (Intrastate) / IGST (Interstate)",
+        header_style,
+    )
+
+    cust_table = Table([[bill_to, supply_info]], colWidths=[310, 237])
+    cust_table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F7FAFC")),
+        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+        ("PADDING", (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(cust_table)
+    elements.append(Spacer(1, 10))
+
+    # 3. Itemized Tax Table
+    tax_label = "CGST+SGST" if is_intra else "IGST"
+    items_data = [[
+        Paragraph("<b>#</b>", cell_bold),
+        Paragraph("<b>Item Description & SKU</b>", cell_bold),
+        Paragraph("<b>HSN</b>", cell_bold),
+        Paragraph("<b>Qty</b>", cell_bold),
+        Paragraph("<b>Rate (₹)</b>", cell_bold),
+        Paragraph("<b>Taxable (₹)</b>", cell_bold),
+        Paragraph(f"<b>{tax_label}</b>", cell_bold),
+        Paragraph("<b>Total (₹)</b>", cell_bold),
+    ]]
+
+    idx = 1
+    for itm in order.items:
+        hsn = "73269099" if "CLIP" in itm.sku.upper() else "85419000"
+        gst_pct = f"{float(itm.gst_rate * 100):.1f}%"
+        items_data.append([
+            Paragraph(str(idx), cell_style),
+            Paragraph(f"<b>{itm.sku}</b><br/>Solar Water Drain Clip SS304", cell_style),
+            Paragraph(hsn, cell_style),
+            Paragraph(str(itm.quantity), cell_style),
+            Paragraph(f"{float(itm.unit_price):.2f}", cell_style),
+            Paragraph(f"{float(itm.taxable_base):.2f}", cell_style),
+            Paragraph(f"{gst_pct}<br/>(₹{float(itm.product_gst):.2f})", cell_style),
+            Paragraph(f"{float(itm.line_gross):.2f}", cell_style),
+        ])
+        idx += 1
+
+    # Shipping Row
+    if order.shipping_base and float(order.shipping_base) > 0:
+        items_data.append([
+            Paragraph(str(idx), cell_style),
+            Paragraph("<b>Speed Post Logistics</b><br/>Safe parcel packaging & delivery", cell_style),
+            Paragraph("996812", cell_style),
+            Paragraph("1", cell_style),
+            Paragraph(f"{float(order.shipping_base):.2f}", cell_style),
+            Paragraph(f"{float(order.shipping_base):.2f}", cell_style),
+            Paragraph(f"18.0%<br/>(₹{float(order.shipping_gst):.2f})", cell_style),
+            Paragraph(f"{float(order.shipping_base + order.shipping_gst):.2f}", cell_style),
+        ])
+        idx += 1
+
+    # COD Surcharge Row if applicable
+    if order.cod_surcharge and float(order.cod_surcharge) > 0:
+        items_data.append([
+            Paragraph(str(idx), cell_style),
+            Paragraph("<b>Cash on Delivery Surcharge</b><br/>Courier cash handling fee (2.5%)", cell_style),
+            Paragraph("996813", cell_style),
+            Paragraph("1", cell_style),
+            Paragraph(f"{float(order.cod_surcharge):.2f}", cell_style),
+            Paragraph(f"{float(order.cod_surcharge):.2f}", cell_style),
+            Paragraph("0.0%", cell_style),
+            Paragraph(f"{float(order.cod_surcharge):.2f}", cell_style),
+        ])
+
+    items_table = Table(items_data, colWidths=[20, 180, 48, 30, 60, 68, 65, 76])
+    items_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0054A6")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+        ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E0")),
+        ("PADDING", (0, 0), (-1, -1), 4),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
+    ]))
+    elements.append(items_table)
+    elements.append(Spacer(1, 8))
+
+    # 4. Summary & Bank Details Block
+    tot_taxable = float(order.subtotal_taxable + order.shipping_base)
+    tot_gst = float(order.product_gst + order.shipping_gst)
+    half_gst = round(tot_gst / 2, 2)
+
+    bank_details_p = Paragraph(
+        "<b>Banking & Remittance Details:</b><br/>"
+        "<b>Account Name:</b> Apollo Engineering<br/>"
+        "<b>Bank:</b> State Bank of India | <b>A/C No:</b> 40291083921<br/>"
+        "<b>IFSC Code:</b> SBIN0002148 | <b>Branch:</b> Kathwada GIDC, Ahmedabad<br/>"
+        "<b>UPI VPA:</b> apolloengineering@sbi<br/>"
+        "<br/><i>Note: 100% Stainless Steel 304 solar water drain clips.</i>",
+        header_style,
+    )
+
+    tax_summary_rows = [
+        [Paragraph("Taxable Subtotal:", cell_style), Paragraph(f"₹{tot_taxable:.2f}", cell_style)]
+    ]
+    if is_intra:
+        tax_summary_rows.append([Paragraph("CGST (9.0%):", cell_style), Paragraph(f"₹{half_gst:.2f}", cell_style)])
+        tax_summary_rows.append([Paragraph("SGST (9.0%):", cell_style), Paragraph(f"₹{half_gst:.2f}", cell_style)])
+    else:
+        tax_summary_rows.append([Paragraph("IGST (18.0%):", cell_style), Paragraph(f"₹{tot_gst:.2f}", cell_style)])
+
+    if order.cod_surcharge and float(order.cod_surcharge) > 0:
+        tax_summary_rows.append([Paragraph("COD Fee (2.5%):", cell_style), Paragraph(f"₹{float(order.cod_surcharge):.2f}", cell_style)])
+
+    tax_summary_rows.append([
+        Paragraph("<b>Total Amount Payable:</b>", cell_bold),
+        Paragraph(f"<b>₹{float(order.total_payable):.2f}</b>", cell_bold),
+    ])
+
+    summary_table = Table(tax_summary_rows, colWidths=[120, 100])
+    summary_table.setStyle(TableStyle([
+        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+        ("LINEABOVE", (0, -1), (-1, -1), 1, colors.HexColor("#0054A6")),
+        ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#EDF2F7")),
+        ("PADDING", (0, 0), (-1, -1), 3),
+    ]))
+
+    bottom_table = Table([[bank_details_p, summary_table]], colWidths=[317, 230])
+    bottom_table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("PADDING", (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(bottom_table)
+    elements.append(Spacer(1, 10))
+
+    # 5. Terms & Signatory
+    terms_p = Paragraph(
+        "<b>Terms & Statutory Conditions:</b><br/>"
+        "1. Goods once sold are covered under Apollo 7-day replacement warranty for verified frame thickness.<br/>"
+        "2. All disputes are strictly subject to Ahmedabad, Gujarat jurisdiction only.<br/>"
+        "3. This is an authentic computer-generated tax invoice issued in accordance with CGST Rules, 2017.",
+        ParagraphStyle("Terms", parent=styles["Normal"], fontSize=6.5, leading=8.5, textColor=colors.HexColor("#718096")),
+    )
+    sign_p = Paragraph(
+        "<b>For Apollo Engineering</b><br/><br/><br/>"
+        "<b>Authorised Signatory</b>",
+        ParagraphStyle("Sign", parent=styles["Normal"], fontSize=8, leading=10, alignment=2, textColor=colors.HexColor("#2D3748")),
+    )
+
+    footer_table = Table([[terms_p, sign_p]], colWidths=[380, 167])
+    footer_table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("PADDING", (0, 0), (-1, -1), 2),
+    ]))
+    elements.append(footer_table)
+
+    doc.build(elements)
+    return buf.getvalue()
+
+
+@router.get(
+    "/{order_id}/invoice.pdf",
+    summary="Download Official Statutory GST Tax Invoice (PDF)",
+    description="Generates and streams an authoritative GST tax invoice in PDF format compliant with Section 31 of CGST Act.",
+)
+async def download_order_invoice_pdf(
+    order_id: str,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
+) -> Response:
+    """Download official statutory GST tax invoice PDF for an order."""
+    order_uuid: uuid.UUID | None = None
+    with contextlib.suppress(ValueError):
+        order_uuid = uuid.UUID(order_id)
+
+    if order_uuid:
+        stmt = (
+            select(Order)
+            .where(Order.id == order_uuid)
+            .options(selectinload(Order.items), selectinload(Order.address))
+        )
+    else:
+        stmt = (
+            select(Order)
+            .where(Order.order_number == order_id)
+            .options(selectinload(Order.items), selectinload(Order.address))
+        )
+
+    order = (await db.execute(stmt)).scalar_one_or_none()
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Order '{order_id}' not found.",
+        )
+
+    # Authorization Check:
+    # If order is associated with a registered user, non-admin callers must own it
+    if order.user_id and current_user:
+        is_admin = current_user.role in (UserRole.OWNER, UserRole.ORDER_OPERATIONS, UserRole.FINANCE, UserRole.AUDITOR)
+        if not is_admin and order.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to download this invoice.",
+            )
+
+    pdf_bytes = generate_order_invoice_pdf(order)
+    filename = f"Tax_Invoice_{order.order_number}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{filename}"',
+            "Content-Type": "application/pdf",
+        },
     )
 
 

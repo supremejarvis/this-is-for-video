@@ -5,6 +5,7 @@ import {
 } from '../constants';
 import { calculateExclusiveGst } from '../utils/gstCalculations';
 import { ceptIndiaPostService } from './ceptIndiaPostService';
+import { apiClient } from './api/client';
 
 export { ORIGIN_HUB_PINCODE, ORIGIN_HUB_NAME, ORIGIN_STATE, ORIGIN_STATE_CODE };
 export { ceptIndiaPostService };
@@ -182,7 +183,44 @@ export async function lookupPincode(pincode: string): Promise<{
     return { pincode: cleanPin, ...pincodeMemoryCache[cleanPin] };
   }
 
-  // 2. Query Live India Post Open Pincode Directory API
+  // 2. Query Authoritative Apollo FastAPI Backend Pincode Directory
+  try {
+    const backendData = await apiClient.get<any>(`/shipping/pincode/${cleanPin}`, { timeoutMs: 2500, skipRetry: true });
+    if (backendData && (backendData.district || backendData.state)) {
+      const district = backendData.district || 'Ahmedabad';
+      const state = backendData.state || 'Gujarat';
+      const stateCode = backendData.state_code || backendData.stateCode || getGstStateCode(state, cleanPin);
+      const postOffices: PostOfficeInfo[] = Array.isArray(backendData.post_offices) && backendData.post_offices.length > 0
+        ? backendData.post_offices.map((po: any, idx: number) => ({
+            name: po.name || `${district.toUpperCase()} S.O.`,
+            branchType: po.branch_type || po.branchType || 'Sub Post Office',
+            deliveryStatus: po.delivery_status || po.deliveryStatus || 'Delivery',
+            circle: po.circle || state,
+            district: po.district || district,
+            state: po.state || state,
+            facilityId: po.facility_id || po.facilityId || `IN${cleanPin}_${(idx + 1).toString().padStart(2, '0')}`
+          }))
+        : [
+            {
+              name: `${district.toUpperCase()} S.O.`,
+              branchType: 'Sub Post Office',
+              deliveryStatus: 'Delivery',
+              circle: state,
+              district,
+              state,
+              facilityId: `IN${cleanPin}_01`
+            }
+          ];
+
+      const result = { district, state, stateCode, postOffices };
+      pincodeMemoryCache[cleanPin] = result;
+      return { pincode: cleanPin, ...result };
+    }
+  } catch {
+    // Fallthrough to external India Post API and local directory
+  }
+
+  // 3. Query Live India Post Open Pincode Directory API
   try {
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timeoutId = controller ? setTimeout(() => controller.abort(), 4000) : null;

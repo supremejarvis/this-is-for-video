@@ -50,13 +50,13 @@ export interface RefundResponse {
 export const adminPaymentApi = {
   getPayments: async (statusFilter?: string): Promise<PaymentItem[]> => {
     const url = statusFilter
-      ? `/api/v1/admin/payments?status=${encodeURIComponent(statusFilter)}`
-      : '/api/v1/admin/payments';
+      ? `/admin/payments?status=${encodeURIComponent(statusFilter)}`
+      : '/admin/payments';
     return apiClient.get<PaymentItem[]>(url);
   },
 
   verifyUpi: async (paymentId: string, utrNumber: string, notes?: string): Promise<PaymentItem> => {
-    return apiClient.post<PaymentItem>(`/api/v1/admin/payments/${paymentId}/verify-upi`, {
+    return apiClient.post<PaymentItem>(`/admin/payments/${paymentId}/verify-upi`, {
       utr_number: utrNumber,
       notes,
     });
@@ -69,10 +69,10 @@ export const adminPaymentApi = {
     reason: string;
     idempotency_key: string;
   }): Promise<RefundResponse> => {
-    return apiClient.post<RefundResponse>('/api/v1/admin/payments/refund', req);
+    return apiClient.post<RefundResponse>('/admin/payments/refund', req);
   },
 
   getReconciliation: async (): Promise<PaymentReconciliationSummary> => {
-    return apiClient.get<PaymentReconciliationSummary>('/api/v1/admin/payments/reconciliation');
+    return apiClient.get<PaymentReconciliationSummary>('/admin/payments/reconciliation');
   },
 };

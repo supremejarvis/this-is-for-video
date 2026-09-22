@@ -49,27 +49,38 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     if (cleanPath === 'admin' || cleanPath.startsWith('admin/')) {
       setActiveTab('admin');
       setAppMode('ADMIN');
+      setSelectedProduct(null);
     } else if (cleanPath === 'account') {
       setActiveTab('account');
+      setSelectedProduct(null);
     } else if (cleanPath === 'orders') {
       setActiveTab('orders');
+      setSelectedProduct(null);
     } else if (cleanPath === 'b2b' || cleanPath === 'b2b-portal') {
       setActiveTab('b2b');
       setAppMode('B2B');
+      setSelectedProduct(null);
     } else if (cleanPath === 'wishlist') {
       setActiveTab('wishlist');
+      setSelectedProduct(null);
     } else if (cleanPath === 'about') {
       setActiveTab('about');
+      setSelectedProduct(null);
     } else if (cleanPath === 'installation') {
       setActiveTab('installation');
+      setSelectedProduct(null);
     } else if (cleanPath === 'contact') {
       setActiveTab('contact');
+      setSelectedProduct(null);
+    } else if (cleanPath.startsWith('products/')) {
+      // Handled by dedicated products/[slug] page
     } else {
       setActiveTab('store');
     }
-  }, [pathname, setActiveTab, setAppMode]);
+  }, [pathname, setActiveTab, setAppMode, setSelectedProduct]);
 
   const isAdminRoute = pathname.toLowerCase() === '/admin' || pathname.toLowerCase().startsWith('/admin/');
+  const isStoreRoute = pathname === '/' || pathname === '/store';
 
   return (
     <div className="min-h-screen bg-bg-deep text-text-main font-sans selection:bg-accent selection:text-white relative flex flex-col justify-between">
@@ -100,9 +111,9 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         <Header />
       )}
 
-      {/* Main Page Content or Product Detail Overlay */}
+      {/* Main Page Content or Product Detail Overlay (Store only) */}
       <main className="relative">
-        {selectedProduct ? (
+        {selectedProduct && isStoreRoute ? (
           <div className="pt-8 pb-16 max-w-7xl mx-auto px-4">
             <button
               onClick={() => setSelectedProduct(null)}

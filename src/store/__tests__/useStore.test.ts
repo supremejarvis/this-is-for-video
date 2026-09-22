@@ -1,8 +1,18 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useStore } from '../useStore';
 import { DeliveryAddress, CartItem } from '../../types';
 import { MOCK_PRODUCTS } from '../../data/mockData';
 import { ApiProduct } from '../../services/catalogService';
+
+vi.mock('../../services/api/catalogApi', () => ({
+  catalogApi: {
+    getCatalog: vi.fn().mockResolvedValue([]),
+    getProduct: vi.fn().mockResolvedValue(null),
+    createProduct: vi.fn().mockResolvedValue({}),
+    updateProduct: vi.fn().mockResolvedValue({}),
+    archiveProduct: vi.fn().mockResolvedValue({}),
+  },
+}));
 
 const mockApiProducts: ApiProduct[] = MOCK_PRODUCTS.map(p => ({
   id: p.asin,

@@ -103,6 +103,17 @@ class CreateOrderRequest(BaseModel):
     company_name: str | None = Field(default=None, max_length=150)
 
 
+class OrderPreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    items: list[OrderItemInput] = Field(default_factory=list, min_length=1)
+    destination_pincode: str | None = Field(default=None, pattern=r"^[1-9][0-9]{5}$")
+    shipping_address: AddressInput | None = None
+    payment_method: str = Field(default="PREPAID", max_length=50)
+    channel: str = Field(default="B2C")
+    idempotency_key: str | None = None
+
+
 class OrderAddressResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

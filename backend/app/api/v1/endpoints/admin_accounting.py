@@ -1,16 +1,19 @@
-"""Admin Double-Entry Accounting, Period Controls, and Financial Reports Router."""
-from datetime import date
-from typing import Any
+import csv
+from datetime import date, datetime
+import io
+from typing import Annotated, Any
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, require_roles
 from app.models.accounting import Invoice, JournalEntry, JournalLine
-from app.models.auth import User
+from app.models.auth import User, UserRole
+from app.models.order import Order, OrderStatus, PaymentStatus
+from app.services.shipping_service import determine_zone
 from app.schemas.accounting import (
     AccountCreate,
     AccountOut,
@@ -277,3 +280,174 @@ async def get_gst_subledger(
     f_date = from_date or date(today.year, today.month, 1)
     t_date = to_date or today
     return await service.generate_gst_subledger(DEFAULT_COMPANY_ID, f_date, t_date)
+
+
+@router.get(
+    "/export/gst-gstr1",
+    summary="Export Authoritative GSTR-1 Sales Return Register",
+    description="Generates and downloads statutory GSTR-1 B2B and B2C sales report in CSV or JSON format.",
+)
+async def export_gstr1_report(
+    from_date: date | None = None,
+    to_date: date | None = None,
+    export_format: str = Query("csv", pattern="^(csv|json)$", alias="format"),
+    current_user: User = Depends(require_roles([UserRole.OWNER, UserRole.FINANCE, UserRole.AUDITOR])),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Generate statutory GSTR-1 outward supplies return."""
+    # Query confirmed/paid orders
+    stmt = (
+        select(Order)
+        .options(selectinload(Order.items), selectinload(Order.address))
+        .where(
+            Order.payment_status.in_([PaymentStatus.CAPTURED, PaymentStatus.PENDING]),
+            Order.order_status.in_([
+                OrderStatus.CONFIRMED,
+                OrderStatus.PROCESSING,
+                OrderStatus.SHIPPED,
+                OrderStatus.DELIVERED,
+            ]),
+        )
+        .order_by(Order.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    orders = result.scalars().all()
+
+    # Apply date filters if supplied
+    filtered_orders = []
+    for ord_obj in orders:
+        ord_date = ord_obj.created_at.date() if hasattr(ord_obj.created_at, "date") else ord_obj.created_at
+        if from_date and ord_date < from_date:
+            continue
+        if to_date and ord_date > to_date:
+            continue
+        filtered_orders.append(ord_obj)
+
+    records: list[dict[str, Any]] = []
+
+    for ord_obj in filtered_orders:
+        gstin_val = (ord_obj.gstin or (ord_obj.address.gstin if ord_obj.address else None) or "").strip().upper()
+        is_b2b = bool(gstin_val and len(gstin_val) >= 15)
+        recipient_gstin = gstin_val if is_b2b else "URP"
+        receiver_name = (
+            ord_obj.company_name
+            or (ord_obj.address.company_name if ord_obj.address else None)
+            or ord_obj.customer_name
+            or (ord_obj.address.full_name if ord_obj.address else "Customer")
+        )
+        inv_number = f"APE/26-27/{ord_obj.order_number}"
+        inv_date = ord_obj.created_at.strftime("%d-%b-%Y") if hasattr(ord_obj.created_at, "strftime") else str(ord_obj.created_at)[:10]
+        inv_val = float(ord_obj.total_payable)
+
+        # Place of supply
+        pincode = (ord_obj.address.pincode if ord_obj.address else "382430").strip()
+        state_str = (ord_obj.address.state if ord_obj.address else "Gujarat").strip()
+        zone = determine_zone(pincode)
+
+        if zone in ("LOCAL", "GUJARAT") or "GUJARAT" in state_str.upper():
+            place_of_supply = "24-Gujarat"
+            is_intra = True
+        else:
+            place_of_supply = f"99-{state_str}" if state_str else "99-Other"
+            is_intra = False
+
+        taxable_val = float(ord_obj.subtotal_taxable + ord_obj.shipping_base)
+        tot_product_gst = float(ord_obj.product_gst)
+        tot_shipping_gst = float(ord_obj.shipping_gst)
+        total_gst = tot_product_gst + tot_shipping_gst
+
+        if is_intra:
+            cgst_amt = round(total_gst / 2, 2)
+            sgst_amt = round(total_gst / 2, 2)
+            igst_amt = 0.0
+        else:
+            cgst_amt = 0.0
+            sgst_amt = 0.0
+            igst_amt = round(total_gst, 2)
+
+        records.append({
+            "gstin_recipient": recipient_gstin,
+            "receiver_name": receiver_name,
+            "invoice_number": inv_number,
+            "invoice_date": inv_date,
+            "invoice_value": inv_val,
+            "place_of_supply": place_of_supply,
+            "reverse_charge": "N",
+            "applicable_tax_rate": 18.0,
+            "invoice_type": "Regular B2B" if is_b2b else "B2C Small",
+            "taxable_value": round(taxable_val, 2),
+            "cess_amount": 0.0,
+            "cgst_amount": cgst_amt,
+            "sgst_amount": sgst_amt,
+            "igst_amount": igst_amt,
+            "hsn_summary": "73269099, 996812",
+        })
+
+    if export_format == "json":
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content={
+            "report": "GSTR-1 Outward Supplies Sales Register",
+            "company": "Apollo Engineering",
+            "gstin": "24AAAPA0000A1Z5",
+            "period": f"{from_date or 'Beginning'} to {to_date or 'Latest'}",
+            "total_records": len(records),
+            "total_invoice_value": round(sum(r["invoice_value"] for r in records), 2),
+            "total_taxable_value": round(sum(r["taxable_value"] for r in records), 2),
+            "total_cgst": round(sum(r["cgst_amount"] for r in records), 2),
+            "total_sgst": round(sum(r["sgst_amount"] for r in records), 2),
+            "total_igst": round(sum(r["igst_amount"] for r in records), 2),
+            "records": records,
+        })
+
+    # Generate official GSTR-1 formatted CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "GSTIN/UIN of Recipient",
+        "Receiver Name",
+        "Invoice Number",
+        "Invoice Date",
+        "Invoice Value (₹)",
+        "Place Of Supply",
+        "Reverse Charge",
+        "Applicable % of Tax Rate",
+        "Invoice Type",
+        "Rate (%)",
+        "Taxable Value (₹)",
+        "Cess Amount (₹)",
+        "CGST Amount (₹)",
+        "SGST Amount (₹)",
+        "IGST Amount (₹)",
+        "HSN / SAC Codes",
+    ])
+
+    for r in records:
+        writer.writerow([
+            r["gstin_recipient"],
+            r["receiver_name"],
+            r["invoice_number"],
+            r["invoice_date"],
+            f"{r['invoice_value']:.2f}",
+            r["place_of_supply"],
+            r["reverse_charge"],
+            f"{r['applicable_tax_rate']:.1f}%",
+            r["invoice_type"],
+            "18.00",
+            f"{r['taxable_value']:.2f}",
+            f"{r['cess_amount']:.2f}",
+            f"{r['cgst_amount']:.2f}",
+            f"{r['sgst_amount']:.2f}",
+            f"{r['igst_amount']:.2f}",
+            r["hsn_summary"],
+        ])
+
+    csv_bytes = output.getvalue().encode("utf-8-sig")  # utf-8 with BOM for Excel compatibility
+    filename = f"GSTR1_Sales_{from_date or 'all'}_{to_date or 'latest'}.csv"
+    return Response(
+        content=csv_bytes,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Type": "text/csv; charset=utf-8",
+        },
+    )

@@ -1122,12 +1122,20 @@ export const useStore = create<AppStore>((set, get) => ({
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.removeItem('apollo_session_24h');
       localStorage.removeItem('apollo_current_user');
+      // If mock users or mock addresses are in localStorage, ensure they are purged
+      const rawAddrs = localStorage.getItem('apollo_addresses');
+      if (rawAddrs && rawAddrs.includes('Nilesh')) {
+        localStorage.removeItem('apollo_addresses');
+        localStorage.removeItem('apollo_shipping_address');
+        localStorage.removeItem('apollo_billing_address');
+      }
     }
 
     set({ 
       authStatus: 'GUEST', 
       currentUser: GUEST_USER, 
       customerProfile: null,
+      addresses: [],
       activeAddress: null, 
       billingAddress: null, 
       shippingAddress: null 
@@ -2904,15 +2912,38 @@ export function rehydrateStoreFromStorage(): void {
     }
 
     if (storedAppMode) updates.appMode = storedAppMode;
-    if (storedUser && storedUser.id) {
-      updates.currentUser = storedUser;
-      updates.authStatus = storedUser.id !== 'usr_guest' ? 'AUTHENTICATED' : 'GUEST';
+
+    // Strict Security & Privacy Invariant (Directive 8):
+    // NEVER elevate visitor to AUTHENTICATED purely from client localStorage.
+    // Client must strictly default to GUEST until FastAPI (/api/v1/auth/session) confirms session.
+    // Purge any stale mock user (e.g. Nilesh Patel / u_epc_procure) immediately.
+    if (storedUser) {
+      const isMockUser = !storedUser.id || 
+        storedUser.id === 'usr_guest' || 
+        String(storedUser.id).startsWith('u_') || 
+        storedUser.id === 'u_epc_procure' ||
+        (storedUser.name && String(storedUser.name).includes('Nilesh')) || 
+        (storedUser.email && String(storedUser.email).includes('apolloengineering.co.in'));
+      if (isMockUser) {
+        try { localStorage.removeItem('apollo_current_user'); } catch {}
+      }
     }
+    updates.currentUser = GUEST_USER;
+    updates.authStatus = 'GUEST';
+
     if (storedAddresses && Array.isArray(storedAddresses) && storedAddresses.length > 0) {
-      updates.addresses = storedAddresses;
-      updates.shippingAddress = storedAddresses[0] || null;
-      updates.billingAddress = storedAddresses[0] || null;
-      updates.activeAddress = storedAddresses[0] || null;
+      const validAddrs = storedAddresses.filter(a => 
+        a && a.fullName && !String(a.fullName).includes('Nilesh') && !String(a.id).startsWith('addr_epc_') && a.userId !== 'u_epc_procure'
+      );
+      if (validAddrs.length > 0) {
+        updates.addresses = validAddrs;
+      } else {
+        try {
+          localStorage.removeItem('apollo_addresses');
+          localStorage.removeItem('apollo_shipping_address');
+          localStorage.removeItem('apollo_billing_address');
+        } catch {}
+      }
     }
     if (storedOrders && Array.isArray(storedOrders) && storedOrders.length > 0) {
       updates.orders = storedOrders;

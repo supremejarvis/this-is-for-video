@@ -34,10 +34,10 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
   const pathname = usePathname() || '/';
 
-  // Startup: Safely rehydrate client storage, run migrations & verify backend session & catalog
+  // Startup: Safely run storage migrations, rehydrate client storage & verify backend session & catalog
   useEffect(() => {
-    rehydrateStoreFromStorage();
     runStorageMigration();
+    rehydrateStoreFromStorage();
     useStore.getState().checkAuthSession();
     useStore.getState().fetchApiCatalog();
   }, []);
